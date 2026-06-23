@@ -196,10 +196,8 @@ function Hdr() {
   const [about, setAbout] = useState(false);
   return (
     <header>
-      <div className="title-row">
-        <div className="title">JOSÉ EN LA VIDA ADULTA</div>
-        <button className="about-btn" onClick={() => setAbout(!about)} title="¿Qué es esto?">?</button>
-      </div>
+      <div className="title">JOSÉ EN LA VIDA ADULTA</div>
+      <button className="about-btn" onClick={() => setAbout(!about)} title="¿Qué es esto?">?</button>
       <div className="ver">v0.90 · el juego de la vida, ambientado en Cuenca, Ecuador</div>
       <div className="sub">"No importa cuántas veces cambie el camino. Lo importante es seguir avanzando."</div>
       {about && (
