@@ -18,13 +18,18 @@ function applyEffectToPlayer(player: PlayerState, effect: SystemEffect): PlayerS
     case 'liquidity':
       return { ...player, liquidity: applyNumeric(player.liquidity, effect) };
     case 'time':
-      return { ...player, timeLeft: applyNumeric(player.timeLeft, effect) };
+      return { ...player, timeLeft: Math.max(0, applyNumeric(player.timeLeft, effect)) };
     case 'location':
       return { ...player, currentLocation: effect.value as string };
+    case 'transport':
+      return { ...player, transport: effect.value as PlayerState['transport'] };
     case 'stats': {
       const key = effect.key as keyof PlayerState['stats'];
       const current = player.stats[key];
-      const updated = clamp(applyNumeric(current, effect), 0, 100);
+      // experience y knowledge sin tope; otros se clamean
+      const unbounded = key === 'experience' || key === 'knowledge';
+      const raw = applyNumeric(current, effect);
+      const updated = unbounded ? Math.max(0, raw) : clamp(raw, 0, 100);
       return { ...player, stats: { ...player.stats, [key]: updated } };
     }
     default:

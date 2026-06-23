@@ -1,6 +1,5 @@
 import { Location } from '../types';
 
-// Costos de traslado en horas, desde cualquier punto de la ciudad (mock simplificado para Semana 1).
 function travelCosts(walk: number, bus: number, taxi: number, bike: number, moto: number, car: number) {
   return { walk, bus, taxi, bicycle: bike, motorcycle: moto, car };
 }
@@ -8,10 +7,11 @@ function travelCosts(walk: number, bus: number, taxi: number, bike: number, moto
 export const locations: Location[] = [
   {
     id: 'centro_historico',
-    name: 'Centro Histórico',
+    name: 'Centro Historico',
     zone: 'centro',
     crimeRisk: 30,
     travelCostByTransport: travelCosts(3, 1, 0.5, 1.5, 0.75, 0.5),
+    boardPos: { col: 30, row: 6 },
   },
   {
     id: 'feria_libre',
@@ -19,6 +19,7 @@ export const locations: Location[] = [
     zone: 'comercial',
     crimeRisk: 45,
     travelCostByTransport: travelCosts(4, 1.5, 0.75, 2, 1, 0.75),
+    boardPos: { col: 12, row: 10 },
   },
   {
     id: 'zona_universitaria',
@@ -26,6 +27,7 @@ export const locations: Location[] = [
     zone: 'universitaria',
     crimeRisk: 15,
     travelCostByTransport: travelCosts(3.5, 1, 0.5, 1.5, 0.75, 0.5),
+    boardPos: { col: 12, row: 3 },
   },
   {
     id: 'barrio_residencial',
@@ -33,6 +35,7 @@ export const locations: Location[] = [
     zone: 'residencial',
     crimeRisk: 20,
     travelCostByTransport: travelCosts(2, 1, 0.5, 1, 0.5, 0.5),
+    boardPos: { col: 50, row: 10 },
   },
   {
     id: 'zona_industrial',
@@ -40,6 +43,7 @@ export const locations: Location[] = [
     zone: 'industrial',
     crimeRisk: 25,
     travelCostByTransport: travelCosts(5, 2, 1, 2.5, 1.25, 1),
+    boardPos: { col: 30, row: 14 },
   },
   {
     id: 'zona_financiera',
@@ -47,11 +51,12 @@ export const locations: Location[] = [
     zone: 'financiera',
     crimeRisk: 10,
     travelCostByTransport: travelCosts(3, 1, 0.5, 1.5, 0.75, 0.5),
+    boardPos: { col: 50, row: 3 },
   },
 ];
 
 export function getLocation(id: string): Location {
   const loc = locations.find((l) => l.id === id);
-  if (!loc) throw new Error(`Locación no encontrada: ${id}`);
+  if (!loc) throw new Error(`Locacion no encontrada: ${id}`);
   return loc;
 }
