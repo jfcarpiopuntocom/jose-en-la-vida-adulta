@@ -11,6 +11,7 @@ export interface World {
   salesMult: number;
 }
 
+// stop funcional del TABLERO (donde el jugador se mueve y actúa) — NO es un barrio
 export interface Location {
   id: string;
   code: string;
@@ -19,7 +20,15 @@ export interface Location {
   crimeRisk: number;
   x: number;
   y: number;
+  icon: string;
   tc: Record<TransportType, number>;
+}
+
+// barrio real de Cuenca — SOLO origen/nacimiento, no tiene posición en el tablero
+export interface Barrio {
+  id: string;
+  name: string;
+  crimeRisk: number;
 }
 
 export interface Job {
@@ -123,7 +132,7 @@ export interface PlayerState {
   vehicles: { type: TransportType; value: number }[];
   housing: HousingType;
   transport: TransportType;
-  birthBarrio: string;
+  birthBarrio: string;  // id de un Barrio (no de un stop del tablero)
   birthCrime: number;
   currentLocation: string;
   family: FamilyMember[];

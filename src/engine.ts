@@ -4,7 +4,7 @@ import {
 } from './types';
 import { CAREER_LADDER } from './types';
 import {
-  LOCATIONS, locById, JOBS, jobsAt, EVENTS, DEGREES, degreeById,
+  LOCATIONS, locById, BARRIOS, JOBS, jobsAt, EVENTS, DEGREES, degreeById,
   FNAMES_M, FNAMES_F, EMP_NAMES, RELATIONS, PERSONALITIES, PERS_WEALTH,
 } from './data';
 
@@ -41,14 +41,14 @@ function startingLiquidity(fam: FamilyMember[]): number {
 
 /* ---------- ESTADO INICIAL ---------- */
 export function newPlayer(id: string, name: string, idx: number, generation = 1): PlayerState {
-  const birth = pick(LOCATIONS);
+  const birth = pick(BARRIOS);
   const family = generateFamily();
   return {
     id, name, colorIndex: idx, generation,
     timeLeft: HOURS_PER_TURN, liquidity: startingLiquidity(family), bank: 0,
     businesses: [], vehicles: [],
     housing: 'family', transport: 'walk',
-    birthBarrio: birth.id, birthCrime: birth.crimeRisk, currentLocation: birth.id,
+    birthBarrio: birth.id, birthCrime: birth.crimeRisk, currentLocation: 'casa',
     family, job: null, careerLevel: 0,
     education: { completed: [], enrolledId: null, hoursInvested: 0 },
     impact: { profesional: 5, familiar: 10, comunitario: 5, empresarial: 0 },
@@ -206,7 +206,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   const out: GameAction[] = [];
   const loc = p.currentLocation;
 
-  if (loc === p.birthBarrio) {
+  if (loc === 'casa') {
     out.push({ id: 'rest', label: 'Descansar (8h)', hours: 8, desc: '+salud, -estrés', ok: p.timeLeft >= 8,
       run: () => { applyEff(p, [['time', -8], ['stat', 'health', 6], ['stat', 'stress', -10], ['stat', 'happiness', 3]]); return `${p.name} descansó en casa`; } });
     out.push({ id: 'social', label: 'Socializar (4h)', hours: 4, desc: '+felicidad, +impacto comunitario, -$15', ok: p.timeLeft >= 4 && p.liquidity >= 15,

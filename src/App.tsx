@@ -4,7 +4,9 @@ import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
   hasWon, canRetire, makeHeir, HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
 } from './engine';
-import { LOCATIONS, LINKS, locById } from './data';
+import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
+
+const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾'];
 import {
   saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory,
 } from './nostr';
@@ -202,15 +204,9 @@ function Hdr() {
 
 function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const [n, setN] = useState(1);
-  const [names, setNames] = useState<string[]>(['José']);
-  const [step, setStep] = useState<1 | 2>(1);
 
-  function go() {
-    const arr = Array.from({ length: n }, (_, i) => names[i] || (i === 0 ? 'José' : 'Jugador' + (i + 1)));
-    setNames(arr); setStep(2);
-  }
   function start() {
-    const players = names.slice(0, n).map((nm, i) => ({ id: 'p' + i, name: nm.trim() || 'Jugador' + (i + 1) }));
+    const players = Array.from({ length: n }, (_, i) => ({ id: 'p' + i, name: 'Jugador ' + (i + 1) }));
     onStart(newGame(players, DEFAULT_GOALS));
   }
   function resume() {
@@ -223,26 +219,13 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
       <Hdr />
       <div className="card">
         <div className="section-tag">Nueva partida — 1 a 4 jugadores, por turnos quincenales</div>
-        {step === 1 && (
-          <div className="row">
-            <label>¿Cuántos jugadores? (1-4)</label>
-            <input type="number" min={1} max={4} value={n}
-              onChange={(e) => setN(clamp(parseInt(e.target.value) || 1, 1, 4))} style={{ width: 80 }} />
-            <button onClick={go}>Continuar</button>
-          </div>
-        )}
-        {step === 2 && (
-          <>
-            {Array.from({ length: n }).map((_, i) => (
-              <div className="row" key={i}>
-                <label>Nombre jugador {i + 1}</label>
-                <input type="text" maxLength={14} value={names[i] || ''}
-                  onChange={(e) => { const a = [...names]; a[i] = e.target.value; setNames(a); }} />
-              </div>
-            ))}
-            <div className="row"><button className="primary" onClick={start}>Empezar a jugar</button></div>
-          </>
-        )}
+        <p className="pmeta">Empiezas como "Jugador 1", "Jugador 2"... como en Jones in the Fast Lane. Tu nombre real se pide al final, al ganar.</p>
+        <div className="row">
+          <label>¿Cuántos jugadores? (1-4)</label>
+          <input type="number" min={1} max={4} value={n}
+            onChange={(e) => setN(clamp(parseInt(e.target.value) || 1, 1, 4))} style={{ width: 80 }} />
+          <button className="primary" onClick={start}>Empezar a jugar</button>
+        </div>
         {hasLocalSave() && (
           <div className="row"><button onClick={resume}>Continuar partida guardada</button></div>
         )}
@@ -251,35 +234,57 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   );
 }
 
+function TimeClock({ hours }: { hours: number }) {
+  const pct = clamp(hours / 112, 0, 1);
+  const color = pct > 0.5 ? '#28ECAA' : pct > 0.2 ? '#E8A020' : '#FF5A4D';
+  const deg = pct * 360;
+  return (
+    <div className="clock" style={{ background: `conic-gradient(${color} ${deg}deg, #242424 0deg)` }}>
+      <div className="clock-inner">
+        <span className="clock-h">{Math.round(hours)}</span>
+        <span className="clock-u">h</span>
+      </div>
+    </div>
+  );
+}
+
 function Board({ game, onMove }: { game: GameState; onMove: (id: string) => void }) {
   const active = game.players[game.activePlayerIndex];
+  const pts = PATH_ORDER.map((id) => locById(id));
+  const loopPts = [...pts, pts[0]];
+  // tiles decorativos intermedios entre stops, para que se vea tablero/snake, no zonas sueltas
+  const dots: { x: number; y: number }[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = loopPts[i + 1];
+    dots.push({ x: a.x + (b.x - a.x) * 0.33, y: a.y + (b.y - a.y) * 0.33 });
+    dots.push({ x: a.x + (b.x - a.x) * 0.66, y: a.y + (b.y - a.y) * 0.66 });
+  }
   return (
     <div className="board-wrap">
-      <div className="board-title">CUENCA · click en una zona para moverte</div>
+      <div className="board-title-row">
+        <div className="board-title">CUENCA · tu tablero — tiempo es el recurso escaso</div>
+        <TimeClock hours={active.timeLeft} />
+      </div>
       <div className="board">
-        <svg className="links" viewBox="0 0 640 320">
-          {LINKS.map(([a, b], i) => {
-            const la = locById(a), lb = locById(b);
-            return <line key={i} x1={la.x} y1={la.y} x2={lb.x} y2={lb.y} stroke="#2a2a2a" strokeWidth={2} strokeDasharray="3 4" />;
-          })}
+        <svg className="links" viewBox="0 0 760 480">
+          <polygon points={pts.map((l) => `${l.x},${l.y}`).join(' ')} fill="none" stroke="var(--gold)" strokeWidth={3} strokeDasharray="2 10" strokeLinecap="round" />
+          {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={3} fill="#3a3a3a" />)}
         </svg>
         {LOCATIONS.map((loc) => {
           const here = loc.id === active.currentLocation;
           const cost = loc.tc[active.transport];
           const reachable = !here && active.timeLeft >= cost;
-          const isHome = loc.id === active.birthBarrio;
           const pawns = game.players.filter((p) => p.currentLocation === loc.id);
           return (
             <div key={loc.id} className={'node' + (here ? ' here' : '') + (reachable ? ' reachable' : '')}
               style={{ left: loc.x, top: loc.y }} onClick={() => onMove(loc.id)}>
-              <span className="code">{loc.code}</span>
+              <span className="stop-icon">{loc.icon}</span>
               <span className="nm">{loc.name}</span>
-              {isHome && <span className="nm" style={{ color: 'var(--gold)', WebkitTextFillColor: 'var(--gold)' }}>🏠 casa</span>}
               {here ? <span className="nm">aquí</span> : <span className="cost">{cost}h</span>}
               <div className="pawns">
                 {pawns.map((p) => (
-                  <span key={p.id} style={{ color: PLAYER_COLORS[p.colorIndex], WebkitTextFillColor: PLAYER_COLORS[p.colorIndex] }}>
-                    {p.id === active.id ? '★' : '●'}
+                  <span key={p.id} title={p.name} style={{ filter: p.id === active.id ? `drop-shadow(0 0 4px ${PLAYER_COLORS[p.colorIndex]})` : 'none' }}>
+                    {PAWN_ICONS[p.colorIndex]}
                   </span>
                 ))}
               </div>
@@ -311,7 +316,7 @@ function PlayerCard({ p, game }: { p: PlayerState; game: GameState }) {
     <div className={'pcard' + (active ? ' active' : '')}>
       <div className="pname" style={{ color: col, WebkitTextFillColor: col }}>{active ? '▶ ' : ''}{p.name}{p.generation > 1 ? ` (gen.${p.generation})` : ''}</div>
       <div className="pmeta">
-        nació en {locById(p.birthBarrio).name} 🏠 · ahora en {loc.name}<br />
+        nació en {barrioById(p.birthBarrio).name} · ahora en {loc.icon} {loc.name}<br />
         {p.job ? `${p.job.title}` : 'sin empleo'} · <b>{careerTitle(p.careerLevel)}</b><br />
         tiempo <b>{Math.round(p.timeLeft)}</b>/112h · <span className="money">${p.liquidity}</span> · banco ${p.bank}<br />
         estudios: {eduCount ? p.education.completed.join(', ') : '—'}{p.education.enrolledId ? ` (cursando ${p.education.enrolledId})` : ''}

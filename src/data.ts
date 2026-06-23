@@ -1,20 +1,48 @@
-import { Location, Job, Degree, GameEvent, Personality } from './types';
+import { Location, Barrio, Job, Degree, GameEvent, Personality } from './types';
 
+// TABLERO: 13 stops funcionales en loop ovalado (no rectangular), siguiendo la idea
+// de "alrededor del río + bastante Centro". Aquí NO se nace — solo se actúa y circula.
 export const LOCATIONS: Location[] = [
-  { id:'zona_universitaria', code:'UNI', name:'Universidad', zone:'universitaria', crimeRisk:15, x:120, y:60,  tc:{walk:3.5,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'zona_financiera',    code:'FIN', name:'Z. Financiera', zone:'financiera', crimeRisk:10, x:520, y:60,  tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'centro_historico',   code:'CEN', name:'Centro', zone:'centro', crimeRisk:30, x:320, y:130, tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'feria_libre',        code:'FER', name:'Feria Libre', zone:'comercial', crimeRisk:45, x:120, y:215, tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.75} },
-  { id:'barrio_residencial', code:'RES', name:'Z. Residencial', zone:'residencial', crimeRisk:20, x:520, y:215, tc:{walk:2,bus:1,taxi:0.5,bicycle:1,motorcycle:0.5,car:0.5} },
-  { id:'zona_industrial',    code:'IND', name:'Z. Industrial', zone:'industrial', crimeRisk:25, x:320, y:270, tc:{walk:5,bus:2,taxi:1,bicycle:2.5,motorcycle:1.25,car:1} },
+  { id:'casa',               code:'CASA', name:'Tu Casa',         zone:'hogar',       crimeRisk:15, x:380, y:60,  icon:'🏠', tc:{walk:0,bus:0,taxi:0,bicycle:0,motorcycle:0,car:0} },
+  { id:'zona_universitaria', code:'UNI',  name:'Universidad (UDA)',zone:'universitaria',crimeRisk:15, x:529, y:81,  icon:'🎓', tc:{walk:3.5,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'zona_financiera',    code:'FIN',  name:'Z. Financiera',   zone:'financiera',  crimeRisk:10, x:644, y:138, icon:'🏦', tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'terminal',           code:'TER',  name:'Terminal Terrestre',zone:'transporte',crimeRisk:35, x:698, y:218, icon:'🚌', tc:{walk:4,bus:1,taxi:0.5,bicycle:2,motorcycle:1,car:0.5} },
+  { id:'zona_industrial',    code:'IND',  name:'Z. Industrial',   zone:'industrial',  crimeRisk:25, x:679, y:304, icon:'🏭', tc:{walk:5,bus:2,taxi:1,bicycle:2.5,motorcycle:1.25,car:1} },
+  { id:'hospital',           code:'HOS',  name:'Hospital',        zone:'salud',       crimeRisk:10, x:592, y:375, icon:'🏥', tc:{walk:3,bus:1.5,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'feria_libre',        code:'FER',  name:'Feria Libre',     zone:'comercial',   crimeRisk:45, x:456, y:415, icon:'🛒', tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.75} },
+  { id:'centro_historico',   code:'CEN',  name:'Centro Histórico',zone:'centro',      crimeRisk:30, x:304, y:415, icon:'⛪', tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'parque_calderon',    code:'PAR',  name:'Parque Calderón', zone:'centro',      crimeRisk:20, x:168, y:375, icon:'🌳', tc:{walk:2.5,bus:1,taxi:0.5,bicycle:1.25,motorcycle:0.6,car:0.5} },
+  { id:'rio_tomebamba',      code:'RIO',  name:'Río Tomebamba',   zone:'rio',         crimeRisk:18, x:81,  y:304, icon:'🌉', tc:{walk:2,bus:1,taxi:0.5,bicycle:1,motorcycle:0.5,car:0.5} },
+  { id:'municipio',          code:'MUN',  name:'Municipio',       zone:'politico',    crimeRisk:15, x:62,  y:218, icon:'🏛️', tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'mall_rio',           code:'MAL',  name:'Mall del Río',    zone:'comercial',   crimeRisk:12, x:117, y:138, icon:'🛍️', tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.6} },
+  { id:'estadio',            code:'EST',  name:'Estadio',         zone:'deporte',     crimeRisk:22, x:231, y:81,  icon:'⚽', tc:{walk:3,bus:1.25,taxi:0.6,bicycle:1.5,motorcycle:0.75,car:0.5} },
 ];
 export const locById = (id: string): Location => LOCATIONS.find(l => l.id === id)!;
-export const LINKS: [string, string][] = [
-  ['zona_universitaria','centro_historico'],['zona_financiera','centro_historico'],
-  ['centro_historico','feria_libre'],['centro_historico','barrio_residencial'],
-  ['centro_historico','zona_industrial'],['feria_libre','zona_industrial'],
-  ['barrio_residencial','zona_industrial'],
+// orden del recorrido del tablero (loop ovalado cerrado, estilo Jones/Monopoly)
+export const PATH_ORDER = LOCATIONS.map(l => l.id);
+
+// BARRIOS reales de Cuenca — solo para nacimiento/origen familiar, NO son stops del tablero
+export const BARRIOS: Barrio[] = [
+  { id:'centro_colonial',   name:'El Centro (Casco Colonial)', crimeRisk:30 },
+  { id:'san_sebastian',     name:'San Sebastián',              crimeRisk:25 },
+  { id:'san_blas',          name:'San Blas',                   crimeRisk:28 },
+  { id:'el_vado',           name:'El Vado',                    crimeRisk:32 },
+  { id:'todos_santos',      name:'Todos Santos',                crimeRisk:22 },
+  { id:'las_herrerias',     name:'Las Herrerías',               crimeRisk:24 },
+  { id:'el_ejido',          name:'El Ejido',                    crimeRisk:14 },
+  { id:'yanuncay',          name:'Yanuncay',                    crimeRisk:20 },
+  { id:'remigio_crespo',    name:'Remigio Crespo',              crimeRisk:12 },
+  { id:'gran_colombia',     name:'Gran Colombia',               crimeRisk:26 },
+  { id:'totoracocha',       name:'Totoracocha',                 crimeRisk:35 },
+  { id:'el_vergel',         name:'El Vergel',                   crimeRisk:18 },
+  { id:'miraflores',        name:'Miraflores',                  crimeRisk:16 },
+  { id:'bellavista',        name:'Bellavista',                  crimeRisk:15 },
+  { id:'maria_auxiliadora', name:'María Auxiliadora',           crimeRisk:38 },
+  { id:'sayausi',           name:'Sayausí',                     crimeRisk:20 },
+  { id:'monay',             name:'Monay',                       crimeRisk:30 },
+  { id:'el_arenal',         name:'El Arenal',                   crimeRisk:33 },
 ];
+export const barrioById = (id: string): Barrio => BARRIOS.find(b => b.id === id)!;
 
 // minLevel: nivel mínimo de carrera para acceder al puesto
 export const JOBS: Job[] = [
