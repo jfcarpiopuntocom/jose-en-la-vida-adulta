@@ -23,6 +23,7 @@ export function App() {
   const [qi, setQi] = useState(0);
   const [flash, setFlash] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string>('');
+  const [zoom, setZoom] = useState<string | null>(null);
 
   // autosave + nostr en cada cambio de quincena
   function commit(g: GameState, persist = false) {
@@ -140,19 +141,49 @@ export function App() {
 
   return (
     <>
+      <RotateOverlay />
       <Hdr />
-      <Board game={game} onMove={moveTo} />
 
-      <div className="card">
-        <div className="turnbar">
-          <div className="who">Turno de {active.name} — {Math.round(active.timeLeft)}h</div>
-          <div>Quincena {game.turn} · {game.world.economy === 'good'
-            ? <span className="econ-good">● buen año</span> : <span className="econ-bad">● mal año</span>}</div>
-          <div style={{ display: 'flex', gap: 8 }}>
+      <div className="game-layout">
+        <Board game={game} onMove={moveTo} onZoom={() => setZoom(active.id)} />
+
+        <div className="dash">
+          <div className="dash-block">
+            <div className="who">{active.name} — {Math.round(active.timeLeft)}h</div>
+            <div className="dash-sub">Q{game.turn} · {game.world.economy === 'good'
+              ? <span className="econ-good">● buen año</span> : <span className="econ-bad">● mal año</span>}</div>
             {canRetire(active, game.turn) && <button onClick={retire} title="Modo Legado">Pasar el legado ✦</button>}
-            <button className="primary" onClick={endPlayerTurn}>Terminar mi quincena ▶</button>
+            <button className="primary" onClick={endPlayerTurn}>Terminar quincena ▶</button>
+          </div>
+
+          <div className="dash-block dash-mini">
+            {game.players.map((p) => {
+              const m = metrics(p);
+              const col = PLAYER_COLORS[p.colorIndex];
+              const isActive = p.id === active.id;
+              return (
+                <div key={p.id} className={'mini-row' + (isActive ? ' here' : '')} onClick={() => setZoom(p.id)}>
+                  <span style={{ color: col, WebkitTextFillColor: col }}>{PAWN_ICONS[p.colorIndex]} {p.name}</span>
+                  <span className="mini-stats">${Math.round(m.patrimonio)} · {Math.round(m.bienestar)}♥ · {Math.round(m.conocimientos)}✎</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="dash-block dash-log">
+            <div className="section-tag">Historia</div>
+            <div className="log">
+              {[...game.log].slice(-10).reverse().map((l, i) => (
+                <div key={i} className={'logline ' + (l.kind === 'pos' ? 'ev-pos' : l.kind === 'neg' ? 'ev-neg' : '')}>
+                  Q{l.turn} · {l.text}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="card">
         <div className="section-tag">Acciones en {locById(active.currentLocation).name}</div>
         <div className="actions">
           {acts.length === 0
@@ -166,20 +197,17 @@ export function App() {
         <div className="saveline">{savedAt ? `Guardado automático ${savedAt} · local + Nostr` : 'Se guarda solo al cerrar cada quincena'}</div>
       </div>
 
-      <div className="players-row">
-        {game.players.map((p) => <PlayerCard key={p.id} p={p} game={game} />)}
-      </div>
-
-      <div className="card">
-        <div className="section-tag">Tu historia (eventos recientes)</div>
-        <div className="log">
-          {[...game.log].slice(-14).reverse().map((l, i) => (
-            <div key={i} className={'logline ' + (l.kind === 'pos' ? 'ev-pos' : l.kind === 'neg' ? 'ev-neg' : '')}>
-              Q{l.turn} · {l.text}
+      {zoom && (() => {
+        const zp = game.players.find((p) => p.id === zoom);
+        return zp ? (
+          <div className="modal-bg" onClick={() => setZoom(null)}>
+            <div className="modal modal-zoom" onClick={(e) => e.stopPropagation()}>
+              <button className="zoom-close" onClick={() => setZoom(null)}>✕</button>
+              <PlayerCard p={zp} game={game} />
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        ) : null;
+      })()}
 
       {queue.length > 0 && qi < queue.length && (
         <EventModal pend={queue[qi]} onNext={advanceQueue} />
@@ -257,7 +285,16 @@ function TimeClock({ hours }: { hours: number }) {
   );
 }
 
-function Board({ game, onMove }: { game: GameState; onMove: (id: string) => void }) {
+function RotateOverlay() {
+  return (
+    <div className="rotate-overlay">
+      <div className="rotate-icon">⤵️📱⤴️</div>
+      <div>Gira tu teléfono — este tablero se juega en horizontal</div>
+    </div>
+  );
+}
+
+function Board({ game, onMove, onZoom }: { game: GameState; onMove: (id: string) => void; onZoom: () => void }) {
   const active = game.players[game.activePlayerIndex];
   const pts = PATH_ORDER.map((id) => locById(id));
   const loopPts = [...pts, pts[0]];
@@ -272,6 +309,7 @@ function Board({ game, onMove }: { game: GameState; onMove: (id: string) => void
     <div className="board-wrap">
       <div className="board-title-row">
         <div className="board-title">CUENCA · tu tablero — tiempo es el recurso escaso</div>
+        <button className="zoom-btn" onClick={onZoom} title="Ver mi ficha en grande">🔍</button>
         <TimeClock hours={active.timeLeft} />
       </div>
       <div className="board">
