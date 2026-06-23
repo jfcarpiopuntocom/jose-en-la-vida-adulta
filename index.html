@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<meta name="theme-color" content="#0a0a0a">
+<title>José en la Vida Adulta — v0.88</title>
+<style>
+  :root {
+    color-scheme: light only;
+    forced-color-adjust: none;
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --panel2: #1c1c1c;
+    --line: #2a2a2a;
+    --white: #FFFFFF;
+    --soft: #CCCCCC;
+    --gold: #E8A020;
+    --green: #28ECAA;
+    --orange: #E86040;
+    --pink: #F06DD0;
+    --magenta: #C77DFF;
+    --red: #FF5A4D;
+    --p0: #E8A020;
+    --p1: #28ECAA;
+    --p2: #F06DD0;
+    --p3: #E86040;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--white) !important;
+    -webkit-text-fill-color: var(--white);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+  body { padding: 12px; max-width: 1100px; margin: 0 auto; }
+  h1, h2, h3, p, span, div, button, label, li {
+    color: var(--white);
+    -webkit-text-fill-color: var(--white);
+  }
+  .mono { font-family: 'Consolas', 'Courier New', monospace; }
+
+  header { text-align: center; padding: 10px 0 14px; }
+  header .title {
+    font-size: 26px; font-weight: 800; letter-spacing: 0.5px;
+    color: var(--gold); -webkit-text-fill-color: var(--gold);
+  }
+  header .ver { font-size: 14px; color: var(--soft); -webkit-text-fill-color: var(--soft); }
+  header .sub { font-size: 15px; color: var(--white); -webkit-text-fill-color: var(--white); margin-top: 6px; font-style: italic; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px; margin-bottom: 14px;
+  }
+  button {
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    background: var(--panel2); color: var(--white); -webkit-text-fill-color: var(--white);
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 11px 14px; min-height: 44px;
+    transition: border-color .12s, background .12s;
+  }
+  button:hover { border-color: var(--gold); }
+  button.primary { background: var(--gold); color: #1a1200; -webkit-text-fill-color: #1a1200; border-color: var(--gold); }
+  button.primary:hover { background: #ffb733; }
+  button:disabled { color: #555; -webkit-text-fill-color: #555; cursor: not-allowed; border-color: var(--line); }
+  button:disabled:hover { border-color: var(--line); }
+
+  input[type=text], input[type=number] {
+    font-size: 16px; background: var(--panel2); color: var(--white);
+    -webkit-text-fill-color: var(--white);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+  }
+
+  /* ---- Setup ---- */
+  #setup .row { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  #setup label { font-size: 15px; color: var(--soft); -webkit-text-fill-color: var(--soft); min-width: 130px; }
+
+  /* ---- Board ---- */
+  .board-wrap { background: #060606; border: 1px solid var(--line); border-radius: 12px; padding: 10px; overflow-x: auto; }
+  .board-title { font-size: 14px; color: var(--gold); -webkit-text-fill-color: var(--gold); font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
+  .board {
+    position: relative; width: 640px; height: 300px; margin: 0 auto;
+  }
+  .node {
+    position: absolute; transform: translate(-50%, -50%);
+    border: 2px solid var(--line); border-radius: 10px;
+    background: var(--panel2); padding: 7px 9px; cursor: pointer;
+    text-align: center; min-width: 96px;
+    transition: border-color .12s, background .12s;
+  }
+  .node:hover { border-color: var(--gold); }
+  .node.here { border-color: var(--gold); background: #241a05; }
+  .node.reachable { border-color: var(--green); }
+  .node .code { font-size: 17px; font-weight: 800; color: var(--white); -webkit-text-fill-color: var(--white); }
+  .node .nm { font-size: 13px; color: var(--soft); -webkit-text-fill-color: var(--soft); display: block; margin-top: 2px; }
+  .node .cost { font-size: 13px; color: var(--gold); -webkit-text-fill-color: var(--gold); font-weight: 700; }
+  .node .pawns { font-size: 18px; margin-top: 3px; min-height: 22px; letter-spacing: 2px; }
+  svg.links { position: absolute; top: 0; left: 0; width: 640px; height: 300px; pointer-events: none; }
+
+  /* ---- HUD ---- */
+  .players-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .pcard { flex: 1 1 230px; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 12px; }
+  .pcard.active { border-color: var(--gold); border-width: 2px; }
+  .pname { font-size: 18px; font-weight: 800; }
+  .pmeta { font-size: 14px; color: var(--soft); -webkit-text-fill-color: var(--soft); margin: 4px 0 8px; }
+  .money { color: var(--gold); -webkit-text-fill-color: var(--gold); font-weight: 800; }
+  .metric { margin: 6px 0; }
+  .metric .lab { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; }
+  .barbg { height: 12px; background: #242424; border-radius: 6px; overflow: hidden; margin-top: 3px; }
+  .barfill { height: 100%; border-radius: 6px; }
+  .check { color: var(--green); -webkit-text-fill-color: var(--green); font-weight: 800; }
+
+  /* ---- Actions ---- */
+  .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; }
+  .actions button { flex: 1 1 200px; text-align: left; }
+  .actions .desc { display: block; font-size: 13px; color: var(--soft); -webkit-text-fill-color: var(--soft); font-weight: 400; margin-top: 3px; }
+  .turnbar { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .turnbar .who { font-size: 18px; font-weight: 800; color: var(--gold); -webkit-text-fill-color: var(--gold); }
+  .econ-good { color: var(--green); -webkit-text-fill-color: var(--green); font-weight: 700; }
+  .econ-bad { color: var(--red); -webkit-text-fill-color: var(--red); font-weight: 700; }
+
+  /* ---- Log / events ---- */
+  .log { max-height: 200px; overflow-y: auto; }
+  .logline { font-size: 14px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .ev-pos { color: var(--green); -webkit-text-fill-color: var(--green); }
+  .ev-neg { color: var(--red); -webkit-text-fill-color: var(--red); }
+  .ev-silver { color: var(--gold); -webkit-text-fill-color: var(--gold); }
+
+  /* ---- Modal ---- */
+  .modal-bg {
+    position: fixed; inset: 0; background: #000000d9;
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .modal {
+    background: var(--panel); border: 2px solid var(--gold); border-radius: 14px;
+    padding: 20px; max-width: 460px; width: 100%;
+  }
+  .modal h3 { font-size: 20px; margin-bottom: 10px; }
+  .modal .body { font-size: 16px; color: var(--white); -webkit-text-fill-color: var(--white); line-height: 1.45; }
+  .modal .silver { font-size: 15px; color: var(--gold); -webkit-text-fill-color: var(--gold); margin-top: 12px; line-height: 1.45; }
+  .modal button { width: 100%; margin-top: 16px; }
+
+  .section-tag { font-size: 13px; font-weight: 700; color: var(--gold); -webkit-text-fill-color: var(--gold); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .hidden { display: none !important; }
+
+  @media (prefers-color-scheme: dark) {
+    html, body { color: var(--white) !important; -webkit-text-fill-color: var(--white) !important; }
+    h1,h2,h3,p,span,div,button,label,li { color: var(--white); -webkit-text-fill-color: var(--white); }
+  }
+  @media (max-width: 680px) {
+    .board { transform: scale(0.92); transform-origin: top left; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">JOSÉ EN LA VIDA ADULTA</div>
+  <div class="ver">v0.88 · un simulador de Cuenca, Ecuador</div>
+  <div class="sub">"No importa cuántas veces cambie el camino. Lo importante es seguir avanzando."</div>
+</header>
+
+<!-- SETUP -->
+<div id="setup" class="card">
+  <div class="section-tag">Nueva partida</div>
+  <div class="row">
+    <label for="numPlayers">¿Cuántos jugadores? (1-4)</label>
+    <input type="number" id="numPlayers" min="1" max="4" value="1" style="width:80px">
+    <button onclick="renderNameInputs()">Continuar</button>
+  </div>
+  <div id="nameInputs"></div>
+  <div class="row hidden" id="startRow">
+    <button class="primary" onclick="startGame()">Empezar a jugar</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" class="hidden">
+  <div class="board-wrap">
+    <div class="board-title">CUENCA · tablero de la quincena · click en una zona para moverte</div>
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="card">
+    <div class="turnbar">
+      <div class="who" id="turnWho"></div>
+      <div id="turnEcon"></div>
+      <button class="primary" onclick="endPlayerTurn()" id="passBtn">Terminar mi quincena ▶</button>
+    </div>
+    <div class="section-tag" id="actLocLabel">Acciones</div>
+    <div class="actions" id="actions"></div>
+  </div>
+
+  <div class="players-row" id="playersRow"></div>
+
+  <div class="card">
+    <div class="section-tag">Tu historia (eventos recientes)</div>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<!-- VICTORY -->
+<div id="victory" class="hidden card"></div>
+
+<div id="modalRoot"></div>
+
+<script>
+"use strict";
+
+/* ============ DATA ============ */
+
+const HOURS_PER_TURN = 112;
+
+const LOCATIONS = [
+  { id:'zona_universitaria', code:'UNI', name:'Universidad', zone:'universitaria', crimeRisk:15, x:120, y:60,  tc:{walk:3.5,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'zona_financiera',    code:'FIN', name:'Z. Financiera', zone:'financiera', crimeRisk:10, x:520, y:60,  tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'centro_historico',   code:'CEN', name:'Centro', zone:'centro', crimeRisk:30, x:320, y:130, tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'feria_libre',        code:'FER', name:'Feria Libre', zone:'comercial', crimeRisk:45, x:120, y:215, tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.75} },
+  { id:'barrio_residencial', code:'RES', name:'Tu Barrio', zone:'residencial', crimeRisk:20, x:520, y:215, tc:{walk:2,bus:1,taxi:0.5,bicycle:1,motorcycle:0.5,car:0.5} },
+  { id:'zona_industrial',    code:'IND', name:'Z. Industrial', zone:'industrial', crimeRisk:25, x:320, y:270, tc:{walk:5,bus:2,taxi:1,bicycle:2.5,motorcycle:1.25,car:1} },
+];
+const LINKS = [
+  ['zona_universitaria','centro_historico'],['zona_financiera','centro_historico'],
+  ['centro_historico','feria_libre'],['centro_historico','barrio_residencial'],
+  ['centro_historico','zona_industrial'],['feria_libre','zona_industrial'],
+  ['barrio_residencial','zona_industrial'],
+];
+const locById = id => LOCATIONS.find(l=>l.id===id);
+
+const JOBS = [
+  { id:'cajero_feria', title:'Cajero en Feria Libre', locationId:'feria_libre', hours:8, wage:28, stress:4, exp:2, minDep:30 },
+  { id:'asistente_centro', title:'Asistente admin. (Centro)', locationId:'centro_historico', hours:8, wage:38, stress:5, exp:3, minDep:45 },
+  { id:'obrero_industrial', title:'Obrero (Z. Industrial)', locationId:'zona_industrial', hours:10, wage:42, stress:7, exp:2, minDep:35 },
+  { id:'cajero_banco', title:'Cajero de banco (Financiera)', locationId:'zona_financiera', hours:8, wage:50, stress:5, exp:4, minDep:60 },
+  { id:'monitor_universidad', title:'Monitor universitario', locationId:'zona_universitaria', hours:6, wage:22, stress:2, exp:3, minDep:40 },
+];
+const jobsAt = id => JOBS.filter(j=>j.locationId===id);
+
+/* 33 eventos. effects/silver: [target, op, key, value]. target: liq|stat|time */
+const EVENTS = [
+  // CRIMEN
+  { id:'don_choro_robo', cat:'crimen', neg:true, w:8, imp:2, cond:[['minTurn',2]], wt:[['housing','rent_cheap',1.8],['statLt','reputation',35,1.5]],
+    eff:[['liq',-120],['stat','stress',15]], silver:[['stat','resilience',5],['stat','experience',1]],
+    title:'Don Choro hizo de las suyas', body:'Te asaltaron camino a casa. Perdiste $120 y la tranquilidad de la semana.', sl:'Aprendiste qué calles evitar. Esa cicatriz te hace más sagaz.' },
+  { id:'hurto_inventario', cat:'crimen', neg:true, w:5, imp:1, cond:[['minTurn',4]], wt:[],
+    eff:[['liq',-60]], silver:[['stat','resilience',3]],
+    title:'Hurto menor', body:'Un descuido en la Feria. Te volaron la cartera con $60.', sl:'Ya sabes guardar el efectivo en dos lugares.' },
+  { id:'estafa_telefono', cat:'crimen', neg:true, w:4, imp:1, cond:[], wt:[['statLt','experience',20,1.6]],
+    eff:[['liq',-45],['stat','stress',6]], silver:[['stat','experience',2]],
+    title:'Estafa telefónica', body:'Te llamaron haciéndose pasar por el banco. Caíste por $45.', sl:'Ya no contestas números desconocidos.' },
+  { id:'don_choro_redada', cat:'crimen', neg:false, w:3, imp:2, cond:[['minTurn',6]], wt:[],
+    eff:[['stat','happiness',5],['stat','reputation',3]], silver:[],
+    title:'Cayó la banda de Don Choro', body:'La policía atrapó a la banda. El barrio respira tranquilo.', sl:'' },
+  // FAMILIA
+  { id:'tio_sabio', cat:'familia', neg:false, w:7, imp:2, cond:[['minTurn',2]], wt:[],
+    eff:[['stat','knowledge',4],['stat','happiness',3]], silver:[],
+    title:'Tu tío Pedro te invitó a un café', body:'Hablaron tres horas. Te contó cómo levantó su negocio en los 90s.', sl:'' },
+  { id:'herencia', cat:'familia', neg:false, w:2, imp:3, cond:[['minTurn',8]], wt:[],
+    eff:[['liq',600],['stat','happiness',-4]], silver:[],
+    title:'Herencia inesperada', body:'Tu abuela falleció y te dejó $600. Tristeza y oportunidad mezcladas.', sl:'' },
+  { id:'prestamo_primo', cat:'familia', neg:true, w:6, imp:1, cond:[['minTurn',3]], wt:[['liquidityLt',200,0.3]],
+    eff:[['liq',-80],['stat','stress',3]], silver:[['stat','reputation',4],['stat','happiness',2]],
+    title:'Un primo te pidió prestado', body:'No podías negarte. Soltaste $80.', sl:'En la familia ahora te ven como el que ayuda.' },
+  { id:'cumple_tia', cat:'familia', neg:false, w:9, imp:1, cond:[], wt:[],
+    eff:[['liq',-30],['stat','happiness',6],['stat','stress',-4]], silver:[],
+    title:'Cumpleaños de tía Rosa', body:'Llevaste regalo y compartiste. Comida rica, risas, recargada de energía.', sl:'' },
+  { id:'recom_primo', cat:'familia', neg:false, w:5, imp:2, cond:[['minTurn',3]], wt:[['hasJob',false,2.5]],
+    eff:[['stat','dependability',4],['stat','reputation',3]], silver:[],
+    title:'Tu primo te recomendó', body:'Habló bien de ti en su trabajo. Tu nombre suena en círculos nuevos.', sl:'' },
+  { id:'conflicto_fam', cat:'familia', neg:true, w:5, imp:1, cond:[['minTurn',5]], wt:[],
+    eff:[['stat','happiness',-6],['stat','stress',8]], silver:[['stat','resilience',4]],
+    title:'Discusión familiar fuerte', body:'Reunión que terminó mal. Quedó el sabor amargo.', sl:'A veces los límites se ponen así. Aprendiste a no ceder en todo.' },
+  // SALUD
+  { id:'gripe', cat:'salud', neg:true, w:6, imp:1, cond:[], wt:[['statGt','stress',65,2.0],['statLt','health',50,1.5]],
+    eff:[['stat','health',-12],['liq',-25]], silver:[['stat','stress',-8]],
+    title:'Te dio gripe', body:'Tres días con fiebre. Gastaste $25 en medicinas.', sl:'El cuerpo te obligó a parar. Bajó el estrés.' },
+  { id:'enf_estres', cat:'salud', neg:true, w:4, imp:2, cond:[['statGt','stress',75]], wt:[],
+    eff:[['stat','health',-20],['stat','happiness',-10],['liq',-80]], silver:[['stat','resilience',8],['stat','stress',-15]],
+    title:'El estrés te pasó factura', body:'Ataque de ansiedad. Médico, exámenes, $80. Una semana fuera de combate.', sl:'Aprendiste a leer las señales. No te volverá a pasar tan fuerte.' },
+  { id:'chequeo', cat:'salud', neg:false, w:4, imp:1, cond:[['minTurn',4]], wt:[],
+    eff:[['liq',-20],['stat','health',5],['stat','happiness',3]], silver:[],
+    title:'Chequeo médico', body:'Pagaste $20 al doctor. Todo bien. Te tranquilizó saber.', sl:'' },
+  { id:'descanso', cat:'salud', neg:false, w:5, imp:1, cond:[], wt:[['statGt','stress',50,1.5]],
+    eff:[['stat','stress',-10],['stat','happiness',4]], silver:[],
+    title:'Día gris ideal para descansar', body:'Cancelaron una reunión. Tomaste la tarde para ti.', sl:'' },
+  // TRABAJO
+  { id:'ascenso', cat:'trabajo', neg:false, w:3, imp:3, cond:[['minTurn',6],['hasJob',true],['statGt','dependability',65]], wt:[],
+    eff:[['stat','leadership',5],['stat','happiness',8],['liq',150]], silver:[],
+    title:'¡Ascenso!', body:'Te llamaron a oficina. Subida de cargo y bono de $150.', sl:'' },
+  { id:'despido', cat:'trabajo', neg:true, w:3, imp:3, cond:[['hasJob',true],['minTurn',5]], wt:[['statLt','dependability',40,2.0]],
+    eff:[['stat','stress',18],['stat','happiness',-10]], silver:[['liq',200],['stat','resilience',10]], firesJob:true,
+    title:'Te despidieron', body:'Recorte de personal. El cuello se cierra.', sl:'Te dieron $200 de liquidación. Y por dentro, algo se endurece para mejor.' },
+  { id:'freelance', cat:'trabajo', neg:false, w:6, imp:2, cond:[['minTurn',3]], wt:[['statGt','knowledge',25,1.5]],
+    eff:[['liq',90],['stat','experience',3]], silver:[],
+    title:'Trabajito freelance', body:'Un conocido te pidió un favor pagado. $90 limpios.', sl:'' },
+  { id:'felicita', cat:'trabajo', neg:false, w:5, imp:1, cond:[['hasJob',true]], wt:[['statGt','dependability',60,1.8]],
+    eff:[['stat','happiness',4],['stat','dependability',2]], silver:[],
+    title:'Reconocimiento del jefe', body:'Te felicitó delante del equipo. Vale.', sl:'' },
+  { id:'companero', cat:'trabajo', neg:true, w:4, imp:1, cond:[['hasJob',true]], wt:[],
+    eff:[['stat','stress',6],['stat','happiness',-3]], silver:[['stat','leadership',2]],
+    title:'Compañero conflictivo', body:'Tuviste que mediar un drama en el trabajo. Se fue la mañana.', sl:'Manejaste la situación. Algo de liderazgo se nota.' },
+  // OPORTUNIDAD
+  { id:'curso_muni', cat:'oportunidad', neg:false, w:6, imp:1, cond:[], wt:[],
+    eff:[['stat','knowledge',5]], silver:[],
+    title:'Curso gratis del municipio', body:'Te metiste a un taller. Aprendiste algo útil.', sl:'' },
+  { id:'cliente_grande', cat:'oportunidad', neg:false, w:3, imp:2, cond:[['minTurn',4]], wt:[],
+    eff:[['liq',180],['stat','reputation',5]], silver:[],
+    title:'Cliente grande inesperado', body:'Un encargo gordo cayó del cielo. $180 y una referencia que vale.', sl:'' },
+  { id:'beca', cat:'oportunidad', neg:false, w:2, imp:2, cond:[['minTurn',5],['statGt','knowledge',20]], wt:[],
+    eff:[['liq',250],['stat','happiness',6]], silver:[],
+    title:'Beca de estudio', body:'Aplicaste hace tiempo. Te llamaron. $250 para tus estudios.', sl:'' },
+  { id:'invitacion', cat:'oportunidad', neg:false, w:5, imp:1, cond:[['minTurn',2]], wt:[],
+    eff:[['stat','reputation',3],['stat','happiness',2]], silver:[],
+    title:'Te invitaron a un evento', body:'Networking en el Centro Histórico. Conociste gente.', sl:'' },
+  { id:'idea_negocio', cat:'oportunidad', neg:false, w:4, imp:1, cond:[['minTurn',3]], wt:[['statGt','knowledge',15,1.4]],
+    eff:[['stat','experience',2],['stat','happiness',3]], silver:[],
+    title:'Se te prendió el foco', body:'Caminando viste un nicho. Apuntaste todo en una libreta.', sl:'' },
+  // POLITICO
+  { id:'impuesto', cat:'politico', neg:true, w:4, imp:2, cond:[['minTurn',4]], wt:[],
+    eff:[['liq',-50],['stat','stress',5]], silver:[['stat','experience',2]],
+    title:'Nuevo impuesto municipal', body:'El alcalde lo anunció. Te tocó pagar $50.', sl:'Ya sabes leer la letra chica de los anuncios oficiales.' },
+  { id:'subsidio', cat:'politico', neg:false, w:3, imp:1, cond:[['minTurn',3]], wt:[['liquidityLt',250,2.0]],
+    eff:[['liq',90]], silver:[],
+    title:'Bono estatal', body:'Salió un subsidio del gobierno. Te tocó algo: $90.', sl:'' },
+  { id:'tramite', cat:'politico', neg:true, w:5, imp:1, cond:[], wt:[],
+    eff:[['stat','stress',6]], silver:[['stat','experience',1]],
+    title:'Trámite eterno en oficina pública', body:'Horas haciendo cola. Burocracia pura.', sl:'Aprendiste el sistema. La próxima vas directo a la ventanilla correcta.' },
+  { id:'obra_publica', cat:'politico', neg:false, w:3, imp:1, cond:[['minTurn',5]], wt:[],
+    eff:[['stat','happiness',3],['stat','reputation',2]], silver:[],
+    title:'Arreglaron la avenida', body:'Por fin asfaltaron. El barrio se nota distinto.', sl:'' },
+  // ECONOMIA
+  { id:'inflacion', cat:'economia', neg:true, w:5, imp:1, cond:[['minTurn',3]], wt:[],
+    eff:[['liq',-40]], silver:[['stat','experience',1]],
+    title:'Subió el precio de la comida', body:'El mercado amaneció más caro. $40 menos en la quincena.', sl:'Empezaste a comparar precios. Eso se queda.' },
+  { id:'baja_combustible', cat:'economia', neg:false, w:3, imp:1, cond:[], wt:[],
+    eff:[['liq',25]], silver:[],
+    title:'Bajó el combustible', body:'Ahorraste $25 en transporte esta quincena.', sl:'' },
+  { id:'recesion', cat:'economia', neg:true, w:2, imp:3, cond:[['minTurn',8]], wt:[],
+    eff:[['stat','stress',10]], silver:[['stat','experience',3],['stat','resilience',5]], setEcon:'bad',
+    title:'Se anuncia recesión', body:'Noticieros, redes, conversaciones. El ambiente económico se enfría.', sl:'Los que aprendieron a navegar la última crisis hoy son los más sólidos.' },
+  { id:'recuperacion', cat:'economia', neg:false, w:2, imp:3, cond:[['minTurn',10]], wt:[],
+    eff:[['stat','happiness',8]], silver:[], setEcon:'good',
+    title:'Anuncian recuperación', body:'Los indicadores giran. Se siente en la calle.', sl:'' },
+  { id:'remate', cat:'economia', neg:false, w:4, imp:1, cond:[], wt:[],
+    eff:[['liq',35],['stat','happiness',2]], silver:[],
+    title:'Remate en el mercado', body:'Aprovechaste rebajas. Ahorro real: $35.', sl:'' },
+];
+// Validación: ningún negativo sin silver
+EVENTS.forEach(e=>{ if(e.neg && (!e.silver||e.silver.length===0)) throw new Error('Evento negativo sin silver: '+e.id); });
+
+const DEFAULT_GOALS = { patrimonio:8000, bienestar:75, conocimientos:60, impacto:60 };
+const PLAYER_COLORS = ['var(--p0)','var(--p1)','var(--p2)','var(--p3)'];
+
+/* ============ STATE ============ */
+let G = null;
+
+function newPlayer(id, name, idx){
+  return {
+    id, name, colorIndex:idx,
+    timeLeft:HOURS_PER_TURN, liquidity:300,
+    bank:0, businesses:[], vehicles:[],
+    housing:'family', transport:'walk', currentLocation:'barrio_residencial',
+    job:null,
+    stats:{ experience:0, dependability:50, leadership:0, health:80, stress:20, happiness:60, reputation:30, resilience:0, knowledge:5 },
+  };
+}
+function newGame(players){
+  const econBad = Math.random()<0.5;
+  return {
+    turn:1, activePlayerIndex:0,
+    players: players.map((p,i)=>newPlayer(p.id,p.name,i)),
+    world:{ economy: econBad?'bad':'good', wageMult: econBad?0.8:1, salesMult: econBad?0.8:1 },
+    log:[], goals: {...DEFAULT_GOALS}, over:false,
+  };
+}
+
+/* ============ ENGINE ============ */
+const UNBOUNDED = new Set(['experience','knowledge']);
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+function applyEff(p, eff){
+  for(const e of eff){
+    const t=e[0];
+    if(t==='liq'){ p.liquidity += e[1]; }
+    else if(t==='time'){ p.timeLeft = Math.max(0, p.timeLeft + e[1]); }
+    else if(t==='stat'){
+      const k=e[1], v=e[2];
+      const raw = p.stats[k]+v;
+      p.stats[k] = UNBOUNDED.has(k) ? Math.max(0,raw) : clamp(raw,0,100);
+    }
+  }
+}
+
+function evalCond(c, p, turn){
+  switch(c[0]){
+    case 'minTurn': return turn>=c[1];
+    case 'maxTurn': return turn<=c[1];
+    case 'housing': return p.housing===c[1];
+    case 'transport': return p.transport===c[1];
+    case 'statGt': return p.stats[c[1]]>c[2];
+    case 'statLt': return p.stats[c[1]]<c[2];
+    case 'hasJob': return (p.job!==null)===c[1];
+    case 'liquidityLt': return p.liquidity<c[1];
+  }
+  return true;
+}
+function weightOf(ev, p, turn){
+  let w=ev.w;
+  for(const wm of ev.wt){
+    // wm formats: ['housing','rent_cheap',mult] | ['statLt','reputation',35,mult] | ['hasJob',false,mult] | ['liquidityLt',200,mult]
+    let cond, mult;
+    if(wm[0]==='statGt'||wm[0]==='statLt'){ cond=[wm[0],wm[1],wm[2]]; mult=wm[3]; }
+    else { cond=[wm[0],wm[1]]; mult=wm[2]; }
+    if(evalCond(cond,p,turn)) w*=mult;
+  }
+  return w;
+}
+
+// 25% no pasa nada -> el jugador es el timón
+function rollEvent(p, turn){
+  const cands = EVENTS.filter(e=> e.cond.every(c=>evalCond(c,p,turn)) );
+  if(cands.length===0) return null;
+  if(Math.random()<0.25) return null;
+  const ws = cands.map(e=>weightOf(e,p,turn));
+  const total = ws.reduce((s,w)=>s+w,0);
+  let r = Math.random()*total, pick=cands[cands.length-1];
+  for(let i=0;i<cands.length;i++){ r-=ws[i]; if(r<=0){ pick=cands[i]; break; } }
+  return pick;
+}
+
+/* ============ METRICS ============ */
+function patrimonio(p){
+  const biz = p.businesses.reduce((s,b)=>s+b.capital,0);
+  const veh = p.vehicles.reduce((s,v)=>s+v.value,0);
+  return p.liquidity + p.bank + biz + veh;
+}
+function bienestar(p){ return Math.round((p.stats.health + p.stats.happiness + (100-p.stats.stress))/3); }
+function conocimientos(p){ return Math.min(100, Math.round(p.stats.knowledge + p.stats.experience*0.5)); }
+function impacto(p){ return Math.min(100, Math.round(p.stats.reputation + p.stats.leadership*0.5)); }
+function metrics(p){ return { patrimonio:patrimonio(p), bienestar:bienestar(p), conocimientos:conocimientos(p), impacto:impacto(p) }; }
+
+/* ============ ACTIONS ============ */
+function actionsFor(p){
+  const out=[]; const loc=p.currentLocation;
+  if(loc==='barrio_residencial'){
+    out.push({ id:'rest', label:'Descansar (8h)', hours:8, desc:'+salud, -estrés', ok:p.timeLeft>=8,
+      run:()=>{ applyEff(p,[['time',-8],['stat','health',6],['stat','stress',-10],['stat','happiness',3]]); return `${p.name} descansó en casa (+salud, -estrés)`; } });
+    out.push({ id:'social', label:'Socializar (4h)', hours:4, desc:'+felicidad, +reputación, -$15', ok:p.timeLeft>=4&&p.liquidity>=15,
+      run:()=>{ applyEff(p,[['time',-4],['liq',-15],['stat','happiness',7],['stat','reputation',3]]); return `${p.name} salió con amigos (+felicidad, +reputación)`; } });
+  }
+  if(loc==='zona_universitaria'){
+    out.push({ id:'study', label:'Estudiar (10h)', hours:10, desc:'+8 conocimientos, -$20', ok:p.timeLeft>=10&&p.liquidity>=20,
+      run:()=>{ applyEff(p,[['time',-10],['liq',-20],['stat','knowledge',8],['stat','happiness',1]]); return `${p.name} estudió 10h (+8 conocimientos)`; } });
+  }
+  if(loc==='zona_financiera'){
+    out.push({ id:'save', label:'Ahorrar $100 en banco', hours:1, desc:'mueve liquidez a patrimonio', ok:p.timeLeft>=1&&p.liquidity>=100,
+      run:()=>{ applyEff(p,[['time',-1],['liq',-100]]); p.bank+=100; return `${p.name} ahorró $100 en el banco`; } });
+  }
+  if(loc==='feria_libre'){
+    if(p.businesses.length===0){
+      out.push({ id:'startbiz', label:'Abrir negocio ($500, 12h)', hours:12, desc:'comercio con ventas pasivas', ok:p.timeLeft>=12&&p.liquidity>=500,
+        run:()=>{ applyEff(p,[['time',-12],['liq',-500],['stat','experience',3]]);
+          p.businesses.push({ id:'biz_'+p.id+'_'+G.turn, capital:500, ticket:12, clientes:8, costosFijos:40 });
+          return `${p.name} abrió un negocio en la Feria Libre`; } });
+    } else {
+      out.push({ id:'operate', label:'Operar negocio (8h)', hours:8, desc:'atender clientes, ingresos por ventas', ok:p.timeLeft>=8,
+        run:()=>{ const b=p.businesses[0]; const cl=Math.round(b.clientes*G.world.salesMult); const util=cl*b.ticket-b.costosFijos;
+          applyEff(p,[['time',-8],['liq',util],['stat','stress',5],['stat','experience',2],['stat','reputation',1]]);
+          return `${p.name} operó negocio: ${cl} clientes, utilidad $${util}`; } });
+    }
+  }
+  for(const j of jobsAt(loc)){
+    if(p.job && p.job.id===j.id){
+      out.push({ id:'work_'+j.id, label:'Trabajar turno ('+j.hours+'h)', hours:j.hours, desc:`+$${Math.round(j.wage*G.world.wageMult)}, +exp`, ok:p.timeLeft>=j.hours,
+        run:()=>{ const wage=Math.round(j.wage*G.world.wageMult);
+          applyEff(p,[['time',-j.hours],['liq',wage],['stat','stress',j.stress],['stat','experience',j.exp],['stat','dependability',1]]);
+          return `${p.name} trabajó ${j.hours}h en ${j.title} (+$${wage})`; } });
+    } else if(p.job===null){
+      out.push({ id:'apply_'+j.id, label:'Postular: '+j.title, hours:2, desc:`requiere confiab. ${j.minDep}`, ok:p.timeLeft>=2,
+        run:()=>{ applyEff(p,[['time',-2]]);
+          if(p.stats.dependability>=j.minDep){ p.job=j; return `${p.name} fue contratado en ${j.title}`; }
+          return `${p.name} postuló a ${j.title}: no quedaste (sube tu confiabilidad)`; } });
+    }
+  }
+  return out.filter(a=>a.ok);
+}
+
+/* ============ SETUP UI ============ */
+function renderNameInputs(){
+  const n = clamp(parseInt(document.getElementById('numPlayers').value)||1,1,4);
+  let html='';
+  for(let i=0;i<n;i++){
+    const def = i===0?'José':('Jugador'+(i+1));
+    html += `<div class="row"><label>Nombre jugador ${i+1}</label><input type="text" id="pname${i}" value="${def}" maxlength="14"></div>`;
+  }
+  document.getElementById('nameInputs').innerHTML=html;
+  document.getElementById('startRow').classList.remove('hidden');
+}
+function startGame(){
+  const n = clamp(parseInt(document.getElementById('numPlayers').value)||1,1,4);
+  const players=[];
+  for(let i=0;i<n;i++){
+    const el=document.getElementById('pname'+i);
+    const nm=(el&&el.value.trim())||('Jugador'+(i+1));
+    players.push({ id:'p'+i, name:nm });
+  }
+  G = newGame(players);
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  renderAll();
+}
+
+/* ============ BOARD ============ */
+function renderBoard(){
+  const active = G.players[G.activePlayerIndex];
+  const board = document.getElementById('board');
+  // SVG links
+  let svg = '<svg class="links" viewBox="0 0 640 300">';
+  for(const [a,b] of LINKS){
+    const la=locById(a), lb=locById(b);
+    svg += `<line x1="${la.x}" y1="${la.y}" x2="${lb.x}" y2="${lb.y}" stroke="#2a2a2a" stroke-width="2" stroke-dasharray="3 4"/>`;
+  }
+  svg += '</svg>';
+
+  let nodes='';
+  for(const loc of LOCATIONS){
+    const here = loc.id===active.currentLocation;
+    const cost = loc.tc[active.transport];
+    const reachable = !here && active.timeLeft>=cost;
+    const pawns = G.players.filter(p=>p.currentLocation===loc.id)
+      .map(p=>{ const mark = p.id===active.id?'★':'●'; return `<span style="color:${PLAYER_COLORS[p.colorIndex]};-webkit-text-fill-color:${PLAYER_COLORS[p.colorIndex]}">${mark}</span>`; }).join('');
+    const cls = 'node'+(here?' here':'')+(reachable?' reachable':'');
+    const costLine = here ? `<span class="nm">aquí</span>` : `<span class="cost">${cost}h</span>`;
+    nodes += `<div class="${cls}" style="left:${loc.x}px;top:${loc.y}px" onclick="moveTo('${loc.id}')">
+      <span class="code">${loc.code}</span><span class="nm">${loc.name}</span>${costLine}
+      <div class="pawns">${pawns}</div></div>`;
+  }
+  board.innerHTML = svg + nodes;
+}
+function moveTo(locId){
+  const p = G.players[G.activePlayerIndex];
+  if(locId===p.currentLocation) return;
+  const cost = locById(locId).tc[p.transport];
+  if(p.timeLeft<cost){ flash('No te alcanza el tiempo para moverte.'); return; }
+  p.timeLeft -= cost;
+  p.currentLocation = locId;
+  renderAll();
+}
+
+/* ============ HUD ============ */
+function metricBar(label, val, goal, color){
+  const pct = Math.min(100, (val/goal)*100);
+  const done = val>=goal ? '<span class="check"> ✓</span>' : '';
+  return `<div class="metric"><div class="lab"><span>${label}</span><span>${Math.round(val)} / ${goal}${done}</span></div>
+    <div class="barbg"><div class="barfill" style="width:${pct}%;background:${color}"></div></div></div>`;
+}
+function renderPlayers(){
+  const row = document.getElementById('playersRow');
+  let html='';
+  for(const p of G.players){
+    const m=metrics(p); const col=PLAYER_COLORS[p.colorIndex];
+    const active = p.id===G.players[G.activePlayerIndex].id;
+    const loc=locById(p.currentLocation);
+    html += `<div class="pcard${active?' active':''}">
+      <div class="pname" style="color:${col};-webkit-text-fill-color:${col}">${active?'▶ ':''}${p.name}</div>
+      <div class="pmeta">en ${loc.name} · ${p.job?p.job.title:'sin empleo'}<br>
+        tiempo: <b>${Math.round(p.timeLeft)}</b>/112h · liquidez: <span class="money">$${p.liquidity}</span></div>
+      ${metricBar('Patrimonio', m.patrimonio, G.goals.patrimonio, 'var(--gold)')}
+      ${metricBar('Bienestar', m.bienestar, G.goals.bienestar, 'var(--green)')}
+      ${metricBar('Conocimientos', m.conocimientos, G.goals.conocimientos, 'var(--pink)')}
+      ${metricBar('Impacto', m.impacto, G.goals.impacto, 'var(--magenta)')}
+    </div>`;
+  }
+  row.innerHTML=html;
+}
+
+/* ============ ACTIONS UI ============ */
+function renderActions(){
+  const p = G.players[G.activePlayerIndex];
+  document.getElementById('turnWho').textContent = `Turno de ${p.name} — ${Math.round(p.timeLeft)}h restantes`;
+  const econ = G.world.economy==='good'
+    ? '<span class="econ-good">● buen año</span>' : '<span class="econ-bad">● mal año</span>';
+  document.getElementById('turnEcon').innerHTML = `Quincena ${G.turn} · ${econ}`;
+  document.getElementById('actLocLabel').textContent = 'Acciones en ' + locById(p.currentLocation).name;
+
+  const acts = actionsFor(p);
+  const cont = document.getElementById('actions');
+  if(acts.length===0){
+    cont.innerHTML = `<div class="pmeta">No hay acciones aquí. Muévete a otra zona o termina tu quincena.</div>`;
+    return;
+  }
+  cont.innerHTML = acts.map((a,i)=>`<button onclick="doAction(${i})"><span>${a.label}</span><span class="desc">${a.desc}</span></button>`).join('');
+  window.__acts = acts;
+}
+function doAction(i){
+  const a = window.__acts[i];
+  const log = a.run();
+  pushLog(log, 'plain');
+  renderAll();
+}
+
+/* ============ LOG ============ */
+function pushLog(text, kind){ G.log.push({ text, kind, turn:G.turn }); }
+function renderLog(){
+  const el=document.getElementById('log');
+  const recent = G.log.slice(-12).reverse();
+  el.innerHTML = recent.map(l=>{
+    let cls='';
+    if(l.kind==='pos') cls='ev-pos'; else if(l.kind==='neg') cls='ev-neg'; else if(l.kind==='silver') cls='ev-silver';
+    return `<div class="logline ${cls}">Q${l.turn} · ${l.text}</div>`;
+  }).join('');
+}
+
+/* ============ TURN FLOW ============ */
+function endPlayerTurn(){
+  const p = G.players[G.activePlayerIndex];
+  p.timeLeft = 0;
+  // siguiente jugador con tiempo, o fase de eventos
+  if(G.activePlayerIndex < G.players.length-1){
+    G.activePlayerIndex++;
+    renderAll();
+  } else {
+    runEventsPhase();
+  }
+}
+
+function runEventsPhase(){
+  // un evento por jugador, encolados como modales
+  const queue=[];
+  for(const p of G.players){
+    const ev = rollEvent(p, G.turn);
+    if(ev){
+      applyEff(p, ev.eff);
+      let silvered=false;
+      if(ev.neg && ev.silver.length){ applyEff(p, ev.silver); silvered=true; }
+      if(ev.firesJob) p.job=null;
+      if(ev.setEcon){ setEconomy(ev.setEcon); }
+      pushLog(`${p.name}: ${ev.title}`, ev.neg?'neg':'pos');
+      queue.push({ p, ev, silvered });
+    }
+  }
+  // costos fijos de negocios
+  for(const p of G.players){ for(const b of p.businesses){ p.liquidity -= b.costosFijos; } }
+  // cambio económico aleatorio raro
+  if(Math.random()<0.08){ setEconomy(G.world.economy==='good'?'bad':'good', true); }
+
+  showEventQueue(queue, 0);
+}
+
+function setEconomy(e, log){
+  G.world.economy=e;
+  G.world.wageMult = e==='good'?1:0.8;
+  G.world.salesMult = e==='good'?1:0.8;
+  if(log) pushLog(`La economía cambió a ${e==='good'?'buen año':'mal año'}`, e==='good'?'pos':'neg');
+}
+
+function showEventQueue(queue, idx){
+  if(idx>=queue.length){ finishTurn(); return; }
+  const { p, ev, silvered } = queue[idx];
+  const col = PLAYER_COLORS[p.colorIndex];
+  const icon = ev.neg ? '✗' : '✦';
+  const iconCol = ev.neg ? 'var(--red)' : 'var(--green)';
+  const silverHtml = (silvered && ev.sl) ? `<div class="silver">↪ ${ev.sl}</div>` : '';
+  const html = `<div class="modal-bg" onclick="event.stopPropagation()">
+    <div class="modal">
+      <h3><span style="color:${iconCol};-webkit-text-fill-color:${iconCol}">${icon}</span>
+        <span style="color:${col};-webkit-text-fill-color:${col}">${p.name}</span> — ${ev.title}</h3>
+      <div class="body">${ev.body}</div>
+      ${silverHtml}
+      <button class="primary" onclick="nextEvent()">Continuar</button>
+    </div></div>`;
+  document.getElementById('modalRoot').innerHTML = html;
+  window.__evq = queue; window.__evi = idx;
+}
+function nextEvent(){
+  document.getElementById('modalRoot').innerHTML='';
+  showEventQueue(window.__evq, window.__evi+1);
+}
+
+function finishTurn(){
+  // ¿alguien ganó?
+  const winner = G.players.find(p=>{
+    const m=metrics(p);
+    return m.patrimonio>=G.goals.patrimonio && m.bienestar>=G.goals.bienestar
+        && m.conocimientos>=G.goals.conocimientos && m.impacto>=G.goals.impacto;
+  });
+  if(winner){ showVictory(winner); return; }
+  // nueva quincena
+  G.turn++;
+  G.activePlayerIndex=0;
+  for(const p of G.players) p.timeLeft=HOURS_PER_TURN;
+  renderAll();
+}
+
+function showVictory(winner){
+  G.over=true;
+  document.getElementById('game').classList.add('hidden');
+  const v=document.getElementById('victory');
+  v.classList.remove('hidden');
+  const col=PLAYER_COLORS[winner.colorIndex];
+  const hist = G.log.filter(l=>l.kind!=='plain').slice(-10).map(l=>`<div class="logline">Q${l.turn} · ${l.text}</div>`).join('');
+  v.innerHTML = `
+    <div class="section-tag" style="font-size:16px">🏆 Victoria</div>
+    <div style="font-size:24px;font-weight:800;margin:8px 0;color:${col};-webkit-text-fill-color:${col}">
+      ${winner.name} alcanzó sus metas en la quincena ${G.turn}</div>
+    <p style="font-size:16px;color:var(--soft);-webkit-text-fill-color:var(--soft)">Patrimonio, bienestar, conocimientos e impacto: las cuatro al tiempo. Eso es una vida construida.</p>
+    <div style="margin-top:14px"><b>Momentos de tu historia:</b>${hist}</div>
+    <button class="primary" style="margin-top:16px;max-width:240px" onclick="location.reload()">Jugar de nuevo</button>`;
+}
+
+/* ============ HELPERS ============ */
+function flash(msg){
+  const html=`<div class="modal-bg"><div class="modal"><div class="body">${msg}</div>
+    <button class="primary" onclick="document.getElementById('modalRoot').innerHTML=''">Ok</button></div></div>`;
+  document.getElementById('modalRoot').innerHTML=html;
+}
+function renderAll(){
+  if(!G||G.over) return;
+  renderBoard();
+  renderActions();
+  renderPlayers();
+  renderLog();
+}
+</script>
+</body>
+</html>
