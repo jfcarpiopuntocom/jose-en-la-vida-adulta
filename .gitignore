@@ -1,3 +1,5 @@
 node_modules/
 dist/
 .tokens/
+_legacy/
+*.local
