@@ -113,6 +113,9 @@
   .barbg { height: 12px; background: #242424; border-radius: 6px; overflow: hidden; margin-top: 3px; }
   .barfill { height: 100%; border-radius: 6px; }
   .check { color: var(--green); -webkit-text-fill-color: var(--green); font-weight: 800; }
+  .famblock { font-size: 13px; color: var(--white); -webkit-text-fill-color: var(--white); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; margin: 4px 0 9px; line-height: 1.6; }
+  .famtag { font-size: 13px; font-weight: 700; color: var(--gold); -webkit-text-fill-color: var(--gold); letter-spacing: 0.5px; }
+  .famp { color: var(--soft); -webkit-text-fill-color: var(--soft); }
 
   /* ---- Actions ---- */
   .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; }
@@ -220,7 +223,7 @@ const LOCATIONS = [
   { id:'zona_financiera',    code:'FIN', name:'Z. Financiera', zone:'financiera', crimeRisk:10, x:520, y:60,  tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
   { id:'centro_historico',   code:'CEN', name:'Centro', zone:'centro', crimeRisk:30, x:320, y:130, tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
   { id:'feria_libre',        code:'FER', name:'Feria Libre', zone:'comercial', crimeRisk:45, x:120, y:215, tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.75} },
-  { id:'barrio_residencial', code:'RES', name:'Tu Barrio', zone:'residencial', crimeRisk:20, x:520, y:215, tc:{walk:2,bus:1,taxi:0.5,bicycle:1,motorcycle:0.5,car:0.5} },
+  { id:'barrio_residencial', code:'RES', name:'Z. Residencial', zone:'residencial', crimeRisk:20, x:520, y:215, tc:{walk:2,bus:1,taxi:0.5,bicycle:1,motorcycle:0.5,car:0.5} },
   { id:'zona_industrial',    code:'IND', name:'Z. Industrial', zone:'industrial', crimeRisk:25, x:320, y:270, tc:{walk:5,bus:2,taxi:1,bicycle:2.5,motorcycle:1.25,car:1} },
 ];
 const LINKS = [
@@ -240,10 +243,61 @@ const JOBS = [
 ];
 const jobsAt = id => JOBS.filter(j=>j.locationId===id);
 
+/* ---- Familia generada proceduralmente (azar de cuna) ---- */
+const FNAMES_M = ['Pedro','Luis','Jorge','Marco','Wilson','Patricio','Fabián','Galo','Vinicio','Klever'];
+const FNAMES_F = ['Rosa','María','Carmen','Narcisa','Lourdes','Gladys','Mariana','Cecilia','Fanny','Targelia'];
+const RELATIONS = [
+  {rel:'madre',sex:'f'},{rel:'padre',sex:'m'},{rel:'hermana',sex:'f'},{rel:'hermano',sex:'m'},
+  {rel:'tía',sex:'f'},{rel:'tío',sex:'m'},{rel:'prima',sex:'f'},{rel:'primo',sex:'m'},
+  {rel:'abuela',sex:'f'},{rel:'compadre',sex:'m'},
+];
+const PERSONALITIES = ['trabajador','responsable','generoso','ahorrador','emprendedor','irresponsable','conflictivo','oportunista','fiestero','sabio','protector'];
+// Cuánto patrimonio/cuna aporta cada personalidad a la liquidez inicial
+const PERS_WEALTH = { emprendedor:120, ahorrador:100, trabajador:60, generoso:50, responsable:40, sabio:30, protector:20, fiestero:-20, oportunista:-10, irresponsable:-60, conflictivo:-40 };
+
+function generateFamily(){
+  const n = 2 + Math.floor(Math.random()*3); // 2-4 miembros
+  const pool = RELATIONS.slice();
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const fam=[];
+  for(let k=0;k<n;k++){
+    const r = pool[k];
+    const name = (r.sex==='f'?FNAMES_F:FNAMES_M)[Math.floor(Math.random()*10)];
+    const pers = PERSONALITIES[Math.floor(Math.random()*PERSONALITIES.length)];
+    const score = 40 + Math.floor(Math.random()*51); // 40-90
+    fam.push({ rel:r.rel, name, pers, score });
+  }
+  return fam;
+}
+function startingLiquidity(family){
+  let liq = 200;
+  for(const m of family){ liq += (PERS_WEALTH[m.pers]||0); }
+  return Math.max(80, liq);
+}
+// Visitar familia: apoyo / consejo / costo / lío según personalidad y relationshipScore
+function familyVisitEffect(m, pname){
+  const good = m.score >= 55;
+  let E=[], msg='';
+  switch(m.pers){
+    case 'sabio': E=[['stat','knowledge',good?6:2],['stat','happiness',3]]; msg=good?`tu ${m.rel} ${m.name} te dio una mentoría (+conocimiento)`:`tu ${m.rel} ${m.name} te contó sus historias`; break;
+    case 'emprendedor': E=good?[['stat','knowledge',4],['liq',40]]:[['stat','knowledge',2]]; msg=good?`tu ${m.rel} ${m.name} te conectó un cliente (+$40)`:`tu ${m.rel} ${m.name} te aconsejó sobre negocios`; break;
+    case 'generoso': E=[['liq',good?80:30],['stat','happiness',4]]; msg=`tu ${m.rel} ${m.name} te regaló $${good?80:30}`; break;
+    case 'trabajador': E=[['stat','dependability',3],['liq',good?30:10]]; msg=`tu ${m.rel} ${m.name} te consiguió un trabajito (+$${good?30:10})`; break;
+    case 'responsable': E=[['stat','dependability',3],['stat','stress',-4]]; msg=`tu ${m.rel} ${m.name} te ayudó a organizarte (-estrés)`; break;
+    case 'ahorrador': E=[['stat','knowledge',2],['stat','stress',-2]]; msg=`tu ${m.rel} ${m.name} te enseñó a cuidar el bolsillo`; break;
+    case 'protector': E=[['stat','health',5],['stat','stress',-6]]; msg=`tu ${m.rel} ${m.name} te cuidó y consintió (+salud)`; break;
+    case 'fiestero': E=[['stat','happiness',8],['liq',-20]]; msg=`tu ${m.rel} ${m.name} te llevó de fiesta (+ánimo, -$20)`; break;
+    case 'oportunista': E=good?[['liq',40]]:[['liq',-30],['stat','stress',4]]; msg=good?`tu ${m.rel} ${m.name} te metió en un buen negocito (+$40)`:`tu ${m.rel} ${m.name} te enredó en un lío (-$30)`; break;
+    case 'irresponsable': E=[['liq',-40],['stat','happiness',3]]; msg=`tu ${m.rel} ${m.name} te pidió prestado $40 (pero te animó)`; break;
+    case 'conflictivo': E=[['stat','stress',8],['stat','happiness',-5],['stat','resilience',3]]; msg=`discutiste con tu ${m.rel} ${m.name} (+temple, igual)`; break;
+  }
+  return { eff:E, log:`${pname} visitó a la familia: ${msg}` };
+}
+
 /* 33 eventos. effects/silver: [target, op, key, value]. target: liq|stat|time */
 const EVENTS = [
   // CRIMEN
-  { id:'don_choro_robo', cat:'crimen', neg:true, w:8, imp:2, cond:[['minTurn',2]], wt:[['housing','rent_cheap',1.8],['statLt','reputation',35,1.5]],
+  { id:'don_choro_robo', cat:'crimen', neg:true, w:8, imp:2, cond:[['minTurn',2]], wt:[['bornCrimeGt',30,1.6],['statLt','reputation',35,1.5]],
     eff:[['liq',-120],['stat','stress',15]], silver:[['stat','resilience',5],['stat','experience',1]],
     title:'Don Choro hizo de las suyas', body:'Te asaltaron camino a casa. Perdiste $120 y la tranquilidad de la semana.', sl:'Aprendiste qué calles evitar. Esa cicatriz te hace más sagaz.' },
   { id:'hurto_inventario', cat:'crimen', neg:true, w:5, imp:1, cond:[['minTurn',4]], wt:[],
@@ -359,11 +413,15 @@ const PLAYER_COLORS = ['var(--p0)','var(--p1)','var(--p2)','var(--p3)'];
 let G = null;
 
 function newPlayer(id, name, idx){
+  const birth = LOCATIONS[Math.floor(Math.random()*LOCATIONS.length)]; // nace en el barrio que sea
+  const family = generateFamily();
   return {
     id, name, colorIndex:idx,
-    timeLeft:HOURS_PER_TURN, liquidity:300,
+    timeLeft:HOURS_PER_TURN, liquidity:startingLiquidity(family),
     bank:0, businesses:[], vehicles:[],
-    housing:'family', transport:'walk', currentLocation:'barrio_residencial',
+    housing:'family', transport:'walk',
+    birthBarrio:birth.id, birthCrime:birth.crimeRisk, currentLocation:birth.id,
+    family,
     job:null,
     stats:{ experience:0, dependability:50, leadership:0, health:80, stress:20, happiness:60, reputation:30, resilience:0, knowledge:5 },
   };
@@ -405,6 +463,7 @@ function evalCond(c, p, turn){
     case 'statLt': return p.stats[c[1]]<c[2];
     case 'hasJob': return (p.job!==null)===c[1];
     case 'liquidityLt': return p.liquidity<c[1];
+    case 'bornCrimeGt': return p.birthCrime>c[1];
   }
   return true;
 }
@@ -446,11 +505,13 @@ function metrics(p){ return { patrimonio:patrimonio(p), bienestar:bienestar(p), 
 /* ============ ACTIONS ============ */
 function actionsFor(p){
   const out=[]; const loc=p.currentLocation;
-  if(loc==='barrio_residencial'){
+  if(loc===p.birthBarrio){ // tu barrio = donde naciste y vives con la familia
     out.push({ id:'rest', label:'Descansar (8h)', hours:8, desc:'+salud, -estrés', ok:p.timeLeft>=8,
       run:()=>{ applyEff(p,[['time',-8],['stat','health',6],['stat','stress',-10],['stat','happiness',3]]); return `${p.name} descansó en casa (+salud, -estrés)`; } });
     out.push({ id:'social', label:'Socializar (4h)', hours:4, desc:'+felicidad, +reputación, -$15', ok:p.timeLeft>=4&&p.liquidity>=15,
       run:()=>{ applyEff(p,[['time',-4],['liq',-15],['stat','happiness',7],['stat','reputation',3]]); return `${p.name} salió con amigos (+felicidad, +reputación)`; } });
+    out.push({ id:'family', label:'Visitar a la familia (3h)', hours:3, desc:'azar: apoyo, consejo, regalo o lío según quién esté', ok:p.timeLeft>=3&&p.family.length>0,
+      run:()=>{ const m=p.family[Math.floor(Math.random()*p.family.length)]; const r=familyVisitEffect(m,p.name); applyEff(p,[['time',-3],...r.eff]); return r.log; } });
   }
   if(loc==='zona_universitaria'){
     out.push({ id:'study', label:'Estudiar (10h)', hours:10, desc:'+8 conocimientos, -$20', ok:p.timeLeft>=10&&p.liquidity>=20,
@@ -535,8 +596,9 @@ function renderBoard(){
       .map(p=>{ const mark = p.id===active.id?'★':'●'; return `<span style="color:${PLAYER_COLORS[p.colorIndex]};-webkit-text-fill-color:${PLAYER_COLORS[p.colorIndex]}">${mark}</span>`; }).join('');
     const cls = 'node'+(here?' here':'')+(reachable?' reachable':'');
     const costLine = here ? `<span class="nm">aquí</span>` : `<span class="cost">${cost}h</span>`;
+    const homeTag = loc.id===active.birthBarrio ? `<span class="nm" style="color:var(--gold);-webkit-text-fill-color:var(--gold)">🏠 casa</span>` : '';
     nodes += `<div class="${cls}" style="left:${loc.x}px;top:${loc.y}px" onclick="moveTo('${loc.id}')">
-      <span class="code">${loc.code}</span><span class="nm">${loc.name}</span>${costLine}
+      <span class="code">${loc.code}</span><span class="nm">${loc.name}</span>${homeTag}${costLine}
       <div class="pawns">${pawns}</div></div>`;
   }
   board.innerHTML = svg + nodes;
@@ -565,10 +627,12 @@ function renderPlayers(){
     const m=metrics(p); const col=PLAYER_COLORS[p.colorIndex];
     const active = p.id===G.players[G.activePlayerIndex].id;
     const loc=locById(p.currentLocation);
+    const fam = p.family.map(f=>`<span style="color:${col};-webkit-text-fill-color:${col}">●</span> ${f.rel} ${f.name} <span class="famp">(${f.pers})</span>`).join('<br>');
     html += `<div class="pcard${active?' active':''}">
       <div class="pname" style="color:${col};-webkit-text-fill-color:${col}">${active?'▶ ':''}${p.name}</div>
-      <div class="pmeta">en ${loc.name} · ${p.job?p.job.title:'sin empleo'}<br>
-        tiempo: <b>${Math.round(p.timeLeft)}</b>/112h · liquidez: <span class="money">$${p.liquidity}</span></div>
+      <div class="pmeta">nació en ${locById(p.birthBarrio).name} 🏠 · ahora en ${loc.name}<br>
+        ${p.job?p.job.title:'sin empleo'} · tiempo <b>${Math.round(p.timeLeft)}</b>/112h · <span class="money">$${p.liquidity}</span></div>
+      <div class="famblock"><span class="famtag">Familia</span><br>${fam}</div>
       ${metricBar('Patrimonio', m.patrimonio, G.goals.patrimonio, 'var(--gold)')}
       ${metricBar('Bienestar', m.bienestar, G.goals.bienestar, 'var(--green)')}
       ${metricBar('Conocimientos', m.conocimientos, G.goals.conocimientos, 'var(--pink)')}
