@@ -2,20 +2,24 @@ import { Location, Barrio, Job, Degree, GameEvent, Personality } from './types';
 
 // TABLERO: 13 stops funcionales en loop ovalado (no rectangular), siguiendo la idea
 // de "alrededor del río + bastante Centro". Aquí NO se nace — solo se actúa y circula.
+// tc = horas de viaje por modo. Calibrado a la realidad de Cuenca: ciudad compacta,
+// con tranvía (línea de ~19 paradas / 30-40min recorrido completo, pero tramos cortos
+// rápidos), muy por debajo de los tiempos de Quito/Guayaquil/Ambato. Cruzar el centro
+// a pie toma 15-20min reales; ir a la periferia (Terminal, Z. Industrial) 45-70min.
 export const LOCATIONS: Location[] = [
-  { id:'casa',               code:'CASA', name:'Tu Casa',         zone:'hogar',       crimeRisk:15, x:380, y:60,  icon:'🏠', tc:{walk:0,bus:0,taxi:0,bicycle:0,motorcycle:0,car:0} },
-  { id:'zona_universitaria', code:'UNI',  name:'Universidad (UDA)',zone:'universitaria',crimeRisk:15, x:529, y:81,  icon:'🎓', tc:{walk:3.5,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'zona_financiera',    code:'FIN',  name:'Z. Financiera',   zone:'financiera',  crimeRisk:10, x:644, y:138, icon:'🏦', tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'terminal',           code:'TER',  name:'Terminal Terrestre',zone:'transporte',crimeRisk:35, x:698, y:218, icon:'🚌', tc:{walk:4,bus:1,taxi:0.5,bicycle:2,motorcycle:1,car:0.5} },
-  { id:'zona_industrial',    code:'IND',  name:'Z. Industrial',   zone:'industrial',  crimeRisk:25, x:679, y:304, icon:'🏭', tc:{walk:5,bus:2,taxi:1,bicycle:2.5,motorcycle:1.25,car:1} },
-  { id:'hospital',           code:'HOS',  name:'Hospital',        zone:'salud',       crimeRisk:10, x:592, y:375, icon:'🏥', tc:{walk:3,bus:1.5,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'feria_libre',        code:'FER',  name:'Feria Libre',     zone:'comercial',   crimeRisk:45, x:456, y:415, icon:'🛒', tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.75} },
-  { id:'centro_historico',   code:'CEN',  name:'Centro Histórico',zone:'centro',      crimeRisk:30, x:304, y:415, icon:'⛪', tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'parque_calderon',    code:'PAR',  name:'Parque Calderón', zone:'centro',      crimeRisk:20, x:168, y:375, icon:'🌳', tc:{walk:2.5,bus:1,taxi:0.5,bicycle:1.25,motorcycle:0.6,car:0.5} },
-  { id:'rio_tomebamba',      code:'RIO',  name:'Río Tomebamba',   zone:'rio',         crimeRisk:18, x:81,  y:304, icon:'🌉', tc:{walk:2,bus:1,taxi:0.5,bicycle:1,motorcycle:0.5,car:0.5} },
-  { id:'municipio',          code:'MUN',  name:'Municipio',       zone:'politico',    crimeRisk:15, x:62,  y:218, icon:'🏛️', tc:{walk:3,bus:1,taxi:0.5,bicycle:1.5,motorcycle:0.75,car:0.5} },
-  { id:'mall_rio',           code:'MAL',  name:'Mall del Río',    zone:'comercial',   crimeRisk:12, x:117, y:138, icon:'🛍️', tc:{walk:4,bus:1.5,taxi:0.75,bicycle:2,motorcycle:1,car:0.6} },
-  { id:'estadio',            code:'EST',  name:'Estadio',         zone:'deporte',     crimeRisk:22, x:231, y:81,  icon:'⚽', tc:{walk:3,bus:1.25,taxi:0.6,bicycle:1.5,motorcycle:0.75,car:0.5} },
+  { id:'casa',               code:'CASA', name:'Tu Casa',         zone:'hogar',       crimeRisk:15, x:380, y:60,  icon:'🏠', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
+  { id:'zona_universitaria', code:'UNI',  name:'Universidad (UDA)',zone:'universitaria',crimeRisk:15, x:529, y:81,  icon:'🎓', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
+  { id:'zona_financiera',    code:'FIN',  name:'Z. Financiera',   zone:'financiera',  crimeRisk:10, x:644, y:138, icon:'🏦', tc:{walk:0.5,bus:0.25,taxi:0.15,bicycle:0.35,motorcycle:0.15,car:0.15} },
+  { id:'terminal',           code:'TER',  name:'Terminal Terrestre',zone:'transporte',crimeRisk:35, x:698, y:218, icon:'🚌', tc:{walk:1.1,bus:0.45,taxi:0.3,bicycle:0.6,motorcycle:0.3,car:0.25} },
+  { id:'zona_industrial',    code:'IND',  name:'Z. Industrial',   zone:'industrial',  crimeRisk:25, x:679, y:304, icon:'🏭', tc:{walk:1.2,bus:0.5,taxi:0.3,bicycle:0.65,motorcycle:0.3,car:0.25} },
+  { id:'hospital',           code:'HOS',  name:'Hospital',        zone:'salud',       crimeRisk:10, x:592, y:375, icon:'🏥', tc:{walk:0.7,bus:0.3,taxi:0.2,bicycle:0.4,motorcycle:0.2,car:0.2} },
+  { id:'feria_libre',        code:'FER',  name:'Feria Libre',     zone:'comercial',   crimeRisk:45, x:456, y:415, icon:'🛒', tc:{walk:0.8,bus:0.35,taxi:0.25,bicycle:0.45,motorcycle:0.2,car:0.2} },
+  { id:'centro_historico',   code:'CEN',  name:'Centro Histórico',zone:'centro',      crimeRisk:30, x:304, y:415, icon:'⛪', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
+  { id:'parque_calderon',    code:'PAR',  name:'Parque Calderón', zone:'centro',      crimeRisk:20, x:168, y:375, icon:'🌳', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
+  { id:'rio_tomebamba',      code:'RIO',  name:'Río Tomebamba',   zone:'rio',         crimeRisk:18, x:81,  y:304, icon:'🌉', tc:{walk:0.6,bus:0.25,taxi:0.2,bicycle:0.35,motorcycle:0.2,car:0.2} },
+  { id:'municipio',          code:'MUN',  name:'Municipio',       zone:'politico',    crimeRisk:15, x:62,  y:218, icon:'🏛️', tc:{walk:0.5,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
+  { id:'mall_rio',           code:'MAL',  name:'Mall del Río',    zone:'comercial',   crimeRisk:12, x:117, y:138, icon:'🛍️', tc:{walk:0.6,bus:0.25,taxi:0.2,bicycle:0.35,motorcycle:0.2,car:0.2} },
+  { id:'estadio',            code:'EST',  name:'Estadio',         zone:'deporte',     crimeRisk:22, x:231, y:81,  icon:'⚽', tc:{walk:0.5,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
 ];
 export const locById = (id: string): Location => LOCATIONS.find(l => l.id === id)!;
 // orden del recorrido del tablero (loop ovalado cerrado, estilo Jones/Monopoly)

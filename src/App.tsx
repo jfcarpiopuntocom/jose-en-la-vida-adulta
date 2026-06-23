@@ -193,11 +193,22 @@ export function App() {
 }
 
 function Hdr() {
+  const [about, setAbout] = useState(false);
   return (
     <header>
-      <div className="title">JOSÉ EN LA VIDA ADULTA</div>
-      <div className="ver">v0.90 · un simulador de Cuenca, Ecuador</div>
+      <div className="title-row">
+        <div className="title">JOSÉ EN LA VIDA ADULTA</div>
+        <button className="about-btn" onClick={() => setAbout(!about)} title="¿Qué es esto?">?</button>
+      </div>
+      <div className="ver">v0.90 · el juego de la vida, ambientado en Cuenca, Ecuador</div>
       <div className="sub">"No importa cuántas veces cambie el camino. Lo importante es seguir avanzando."</div>
+      {about && (
+        <div className="about-box">
+          Tributo libre a <b>Jones in the Fast Lane</b> (Sierra On-Line, 1990) — el viejo "juego de la vida" en disquete —
+          llevado más allá: con familia procedural, barrios reales de Cuenca, carrera, educación, negocios con empleados
+          persistentes, impacto comunitario en 4 dimensiones y Modo Legado entre generaciones.
+        </div>
+      )}
     </header>
   );
 }
