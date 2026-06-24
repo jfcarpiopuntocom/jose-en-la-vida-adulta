@@ -3,6 +3,8 @@ import { GameState, PlayerState, GameEvent, Goals } from './types';
 import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
   hasWon, canRetire, makeHeir, cpuTurn, portfolioSlices, collectiblesValue,
+  expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
+  CUADRANTE_LABEL, CUADRANTE_ICON,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
 } from './engine';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
@@ -302,8 +304,7 @@ function LidPanel({ id, title, onClose, children }: {
 
 // ── Indicators Panel Content ──
 function IndicatorsContent({ game }: { game: GameState }) {
-  // 3 métricas con meta + 1 libre (patrimonio sin techo)
-  const bars = [
+  const lifeBars = [
     { key:'bienestar',     label:'Bienestar',     color:'var(--green)',  goal: game.goals.bienestar },
     { key:'conocimientos', label:'Conocimientos', color:'var(--violet)', goal: game.goals.conocimientos },
     { key:'impacto',       label:'Impacto',       color:'var(--pink)',   goal: game.goals.impacto },
@@ -314,52 +315,62 @@ function IndicatorsContent({ game }: { game: GameState }) {
         const m = metrics(p);
         const col = PLAYER_COLORS[p.colorIndex];
         const isActive = p.id === game.players[game.activePlayerIndex].id;
-        const portfolio = portfolioSlices(p);
-        const totalSec = p.liquidity + p.bank + collectiblesValue(p) + portfolio.growth;
-        const secPct = Math.min(100, (totalSec / game.goals.securityFloor) * 100);
+        const cq = cuadrante(p);
+        const pi = passiveIncome(p);
+        const exp = expensesPerTurn(p);
+        const emMonths = emergencyFundMonths(p);
+        const emPct = Math.min(100, (emMonths / game.goals.emergencyMonths) * 100);
+        const piPct = Math.min(100, (pi / Math.max(exp, 1)) * 100);
         const comPct = Math.min(100, (p.impact.comunitario / game.goals.comunitario) * 100);
+        const piGoalPct = 35; // necesitas 35% de gastos cubiertos por flujo pasivo para ganar
         return (
           <div key={p.id} className="ind-section">
             <div className="ind-pname" style={{ color: col, WebkitTextFillColor: col }}>
               {p.isAI ? '🤖 ' : isActive ? '▶ ' : ''}{p.name}
-              {p.isAI && <span style={{fontSize:'0.72rem',color:'var(--muted)',WebkitTextFillColor:'var(--muted)'}}> ({p.aiStrategy}·{['','F','N','D'][p.aiDifficulty??2]})</span>}
+              {p.isAI && <span className="ai-tag"> ({p.aiStrategy}·{['','F','N','D'][p.aiDifficulty??2]})</span>}
             </div>
-            {bars.map(b => {
+
+            {/* Arquetipo actual */}
+            <div className="cuadrante-chip" data-cq={cq}>
+              {CUADRANTE_ICON[cq]} {CUADRANTE_LABEL[cq]}
+              <span className="cq-pi">{pi > 0 ? ` · $${pi}/q pasivo` : ' · sin flujo pasivo'}</span>
+            </div>
+
+            {/* Barras de vida */}
+            {lifeBars.map(b => {
               const val = m[b.key as keyof typeof m] as number;
               const pct = Math.min(100, (val / b.goal) * 100);
               return (
                 <div key={b.key} className="ind-row">
                   <span className="ind-label">{b.label}</span>
-                  <div className="ind-bar">
-                    <div className="ind-fill" style={{ width: pct+'%', '--bc': b.color } as any} />
-                  </div>
-                  <span className="ind-val">
-                    {Math.round(val)}/{b.goal}{val >= b.goal ? <span className="check-icon"> ✓</span> : ''}
-                  </span>
+                  <div className="ind-bar"><div className="ind-fill" style={{ width: pct+'%', '--bc': b.color } as any} /></div>
+                  <span className="ind-val">{Math.round(val)}/{b.goal}{val >= b.goal ? <span className="check-icon"> ✓</span> : ''}</span>
                 </div>
               );
             })}
+
             {/* Legado comunitario */}
             <div className="ind-row">
               <span className="ind-label">Legado</span>
-              <div className="ind-bar">
-                <div className="ind-fill" style={{ width: comPct+'%', '--bc': 'var(--teal)' } as any} />
-              </div>
-              <span className="ind-val">
-                {p.impact.comunitario}/{game.goals.comunitario}{p.impact.comunitario >= game.goals.comunitario ? <span className="check-icon"> ✓</span> : ''}
-              </span>
+              <div className="ind-bar"><div className="ind-fill" style={{ width: comPct+'%', '--bc': 'var(--teal)' } as any} /></div>
+              <span className="ind-val">{p.impact.comunitario}/{game.goals.comunitario}{p.impact.comunitario >= game.goals.comunitario ? <span className="check-icon"> ✓</span> : ''}</span>
             </div>
-            {/* Seguridad financiera — sin techo, solo piso */}
+
+            {/* Fondo de emergencia (6 meses de gastos) */}
             <div className="ind-row">
-              <span className="ind-label">Seguridad</span>
-              <div className="ind-bar">
-                <div className="ind-fill" style={{ width: secPct+'%', '--bc': 'var(--gold)' } as any} />
-              </div>
-              <span className="ind-val">
-                ${Math.round(totalSec)}{totalSec >= game.goals.securityFloor ? <span className="check-icon"> ✓</span> : ''}
-              </span>
+              <span className="ind-label">Emergencia</span>
+              <div className="ind-bar"><div className="ind-fill" style={{ width: emPct+'%', '--bc': 'var(--gold)' } as any} /></div>
+              <span className="ind-val">{emMonths.toFixed(1)}m/{game.goals.emergencyMonths}{emMonths >= game.goals.emergencyMonths ? <span className="check-icon"> ✓</span> : ''}</span>
             </div>
-            {/* Portafolio Permanente — breakdown si hay coleccionables */}
+
+            {/* Flujo pasivo: meta = 35% de gastos cubiertos */}
+            <div className="ind-row">
+              <span className="ind-label">Flujo pasivo</span>
+              <div className="ind-bar"><div className="ind-fill" style={{ width: Math.min(100,piPct)+'%', '--bc': 'var(--orange)' } as any} /></div>
+              <span className="ind-val">{Math.round(piPct)}%{piPct >= piGoalPct ? <span className="check-icon"> ✓</span> : ''}</span>
+            </div>
+
+            {/* Coleccionables si los hay */}
             {p.collectibles.length > 0 && (
               <div className="portfolio-breakdown">
                 {p.collectibles.map((c, i) => (
@@ -418,8 +429,17 @@ function AboutContent() {
       </div>
 
       <div className="about-section">
+        <div className="about-section-title">Los 4 arquetipos de ingreso</div>
+        <p><b>👔 Asalariado</b> — intercambia tiempo por sueldo. Estabilidad real, no debilidad.<br />
+        <b>🛠️ Profesión Liberal</b> — cobra por conocimiento o servicio. Autonomía con límite de horas.<br />
+        <b>🏭 Empresario</b> — posee un sistema que opera sin su presencia constante. Escala con empleados y procedimientos.<br />
+        <b>📈 Inversionista</b> — el capital genera más que los gastos básicos. El tiempo se libera.</p>
+        <p style={{marginTop:6}}>El objetivo no es saltar de cuadrante a cuadrante: es construir bien en el tuyo y diversificar cuando tenga sentido.</p>
+      </div>
+
+      <div className="about-section">
         <div className="about-section-title">Para ganar</div>
-        <p>Bienestar, conocimientos, impacto en la comunidad y un piso de seguridad financiera. Los cuatro a la vez. No hay atajos.</p>
+        <p>Bienestar + conocimientos + impacto comunitario + fondo de emergencia de 6 meses + al menos 35% de tus gastos cubiertos por flujo pasivo. Todo a la vez. El camino es tuyo.</p>
       </div>
 
       <div className="about-section">

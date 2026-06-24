@@ -11,12 +11,76 @@ import {
 
 export const HOURS_PER_TURN = 112;
 export const DEFAULT_GOALS: Goals = {
-  securityFloor: 1800,  // piso de seguridad — alcanzable en cualquier ruta
   bienestar: 68,
   conocimientos: 52,
   impacto: 52,
-  comunitario: 18,      // legado comunitario mínimo en Cuenca
+  comunitario: 18,
+  emergencyMonths: 6,   // fondo de 6 meses de gastos — universal en finanzas personales
 };
+
+// ── Arquetipos de ingreso (concepto universal, no propiedad de nadie) ──
+// Asalariado: intercambia tiempo por sueldo fijo
+// Independiente/Profesión Liberal: cobra por servicio/conocimiento, sin sistema propio
+// Empresario: posee un sistema que opera sin su presencia constante
+// Inversionista: el capital genera ingresos, no el tiempo personal
+export const CUADRANTE_LABEL: Record<string, string> = {
+  asalariado:    'Asalariado',
+  independiente: 'Profesión Liberal',
+  empresario:    'Empresario',
+  inversionista: 'Inversionista',
+};
+export const CUADRANTE_ICON: Record<string, string> = {
+  asalariado:    '👔',
+  independiente: '🛠️',
+  empresario:    '🏭',
+  inversionista: '📈',
+};
+
+// Gastos base por quincena según estilo de vida del jugador
+export function expensesPerTurn(p: PlayerState): number {
+  let e = 75; // alimentación, servicios mínimos
+  if (p.housing === 'rent_cheap') e += 110;
+  if (p.housing === 'own_apartment') e += 20;  // mantenimiento
+  if (p.transport === 'car')   e += 30;
+  if (p.transport === 'taxi')  e += 12;
+  e += p.family.length * 10;
+  return e;
+}
+
+// Ingreso pasivo por quincena (no requiere tiempo laboral)
+export function passiveIncome(p: PlayerState): number {
+  let pi = 0;
+  // Interés bancario: ~5% anual = ~0.2% quincena
+  pi += Math.round(p.bank * 0.002);
+  // Negocio con empleados: el sistema genera sin el dueño presente
+  for (const b of p.businesses) {
+    if (b.employees.length > 0) {
+      const boost = b.employees.reduce((s, e) => s + e.competence / 100, 0);
+      const cl = Math.round(b.clientes * (1 + boost * 0.5));
+      const wages = b.employees.reduce((s, e) => s + e.wage, 0);
+      pi += Math.max(0, cl * b.ticket - b.costosFijos - wages);
+    }
+  }
+  // Apreciación media de coleccionables
+  pi += Math.round(p.collectibles.reduce((s, c) => s + c.value * 0.022, 0));
+  return Math.max(0, pi);
+}
+
+// En qué arquetipo de ingreso está el jugador ahora mismo
+export function cuadrante(p: PlayerState): string {
+  const pi = passiveIncome(p);
+  const exp = expensesPerTurn(p);
+  if (pi >= exp)                                          return 'inversionista';
+  if (p.businesses.some(b => b.employees.length > 0))   return 'empresario';
+  if (p.businesses.length > 0)                           return 'independiente';
+  return 'asalariado';
+}
+
+// Fondo de emergencia: meses de gastos cubiertos en banco
+export function emergencyFundMonths(p: PlayerState): number {
+  const exp = expensesPerTurn(p);
+  return exp > 0 ? p.bank / exp : 0;
+}
 export const PLAYER_COLORS = ['var(--p0)', 'var(--p1)', 'var(--p2)', 'var(--p3)'];
 const rnd = (n: number) => Math.floor(Math.random() * n);
 const pick = <T,>(a: T[]): T => a[rnd(a.length)];
@@ -398,15 +462,20 @@ export function closeBusinessAndEmployees(p: PlayerState): string[] {
   return logs;
 }
 
-/* ---------- VICTORIA — vida plena, no meta económica ---------- */
+/* ---------- VICTORIA — vida plena, cuadrante libre ---------- */
 export function hasWon(p: PlayerState, g: Goals): boolean {
   const m = metrics(p);
-  // Vida equilibrada: bienestar + saber + impacto + legado comunitario + piso de seguridad
+  const emMonths = emergencyFundMonths(p);
+  const pi = passiveIncome(p);
+  const exp = expensesPerTurn(p);
+  // Victoria: vida equilibrada + fondo de 6 meses + al menos ingreso pasivo parcial
+  // (el inversionista pleno gana más rápido; el asalariado puede llegar con paciencia)
   return m.bienestar >= g.bienestar
     && m.conocimientos >= g.conocimientos
     && m.impacto >= g.impacto
     && p.impact.comunitario >= g.comunitario
-    && totalAssets(p) >= g.securityFloor;
+    && emMonths >= g.emergencyMonths
+    && pi >= exp * 0.35;   // al menos 35% de gastos cubiertos por flujo pasivo
 }
 
 /* ---------- CPU OPPONENT — JOSÉ ---------- */

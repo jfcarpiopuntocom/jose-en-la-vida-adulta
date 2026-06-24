@@ -690,6 +690,24 @@ h1,h2,h3,p,span,div,button,label,li,a {
   color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important;
 }
 
+/* ── Cuadrante chip ── */
+.cuadrante-chip {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin: 5px 0 8px; padding: 5px 10px; border-radius: 20px;
+  font-size: 0.80rem; font-weight: 800; letter-spacing: 0.03em;
+  color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+}
+.cuadrante-chip[data-cq="asalariado"]    { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); }
+.cuadrante-chip[data-cq="independiente"] { border-color: rgba(168,85,247,0.4); background: rgba(168,85,247,0.08); }
+.cuadrante-chip[data-cq="empresario"]    { border-color: rgba(251,146,60,0.4); background: rgba(251,146,60,0.08); }
+.cuadrante-chip[data-cq="inversionista"] { border-color: rgba(52,211,153,0.5); background: rgba(52,211,153,0.10); }
+.cq-pi {
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important;
+}
+.ai-tag { font-size: 0.72rem; color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important; }
+
 /* ── Portfolio breakdown en indicators ── */
 .portfolio-breakdown {
   display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; padding-top: 4px;

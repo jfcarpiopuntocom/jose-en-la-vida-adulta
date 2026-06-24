@@ -156,13 +156,19 @@ export interface Collectible {
   boughtFor: number;  // original cost (for display)
 }
 
+// Los 4 arquetipos de generación de ingreso — concepto universal de finanzas personales
+// (empleado, profesión liberal, empresario, inversionista son categorías universales
+// presentes en Adam Smith, Drucker, Buffett, etc.)
+export type Cuadrante = 'asalariado' | 'independiente' | 'empresario' | 'inversionista';
+
 export interface Goals {
-  // NO meta económica fija — la seguridad financiera es el piso, no el techo
-  securityFloor: number;   // assets totales mínimos para sentirse seguro (muy alcanzable)
+  // Metas de vida — sin número económico fijo
   bienestar: number;
   conocimientos: number;
   impacto: number;
-  comunitario: number;     // legado comunitario mínimo (dejar huella en Cuenca)
+  comunitario: number;
+  // Fondo de emergencia: meses de gastos cubiertos en banco (universal: 3-6 meses)
+  emergencyMonths: number;
 }
 
 export interface LogEntry {
