@@ -1338,8 +1338,19 @@ input[type=text], input[type=number] {
   border-top: 1px solid rgba(196,158,72,0.2);
 }
 .clock-face {
-  width: 80px; height: 80px;
+  width: 108px; height: 108px;
   position: relative;
+}
+.clock-face .clock-svg {
+  filter: drop-shadow(0 0 8px rgba(232,160,32,0.55));
+}
+.clock-urgent .clock-svg {
+  filter: drop-shadow(0 0 10px rgba(224,48,58,0.7));
+  animation: clockPulse 0.9s ease-in-out infinite;
+}
+@keyframes clockPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
 }
 
 /* ── Footer bar: clock + actions + end button ── */

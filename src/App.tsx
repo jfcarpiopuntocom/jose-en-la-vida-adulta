@@ -350,27 +350,30 @@ function TimeRing({ hours }: { hours: number }) {
     ? 'M18 4 A14 14 0 ' + largeArc + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1)
     : '';
   const hoursLeft = Math.round(hours);
-  const col = pct > 0.5 ? '#3A7850' : pct > 0.2 ? '#C8A040' : '#A0192C';
+  // El tiempo es oro: dorado normalmente, rojo cuando aprieta la urgencia
+  const urgent = pct <= 0.35;
+  const arcCol = urgent ? '#E0303A' : '#F5C24A';
+  const numCol = urgent ? '#E0303A' : '#E8A020';
   return (
-    <div className="clock-face">
+    <div className={'clock-face' + (urgent ? ' clock-urgent' : '')}>
       <svg viewBox="0 0 36 36" className="clock-svg">
-        {/* Clock face background */}
-        <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
-        {/* Hour markers */}
+        {/* Aro base (sólido, oro oscuro) */}
+        <circle cx="18" cy="18" r="14" fill="none" stroke="#3A2A14" strokeWidth="3"/>
+        {/* Marcas de hora (oro sólido) */}
         {[0,30,60,90,120,150,180,210,240,270,300,330].map(a => {
-          const r1 = 14.5, r2 = 16;
+          const r1 = 15, r2 = 16.6;
           const ax = (a - 90) * Math.PI / 180;
           return <line key={a} x1={18+r1*Math.cos(ax)} y1={18+r1*Math.sin(ax)}
             x2={18+r2*Math.cos(ax)} y2={18+r2*Math.sin(ax)}
-            stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>;
+            stroke="#7A5A1E" strokeWidth="1"/>;
         })}
-        {/* Time arc */}
-        {angle > 0 && <path d={arcPath} fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round"/>}
-        {/* Center text */}
-        <text x="18" y="17" textAnchor="middle" fontSize="8" fontWeight="800"
-          fill={col} style={{ fontFamily: 'Nunito, sans-serif' }}>{hoursLeft}</text>
-        <text x="18" y="22.5" textAnchor="middle" fontSize="3.5"
-          fill="rgba(255,255,255,0.5)" style={{ fontFamily: 'Nunito, sans-serif' }}>horas</text>
+        {/* Arco de tiempo restante */}
+        {angle > 0 && <path d={arcPath} fill="none" stroke={arcCol} strokeWidth="3.4" strokeLinecap="round"/>}
+        {/* Número grande de horas */}
+        <text x="18" y="19.5" textAnchor="middle" fontSize="12" fontWeight="900"
+          fill={numCol} style={{ fontFamily: 'Nunito, sans-serif' }}>{hoursLeft}</text>
+        <text x="18" y="25" textAnchor="middle" fontSize="4" fontWeight="800"
+          fill="#E8A020" style={{ fontFamily: 'Nunito, sans-serif' }}>HORAS</text>
       </svg>
     </div>
   );
