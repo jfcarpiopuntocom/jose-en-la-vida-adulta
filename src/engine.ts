@@ -639,7 +639,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       const eligible = p.careerLevel >= j.minLevel;
       out.push({ id: 'apply_' + j.id, label: 'Postular: ' + j.title, hours: 2, desc: eligible ? `requiere confiab. ${j.minDep}` : `requiere nivel ${careerTitle(j.minLevel)}`, ok: p.timeLeft >= 2 && eligible,
         run: () => { applyEff(p, [['time', -2]]);
-          if (p.stats.dependability >= j.minDep) { p.job = j; return `${p.name} fuiste contratado en ${j.title}`; }
+          if (p.stats.dependability >= j.minDep) { p.job = j; const loc = locById(j.locationId); return `Fuiste contratado como ${j.title} en ${loc.name.split('(')[0].trim()}`; }
           return `${p.name} postuló a ${j.title}: no quedaste (sube confiabilidad)`; } });
     }
   }
