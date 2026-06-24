@@ -1097,6 +1097,14 @@ function App() {
     const g: GameState = deepClone(g0);
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
+    // Apply passive income for each player at end of turn
+    for (const p of g.players) {
+      const pi = passiveIncome(p);
+      if (pi > 0) {
+        p.liquidity += pi;
+        g.log.push({ turn: g.turn, text: `${p.name}: ingresos pasivos +$${pi}`, kind: 'pos', importance: 1 });
+      }
+    }
     g.turn++; g.activePlayerIndex = 0;
     for (const p of g.players) p.timeLeft = HOURS_PER_TURN;
     commit(g, true);
