@@ -98,6 +98,8 @@ const ACTION_ICONS: Record<string, string> = {
   consulta:'R', recuperar:'R', fisio:'R',
   entrenar:'T', partido_inf:'T',
   parque_descanso:'P', parque_foto:'P', parque_familia:'P',
+  naturaleza:'🌿', voluntariado:'🤝', scouts:'⚜️',
+  club_leones:'🦁', kiwanis:'🧒', rotario_operacion:'⚕️',
   proyecto_com:'G', tramite:'G', donacion:'G',
   meditacion:'M', rio_contemp:'M',
   comprar_obra:'A', presentar:'A', escuchar_musica:'A',

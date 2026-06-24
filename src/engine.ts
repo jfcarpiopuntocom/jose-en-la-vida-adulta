@@ -542,6 +542,19 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   if (loc === 'rio_tomebamba') {
     out.push({ id: 'meditar', label: 'Meditar junto al río (2h)', hours: 2, desc: '+salud, -estrés, +legado comunitario', ok: p.timeLeft >= 2,
       run: () => { applyEff(p, [['time', -2], ['stat', 'health', 4], ['stat', 'stress', -8], ['stat', 'happiness', 4], ['impact', 'comunitario', 2]]); return `${p.name} meditó junto al Tomebamba (+salud, -estrés)`; } });
+    // Salir a la naturaleza: vuelves con otro tono y eso mejora los lazos en casa
+    out.push({ id: 'naturaleza', label: 'Caminata por la naturaleza (4h)', hours: 4, desc: '+bienestar fuerte; vuelves de mejor ánimo y mejoran tus relaciones', ok: p.timeLeft >= 4,
+      run: () => {
+        applyEff(p, [['time', -4], ['stat', 'health', 8], ['stat', 'stress', -12], ['stat', 'happiness', 8]]);
+        let extra = '';
+        if (p.family.length > 0) {
+          // El mejor ánimo se contagia: sube la relación con toda la familia
+          for (const fm of p.family) fm.score = Math.min(100, fm.score + 4);
+          applyEff(p, [['impact', 'familiar', 3]]);
+          extra = ' Volviste con otro tono y en casa se notó (+relaciones)';
+        }
+        return `${p.name} caminó por las orillas del Tomebamba (+bienestar).` + extra;
+      } });
   }
 
   if (loc === 'terminal') {
@@ -612,6 +625,14 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     out.push({ id: 'networking_parque', label: 'Red de contactos (2h)', hours: 2, desc: '+confiabilidad, +impacto profesional', ok: p.timeLeft >= 2,
       run: () => { applyEff(p, [['time', -2], ['stat', 'dependability', 3], ['impact', 'profesional', 3], ['stat', 'happiness', 2]]); return `${p.name} expandió su red en el Parque Calderón`; }
     });
+    // Voluntariado: buenas acciones para la comunidad
+    out.push({ id: 'voluntariado', label: 'Voluntariado comunitario (4h)', hours: 4, desc: '+legado, +liderazgo, +felicidad. Buenas acciones que perduran', ok: p.timeLeft >= 4,
+      run: () => { applyEff(p, [['time', -4], ['stat', 'leadership', 4], ['stat', 'happiness', 6], ['stat', 'reputation', 3], ['impact', 'comunitario', 6]]); return `${p.name} hizo voluntariado por su comunidad (+legado, +liderazgo)`; }
+    });
+    // Dirigente Scout: liderazgo formativo de alto impacto comunitario
+    out.push({ id: 'scouts', label: 'Dirigente en Scouts del Ecuador (5h)', hours: 5, desc: 'Formar jóvenes: +liderazgo fuerte, +legado, +reputación', ok: p.timeLeft >= 5,
+      run: () => { applyEff(p, [['time', -5], ['stat', 'leadership', 7], ['stat', 'knowledge', 2], ['stat', 'reputation', 5], ['stat', 'happiness', 5], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `${p.name} sirvió como dirigente en los Scouts del Ecuador (+liderazgo, +legado)`; }
+    });
   }
 
   if (loc === 'municipio') {
@@ -626,6 +647,18 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       out.push({ id: 'cargo_publico', label: 'Cargo público voluntario (6h)', hours: 6, desc: 'legado alto: +reputación, +impacto', ok: p.timeLeft >= 6,
         run: () => { applyEff(p, [['time', -6], ['stat', 'dependability', 6], ['stat', 'knowledge', 2], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `${p.name} asumió un cargo público voluntario`; }
       });
+    // ── Filantropía de legado: clubes de servicio (gana acceso con reputación comunitaria) ──
+    if (p.impact.comunitario >= 20) {
+      out.push({ id: 'club_leones', label: 'Club de Leones: jornada médica ($300, 4h)', hours: 4, desc: 'Apoya hospitales y familias necesitadas. +legado fuerte, +reputación', ok: p.timeLeft >= 4 && p.liquidity >= 300,
+        run: () => { applyEff(p, [['time', -4], ['liq', -300], ['stat', 'reputation', 6], ['stat', 'happiness', 6], ['impact', 'comunitario', 12]]); return `${p.name} financió una jornada médica con el Club de Leones`; }
+      });
+      out.push({ id: 'kiwanis', label: 'Kiwanis: causa por la niñez ($250, 4h)', hours: 4, desc: 'Ayuda a hospitales infantiles. +legado, +reputación', ok: p.timeLeft >= 4 && p.liquidity >= 250,
+        run: () => { applyEff(p, [['time', -4], ['liq', -250], ['stat', 'reputation', 5], ['stat', 'happiness', 6], ['impact', 'comunitario', 10]]); return `${p.name} apoyó a la niñez con Kiwanis`; }
+      });
+      out.push({ id: 'rotario_operacion', label: 'Rotarios: donar una operación ($800, 5h)', hours: 5, desc: 'Como donante, pagas la cirugía de una familia necesitada. +legado máximo', ok: p.timeLeft >= 5 && p.liquidity >= 800,
+        run: () => { applyEff(p, [['time', -5], ['liq', -800], ['stat', 'reputation', 9], ['stat', 'happiness', 10], ['impact', 'comunitario', 18], ['impact', 'profesional', 2]]); return `${p.name} donó una operación a través del Club Rotario (+legado máximo)`; }
+      });
+    }
   }
 
   if (loc === 'estadio') {
