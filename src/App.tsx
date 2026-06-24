@@ -867,6 +867,22 @@ function OnboardModal({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
+        <div style={{ margin:'10px 0 6px', fontSize:'0.82rem', fontWeight:700, color:'#CCCCCC', WebkitTextFillColor:'#CCCCCC' }}>
+          Cuatro rutas al exito:
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:10 }}>
+          {[
+            { label:'Asalariado', desc:'Empleo + carrera', col:'#28ECAA' },
+            { label:'Independiente', desc:'Profesion liberal', col:'#E8A020' },
+            { label:'Empresario', desc:'Negocio propio', col:'#fb7185' },
+            { label:'Inversionista', desc:'Ingresos pasivos', col:'#c084fc' },
+          ].map(r => (
+            <div key={r.label} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid ' + r.col + '66', background: r.col + '18' }}>
+              <div style={{ fontSize:'0.78rem', fontWeight:700, color:r.col, WebkitTextFillColor:r.col }}>{r.label}</div>
+              <div style={{ fontSize:'0.72rem', color:'#CCCCCC', WebkitTextFillColor:'#CCCCCC' }}>{r.desc}</div>
+            </div>
+          ))}
+        </div>
         <div className="onboard-win">Para ganar: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez.</div>
         <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={dismiss}>
           Entendido — empezar
