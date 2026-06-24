@@ -64,6 +64,8 @@ export function passiveIncome(p: PlayerState): number {
   let pi = 0;
   // Interés bancario: ~5% anual = ~0.2% quincena
   pi += Math.round(p.bank * 0.002);
+  // Fondo mutuo: 0.6% por turno
+  pi += Math.round(((p as any).fondoMutuo || 0) * 0.006);
   // Negocio con empleados: el sistema genera sin el dueño presente
   for (const b of p.businesses) {
     if (b.employees.length > 0) {
@@ -376,6 +378,26 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           return win
             ? `${p.name} invirtió en bolsa y ganó $${delta}`
             : `${p.name} invirtió en bolsa y perdió $${-delta}`;
+        } });
+    // Fondo mutuo: aporte genera ingreso pasivo fijo (0.6%/turno sobre capital)
+    const fondoMutuo = (p as any).fondoMutuo as number || 0;
+    if (p.liquidity >= 500)
+      out.push({ id: 'fondo_500', label: 'Fondo mutuo +$500 (1h)', hours: 1,
+        desc: `Cada $500 = ~$3/turno pasivo. Fondo actual: $${fondoMutuo}`,
+        ok: p.timeLeft >= 1 && p.liquidity >= 500,
+        run: () => {
+          (p as any).fondoMutuo = ((p as any).fondoMutuo || 0) + 500;
+          applyEff(p, [['time', -1], ['liq', -500], ['stat', 'knowledge', 1]]);
+          return `${p.name} aporto $500 al fondo mutuo (total: $${(p as any).fondoMutuo})`;
+        } });
+    if (p.liquidity >= 2000)
+      out.push({ id: 'fondo_2000', label: 'Fondo mutuo +$2000 (1h)', hours: 1,
+        desc: `Aporte grande. Fondo actual: $${fondoMutuo}`,
+        ok: p.timeLeft >= 1 && p.liquidity >= 2000,
+        run: () => {
+          (p as any).fondoMutuo = ((p as any).fondoMutuo || 0) + 2000;
+          applyEff(p, [['time', -1], ['liq', -2000], ['stat', 'knowledge', 2]]);
+          return `${p.name} aporto $2000 al fondo mutuo (total: $${(p as any).fondoMutuo})`;
         } });
   }
 
