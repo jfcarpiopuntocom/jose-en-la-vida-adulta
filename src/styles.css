@@ -1118,3 +1118,23 @@ input[type=text], input[type=number] {
   color: var(--dark, #080808) !important; -webkit-text-fill-color: var(--dark, #080808) !important;
   vertical-align: middle;
 }
+
+/* ── Metas de victoria collapsible ── */
+.metas-detail { margin: 6px 0; }
+.metas-summary {
+  cursor: pointer; font-size: 0.76rem; font-weight: 600;
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
+  list-style: none; padding: 4px 0;
+}
+.metas-summary::-webkit-details-marker { display: none; }
+.metas-list { padding: 4px 0; display: flex; flex-direction: column; gap: 3px; }
+.meta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.72rem; gap: 4px;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+.meta-row.meta-done { opacity: 0.6; }
+.meta-check {
+  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
+  font-size: 0.8rem; font-weight: 900;
+}

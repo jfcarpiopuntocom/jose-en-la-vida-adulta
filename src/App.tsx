@@ -418,6 +418,22 @@ function StatsPanel({
       {canRetire(p, game.turn) && (
         <button className="btn-legacy" onClick={onLegacy}>Pasar el legado ✦</button>
       )}
+      <details className="metas-detail">
+        <summary className="metas-summary">Ver metas de victoria</summary>
+        <div className="metas-list">
+          {indBars.map(b => {
+            const pct = Math.min(100, (b.val / b.goal) * 100);
+            const done = pct >= 100;
+            return (
+              <div key={b.key} className={"meta-row" + (done ? " meta-done" : "")}>
+                <span style={{ color: b.color, WebkitTextFillColor: b.color }}>{b.label}</span>
+                <span>{b.key === "emergencia" ? b.val.toFixed(1) + "m / " + b.goal + "m" : b.key === "pasivo" ? Math.round(b.val) + "% / 100%" : Math.round(b.val) + " / " + b.goal}</span>
+                {done && <span className="meta-check">✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      </details>
       <button className="btn-end" onClick={onEnd}>
         Terminar quincena ▶
       </button>
