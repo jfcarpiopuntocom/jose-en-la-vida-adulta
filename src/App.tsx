@@ -386,6 +386,7 @@ function StatsPanel({
       <div className="stat-divider" />
       <div className="resources">
         <div className="resource"><span className="res-icon">💰</span><span className="res-val">${p.liquidity}</span></div>
+        {(() => { const nw = p.liquidity + p.bank + p.businesses.reduce((s,b)=>s+b.capital,0) + collectiblesValue(p); return <div className="resource net-worth-row"><span className="res-icon" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA"}}>NW</span><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:700}}>${nw}</span></div>; })()}
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
         <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} titulos</span></div>
         {p.job && <div className="resource"><span className="res-icon">W</span><span className="res-val" style={{fontSize:"0.78rem"}}>{p.job.title}</span></div>}
