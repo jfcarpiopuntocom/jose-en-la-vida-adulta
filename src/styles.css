@@ -1402,3 +1402,40 @@ input[type=text], input[type=number] {
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
 }
 .philo-area b { color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important; font-weight: 800; }
+
+/* ── José sherpa en la pantalla de inicio ── */
+.jose-hero {
+  display: flex; gap: 12px; align-items: center;
+  margin: 4px 0 16px; padding: 12px;
+  background: linear-gradient(150deg, rgba(200,160,64,0.16), rgba(17,28,45,0.6));
+  border: 2px solid var(--gold); border-radius: 14px;
+}
+.jose-hero-img {
+  width: 64px; height: 64px; flex-shrink: 0;
+  border-radius: 50%; object-fit: cover;
+  border: 3px solid var(--gold); background: #f4e5c8;
+  box-shadow: 0 0 16px rgba(200,160,64,0.4);
+}
+.jose-hero-body { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+.jose-hero-name {
+  font-family: "Cinzel", serif; font-size: 1.05rem; font-weight: 800;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.jose-hero-quip {
+  font-size: 0.92rem; line-height: 1.4; font-style: italic;
+  color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important;
+}
+.jose-hero-toggle {
+  display: flex; align-items: center; gap: 7px; margin-top: 3px;
+  font-size: 0.88rem; cursor: pointer;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.jose-hero-warn {
+  font-size: 0.82rem; font-weight: 700;
+  color: #E86040 !important; -webkit-text-fill-color: #E86040 !important;
+}
+/* Quip de José dentro del log */
+.bc-jose, .log-entry.bc-jose {
+  font-style: italic; font-weight: 700;
+  color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important;
+}

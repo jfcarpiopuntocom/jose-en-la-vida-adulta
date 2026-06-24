@@ -177,7 +177,7 @@ export type GameTier = 1 | 2 | 3 | 4;
 export interface LogEntry {
   turn: number;
   text: string;
-  kind: 'plain' | 'pos' | 'neg' | 'silver';
+  kind: 'plain' | 'pos' | 'neg' | 'silver' | 'jose';
   importance: 1 | 2 | 3;
 }
 

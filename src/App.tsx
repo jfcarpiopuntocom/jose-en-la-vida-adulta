@@ -6,6 +6,7 @@ import {
   expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
   CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle, generateBackstory,
+  joseQuip,
 } from './engine';
 import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
@@ -32,12 +33,18 @@ function PawnAvatar({ p, size = 22, glow = false }: { p: PlayerState; size?: num
 // ── Portrait: large face for active turn ──
 function Portrait({ p, size = 72 }: { p: PlayerState; size?: number }) {
   const col = PLAYER_COLORS[p.colorIndex];
-  // Jose has custom artwork; humans get placeholder smileys until assets land
-  if (p.isAI && p.name.toLowerCase().startsWith('jos')) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const isJose = p.isAI && p.name.toLowerCase().startsWith('jos');
+  // José tiene su retrato; los 4 jugadores usan player1..4.png (fallback a smiley si aún no están)
+  const src = isJose
+    ? '/jose-en-la-vida-adulta/avatars/jose.png'
+    : '/jose-en-la-vida-adulta/avatars/player' + (p.colorIndex + 1) + '.png';
+  if (!imgFailed) {
     return (
-      <img src="/jose-en-la-vida-adulta/avatars/jose.png"
+      <img src={src}
         width={size} height={size}
         alt={p.name}
+        onError={() => setImgFailed(true)}
         style={{
           borderRadius: '50%', objectFit: 'cover',
           border: '3px solid ' + col,
@@ -46,7 +53,7 @@ function Portrait({ p, size = 72 }: { p: PlayerState; size?: number }) {
         }} />
     );
   }
-  // Smiley placeholder for human players — different color per slot
+  // Smiley placeholder para jugadores humanos — distinto color por slot
   const smileyColors = ['#F4D03F', '#F5B041', '#EC7063', '#AF7AC5'];
   const bg = smileyColors[p.colorIndex % 4];
   return (
@@ -237,7 +244,8 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const maxTier = getMaxTier();
   const [tier, setTier] = useState<GameTier>(maxTier);
   const [n, setN] = useState(1);
-  const [withJose, setWithJose] = useState(false);
+  const [withJose, setWithJose] = useState(true);
+  const [joseLine] = useState(joseQuip());
 
   function start() {
     const tierGoals = TIER_GOALS[tier] as typeof TIER_GOALS[1];
@@ -261,6 +269,19 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
         <div className="setup-card">
           <div className="setup-title">JOSÉ EN LA VIDA ADULTA</div>
           <div className="setup-sub">el juego de la vida plena · Cuenca, Ecuador</div>
+
+          {/* José: el héroe-sherpa, primera decisión */}
+          <div className="jose-hero">
+            <img className="jose-hero-img" src="/jose-en-la-vida-adulta/avatars/jose.png" alt="José" />
+            <div className="jose-hero-body">
+              <div className="jose-hero-name">José va contigo</div>
+              <div className="jose-hero-quip">“{joseLine}”</div>
+              <label className="jose-hero-toggle">
+                <input type="checkbox" checked={!withJose} onChange={e => setWithJose(!e.target.checked)} />
+                Jugar sin José <span className="jose-hero-warn">(no recomendado)</span>
+              </label>
+            </div>
+          </div>
 
           {/* Tier selector */}
           <div className="setup-label">Nivel de dificultad</div>
@@ -295,21 +316,14 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             ))}
           </div>
 
-          {/* José CPU */}
-          <label className="jose-toggle-label">
-            <input type="checkbox" checked={withJose} onChange={e => setWithJose(e.target.checked)}
-              style={{ marginRight: 8 }} />
-            Jugar contra <b>José</b> (CPU)
-          </label>
-
           <div style={{ display:'flex', gap:8, marginTop: 16 }}>
             <button className="primary" style={{ flex:1 }} onClick={start}>
               Empezar
             </button>
             <button style={{ flex:'0 0 auto', padding:'0 14px' }} onClick={() => {
               const { label: _l, desc: _d, cpuMult: _c, ...goals } = TIER_GOALS[1];
-              onStart(newGame([{ id:'p0', name:'Jugador 1' }], goals, 1));
-            }} title="Modo Rapido: 1 jugador, Principiante, sin configuracion">
+              onStart(newGame([{ id:'p0', name:'Jugador 1' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:2 }], goals, 1));
+            }} title="Modo Rapido: 1 jugador + José, Principiante, sin configuracion">
               Rapido
             </button>
           </div>
@@ -1100,6 +1114,10 @@ function App() {
       const ai = g.players[g.activePlayerIndex];
       const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
       logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
+      // José, sherpa del Viaje del Héroe: a veces deja un quip socrático (sin spoilear)
+      if (ai.name.toLowerCase().startsWith('jos') && Math.random() < 0.4) {
+        g.log.push({ turn: g.turn, text: 'José: ' + joseQuip(), kind: 'jose', importance: 2 });
+      }
       setCpuThinking(false);
       endPlayerTurn(g);
     }, delay);

@@ -97,6 +97,24 @@ export function emergencyFundMonths(p: PlayerState): number {
   return exp > 0 ? p.bank / exp : 0;
 }
 export const PLAYER_COLORS = ['var(--p0)', 'var(--p1)', 'var(--p2)', 'var(--p3)'];
+
+// ── José sherpa: Viaje del Héroe. Va dos pasos adelante, guía con preguntas
+//    socráticas y quips, sin spoilear. Su hilo: caer y volver a levantarse. ──
+export const JOSE_QUIPS: string[] = [
+  '¿Qué harías distinto si supieras que una caída no es el final, sino el primer acto?',
+  'Yo también quebré mi primer negocio. Aprendí más de esa caída que de tres aciertos.',
+  '¿El tiempo te alcanza… o estás llenando las horas sin elegirlas?',
+  'No busques el camino perfecto. Busca el siguiente paso honesto.',
+  'Cuando caí, no me levantó la suerte. Me levantó una decisión pequeña, repetida.',
+  '¿Qué área de tu vida lleva rato pidiendo atención y la sigues ignorando?',
+  'La fortuna ayuda, sí. Pero la disciplina es la que se queda a desayunar.',
+  '¿Esto te acerca al equilibrio, o solo abulta una sola columna?',
+  'Perdí salud por ganar plata, y gasté la plata en recuperar la salud. No repitas mi vuelta larga.',
+  'Un tropiezo cuenta una historia. Lo que importa es quién la narra después.',
+  '¿Y si el legado no es lo que dejas al final, sino a quién ayudas en el camino?',
+  'Voy dos pasos adelante, pero no para que me sigas: para mostrarte que se puede.',
+];
+export function joseQuip(): string { return JOSE_QUIPS[Math.floor(Math.random() * JOSE_QUIPS.length)]; }
 const rnd = (n: number) => Math.floor(Math.random() * n);
 const pick = <T,>(a: T[]): T => a[rnd(a.length)];
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
