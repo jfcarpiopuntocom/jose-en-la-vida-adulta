@@ -146,7 +146,7 @@ function getMaxTier(): GameTier {
 // ── Setup screen ──
 function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const maxTier = getMaxTier();
-  const [tier, setTier] = useState<GameTier>(1);
+  const [tier, setTier] = useState<GameTier>(maxTier);
   const [n, setN] = useState(1);
   const [names, setNames] = useState<string[]>(['', '', '', '']);
   const [withJose, setWithJose] = useState(false);
@@ -272,9 +272,17 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             )}
           </div>
 
-          <button className="primary" style={{ width:'100%', marginTop: 16 }} onClick={start}>
-            Empezar — {TIER_GOALS[tier].label}
-          </button>
+          <div style={{ display:'flex', gap:8, marginTop: 16 }}>
+            <button className="primary" style={{ flex:1 }} onClick={start}>
+              Empezar
+            </button>
+            <button style={{ flex:'0 0 auto', padding:'0 14px' }} onClick={() => {
+              const { label: _l, desc: _d, cpuMult: _c, ...goals } = TIER_GOALS[1];
+              onStart(newGame([{ id:'p0', name:'Jugador 1' }], goals, 1));
+            }} title="Modo Rapido: 1 jugador, Principiante, sin configuracion">
+              Rapido
+            </button>
+          </div>
           {hasLocalSave() && (
             <button style={{ width:'100%', marginTop: 8 }} onClick={() => { const g = loadLocal(); if (g) onStart(g); }}>
               Continuar partida guardada
