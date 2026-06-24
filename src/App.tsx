@@ -421,6 +421,11 @@ function StatsPanel({
       {canRetire(p, game.turn) && (
         <button className="btn-legacy" onClick={onLegacy}>Pasar el legado ✦</button>
       )}
+      {p.stats.health < 20 && (
+        <div className="stress-warning" style={{ borderColor:'rgba(232,160,32,0.4)', background:'rgba(232,160,32,0.15)', color:'#E8A020', WebkitTextFillColor:'#E8A020' }}>
+          Salud critica ({p.stats.health}%) — no puedes trabajar. Ve a la Clinica.
+        </div>
+      )}
       {p.stats.stress >= 80 && (
         <div className="stress-warning">
           Estres critico ({p.stats.stress}%) — salario reducido. Descansa ya.

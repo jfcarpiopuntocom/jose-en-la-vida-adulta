@@ -602,6 +602,15 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           return `${p.name} postuló a ${j.title}: no quedaste (sube confiabilidad)`; } });
     }
   }
+  // Health crisis: if health < 20, mark all work-related actions as unavailable
+  if (p.stats.health < 20) {
+    out.forEach(a => {
+      if (['work_', 'overtime', 'startbiz', 'runbiz', 'runmanufactura', 'empleo_'].some(k => a.id.startsWith(k))) {
+        a.ok = false;
+        a.desc = a.desc + ' — SALUD CRITICA, descansa primero';
+      }
+    });
+  }
   return out.filter(a => a.ok);
 }
 
