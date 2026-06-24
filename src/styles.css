@@ -230,18 +230,19 @@ h1,h2,h3,p,span,div,button,label,li,a {
 .res-val { font-weight: 700; color: var(--white) !important; -webkit-text-fill-color: var(--white) !important; }
 
 .btn-end {
-  width: 100%; padding: 8px 6px;
-  background: linear-gradient(135deg, rgba(232,160,32,0.18), rgba(232,160,32,0.10));
-  border: 1px solid rgba(232,160,32,0.35); border-radius: 6px;
-  color: var(--text-gold) !important; -webkit-text-fill-color: var(--text-gold) !important;
-  font-family: 'Nunito', sans-serif; font-size: 0.70rem; font-weight: 700;
-  cursor: pointer; transition: all .3s; line-height: 1.3; min-height: 36px;
+  position: sticky; bottom: 0; margin-top: auto;
+  width: 100%; padding: 10px; border-radius: 8px;
+  font-weight: 800; cursor: pointer;
+  background: linear-gradient(135deg, var(--gold), #D4921D);
+  border: 2px solid var(--gold);
+  color: #0c0c0c !important; -webkit-text-fill-color: #0c0c0c !important;
+  box-shadow: 0 -4px 12px rgba(200,160,64,0.2), 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 10;
 }
 .btn-end:hover {
-  background: linear-gradient(135deg, rgba(232,160,32,0.28), rgba(232,160,32,0.18));
-  border-color: rgba(232,160,32,0.55);
-  box-shadow: 0 0 22px rgba(232,160,32,0.18);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #F5C24A, var(--gold));
+  box-shadow: 0 -4px 16px rgba(200,160,64,0.3), 0 4px 12px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
 }
 .btn-legacy {
   width: 100%; padding: 6px;
@@ -1260,7 +1261,7 @@ input[type=text], input[type=number] {
   background: var(--panel-bg);
   border-left: 1px solid var(--line);
   padding: 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
   overflow-y: auto;
 }
 

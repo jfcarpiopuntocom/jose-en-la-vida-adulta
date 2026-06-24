@@ -383,7 +383,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   if (loc === 'casa') {
     if (p.housing === 'family') {
       out.push({ id: 'rent_apartment', label: 'Alquilar apartamento ($300 dep.)', hours: 4, desc: 'Independencia: +$110/quincena en gastos, +felicidad', ok: p.timeLeft >= 4 && p.liquidity >= 300,
-        run: () => { p.housing = 'rent_cheap'; applyEff(p, [['time', -4], ['liq', -300], ['stat', 'happiness', 8], ['stat', 'stress', -5]]); return `${p.name} se independizo: alquilo un apartamento`; } });
+        run: () => { p.housing = 'rent_cheap'; applyEff(p, [['time', -4], ['liq', -300], ['stat', 'happiness', 8], ['stat', 'stress', -5]]); return `${p.name} te independizaste: alquilo un apartamento`; } });
     }
     if (p.housing === 'rent_cheap' && p.bank >= 5000) {
       out.push({ id: 'buy_apartment', label: 'Comprar apartamento (banco: -$5000)', hours: 4, desc: 'Patrimonio real. Gastos bajan a $20/quincena', ok: p.timeLeft >= 4 && p.bank >= 5000,
@@ -537,7 +537,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           if (candidates.length === 0) { applyEff(p, [['time', -2]]); return `${p.name} buscó empleo: aún no cumple requisitos`; }
           const best = candidates.sort((a, b) => b.wage - a.wage)[0];
           p.job = best; applyEff(p, [['time', -2], ['stat', 'happiness', 3], ['impact', 'profesional', 2]]);
-          return `${p.name} fue contratado: ${best.title} (+$${best.wage}/turno)`;
+          return `${p.name} fuiste contratado: ${best.title} (+$${best.wage}/turno)`;
         }
       });
     }
@@ -638,7 +638,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       const eligible = p.careerLevel >= j.minLevel;
       out.push({ id: 'apply_' + j.id, label: 'Postular: ' + j.title, hours: 2, desc: eligible ? `requiere confiab. ${j.minDep}` : `requiere nivel ${careerTitle(j.minLevel)}`, ok: p.timeLeft >= 2 && eligible,
         run: () => { applyEff(p, [['time', -2]]);
-          if (p.stats.dependability >= j.minDep) { p.job = j; return `${p.name} fue contratado en ${j.title}`; }
+          if (p.stats.dependability >= j.minDep) { p.job = j; return `${p.name} fuiste contratado en ${j.title}`; }
           return `${p.name} postuló a ${j.title}: no quedaste (sube confiabilidad)`; } });
     }
   }
