@@ -1169,3 +1169,22 @@ input[type=text], input[type=number] {
   color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important;
   animation: stressPulse 3s ease-in-out infinite;
 }
+
+/* ── Victory stats grid ── */
+.victory-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; margin: 12px 0;
+}
+.vstat {
+  padding: 8px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.vstat-label {
+  font-size: 0.68rem;
+  color: #999999 !important; -webkit-text-fill-color: #999999 !important;
+}
+.vstat-val {
+  font-size: 0.9rem; font-weight: 700;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}

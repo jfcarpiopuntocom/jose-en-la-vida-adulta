@@ -1006,6 +1006,15 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
               Leyenda completada. Has conquistado el juego.
             </div>
           )}
+          {/* Victory stats summary */}
+          <div className="victory-stats">
+            <div className="vstat"><span className="vstat-label">Quincenas</span><span className="vstat-val">{game.turn}</span></div>
+            <div className="vstat"><span className="vstat-label">Patrimonio neto</span><span className="vstat-val">${winner.liquidity + winner.bank + winner.businesses.reduce((s,b)=>s+b.capital,0)}</span></div>
+            <div className="vstat"><span className="vstat-label">Nivel carrera</span><span className="vstat-val">{winner.careerLevel + 1}/9</span></div>
+            <div className="vstat"><span className="vstat-label">Titulos</span><span className="vstat-val">{winner.education.completed.length}</span></div>
+            <div className="vstat"><span className="vstat-label">Vivienda</span><span className="vstat-val">{winner.housing === 'own_apartment' ? 'Propia' : winner.housing === 'rent_cheap' ? 'Alquiler' : 'Familiar'}</span></div>
+            <div className="vstat"><span className="vstat-label">Negocios</span><span className="vstat-val">{winner.businesses.length}</span></div>
+          </div>
           <div style={{ marginBottom: 16 }}>
             {hist.map((l, i) => <div key={i} className="log-entry">Q{l.turn} · {l.text}</div>)}
           </div>
