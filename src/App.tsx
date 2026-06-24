@@ -722,11 +722,11 @@ function Board({ game, onInspect, inspecting }: {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
 
-  // 13 locations around a rectangle: top 4, right 3, bottom 3, left 3
+  // 15 stops around a rectangle ring: top 4, right 4, bottom 4, left 3 (clockwise loop)
   const top    = locs.slice(0, 4);
-  const right  = locs.slice(4, 7);
-  const bottom = [...locs.slice(7, 10)].reverse();
-  const left   = [...locs.slice(10, 13)].reverse();
+  const right  = locs.slice(4, 8);
+  const bottom = [...locs.slice(8, 12)].reverse();
+  const left   = [...locs.slice(12, 15)].reverse();
 
   function Tile({ loc }: { loc: typeof LOCATIONS[0] }) {
     const here = loc.id === active.currentLocation;

@@ -20,6 +20,9 @@ export const LOCATIONS: Location[] = [
   { id:'municipio',          code:'MUN',  name:'Municipio (tramites · legado)',zone:'politico',     crimeRisk:15, x:62,  y:218, icon:'🏛️', tc:{walk:0.5,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
   { id:'mall_rio',           code:'MAL',  name:'Mall del Rio (coleccionables)',zone:'comercial',    crimeRisk:12, x:117, y:138, icon:'🛍️', tc:{walk:0.6,bus:0.25,taxi:0.2,bicycle:0.35,motorcycle:0.2,car:0.2} },
   { id:'estadio',            code:'EST',  name:'Estadio Alejandro (entrena)',  zone:'deporte',      crimeRisk:22, x:231, y:81,  icon:'⚽', tc:{walk:0.5,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
+  // ── Stops extra (duplicados): facilidades por ser Cuenca, ciudad de parques y universidades ──
+  { id:'parque_paraiso',     code:'PRS',  name:'Parque El Paraíso (naturaleza)',zone:'centro',       crimeRisk:14, x:300, y:300, icon:'🌳', tc:{walk:0.5,bus:0.25,taxi:0.2,bicycle:0.35,motorcycle:0.2,car:0.2} },
+  { id:'u_cuenca',           code:'UCU',  name:'U. de Cuenca (estudiar)',       zone:'universitaria',crimeRisk:14, x:430, y:120, icon:'🎓', tc:{walk:0.5,bus:0.25,taxi:0.2,bicycle:0.35,motorcycle:0.2,car:0.2} },
 ];
 export const locById = (id: string): Location => LOCATIONS.find(l => l.id === id)!;
 // orden del recorrido del tablero (loop ovalado cerrado, estilo Jones/Monopoly)

@@ -406,7 +406,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     }
   }
 
-  if (loc === 'zona_universitaria') {
+  if (loc === 'zona_universitaria' || loc === 'u_cuenca') {
     // matricularse en un grado
     for (const d of availableDegrees(p)) {
       if (p.education.enrolledId) break; // un grado a la vez
@@ -614,7 +614,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     });
   }
 
-  if (loc === 'parque_calderon') {
+  if (loc === 'parque_calderon' || loc === 'parque_paraiso') {
     out.push({ id: 'parque_descanso', label: 'Descansar en el parque (3h)', hours: 3, desc: '+felicidad, -estrés, gratis', ok: p.timeLeft >= 3,
       run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 6], ['stat', 'stress', -7], ['stat', 'health', 2]]); return `${p.name} descansó en el Parque Calderón`; }
     });
@@ -633,6 +633,18 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     out.push({ id: 'scouts', label: 'Dirigente en Scouts del Ecuador (5h)', hours: 5, desc: 'Formar jóvenes: +liderazgo fuerte, +legado, +reputación', ok: p.timeLeft >= 5,
       run: () => { applyEff(p, [['time', -5], ['stat', 'leadership', 7], ['stat', 'knowledge', 2], ['stat', 'reputation', 5], ['stat', 'happiness', 5], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `${p.name} sirvió como dirigente en los Scouts del Ecuador (+liderazgo, +legado)`; }
     });
+    // Salir a la naturaleza también disponible en los parques
+    out.push({ id: 'naturaleza', label: 'Día en la naturaleza (4h)', hours: 4, desc: '+bienestar fuerte; vuelves de mejor ánimo y mejoran tus relaciones', ok: p.timeLeft >= 4,
+      run: () => {
+        applyEff(p, [['time', -4], ['stat', 'health', 8], ['stat', 'stress', -12], ['stat', 'happiness', 8]]);
+        let extra = '';
+        if (p.family.length > 0) {
+          for (const fm of p.family) fm.score = Math.min(100, fm.score + 4);
+          applyEff(p, [['impact', 'familiar', 3]]);
+          extra = ' Volviste con otro tono y en casa se notó (+relaciones)';
+        }
+        return `${p.name} pasó el día en la naturaleza (+bienestar).` + extra;
+      } });
   }
 
   if (loc === 'municipio') {
