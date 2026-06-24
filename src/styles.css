@@ -1120,18 +1120,30 @@ input[type=text], input[type=number] {
 
 /* ── Tile (each board square) ── */
 .tile {
-  flex: 1; min-width: 100px; min-height: 90px;
-  padding: 5px 4px;
+  flex: 1; min-width: 92px; min-height: 92px;
+  padding: 6px 5px;
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 2px;
+  justify-content: center; gap: 3px;
   cursor: pointer; position: relative;
-  border: 1px solid transparent;
-  transition: background .2s, border-color .2s;
+  border: 2px solid rgba(196,158,72,0.22);
+  border-radius: 12px;
+  margin: 3px;
+  background: linear-gradient(155deg, rgba(34,46,72,0.55), rgba(17,28,45,0.65));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 5px rgba(0,0,0,0.3);
+  transition: transform .15s, border-color .2s, box-shadow .2s;
   overflow: hidden;
 }
 .tile:hover {
-  background: rgba(200,160,64,0.08);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(200,160,64,0.25);
 }
+/* Slot reservado para iconos PNG reales (caben en lugar del emoji) */
+.tile-art {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  border-radius: 9px; background: rgba(255,255,255,0.04);
+}
+.tile-art img { width: 100%; height: 100%; object-fit: contain; }
 .tile-here {
   background: rgba(200,160,64,0.14) !important;
   border-color: var(--gold) !important;
@@ -1142,7 +1154,7 @@ input[type=text], input[type=number] {
   background: rgba(30,90,153,0.15) !important;
   border-color: var(--sky) !important;
 }
-.tile-icon { font-size: 1.3rem; line-height: 1; }
+.tile-icon { font-size: 1.7rem; line-height: 1; }
 .tile-label {
   font-size: 0.65rem; font-weight: 700; text-align: center;
   line-height: 1.1; max-width: 76px; word-break: break-word;
