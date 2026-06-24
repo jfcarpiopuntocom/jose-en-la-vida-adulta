@@ -1185,41 +1185,31 @@ function App() {
     <>
       <RotateOverlay />
       <AtmosphereBg />
-      <Board
-        game={game}
-        onMove={moveTo}
-        onInspect={id => { setInspecting(id); setOpenPanel(null); }}
-        inspecting={inspecting}
-      />
-      <LogBar game={game} />
-      <TurnHint turn={game.turn} />
-
-      <div id="hud">
-        {showBackstory && game && (
+      {showBackstory && game && (
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
-        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
-        <ActionsBar game={game} onAction={doAction} />
-
-        {/* Lid panels */}
-        {openPanel === 'about' && (
-          <LidPanel id="about" title="¿Qué es este juego?" onClose={() => setOpenPanel(null)}>
-            <AboutContent />
-          </LidPanel>
-        )}
-
-        {/* Node inspect tooltip */}
-        {inspecting && (
-          <NodeInspect
-            locId={inspecting}
-            game={game}
-            onMove={() => moveTo(inspecting)}
-            onAction={doAction}
-            onClose={() => setInspecting(null)}
+      <div className="game-layout">
+        <div className="game-main">
+          <Board game={game} onMove={moveTo}
+            onInspect={id => { setInspecting(id); setOpenPanel(null); }}
+            inspecting={inspecting}
           />
-        )}
+          <ActionsBar game={game} onAction={doAction} />
+        </div>
+        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
       </div>
+      <LogBar game={game} />
+      {inspecting && (
+        <NodeInspect locId={inspecting} game={game}
+          onMove={() => moveTo(inspecting)} onAction={doAction}
+          onClose={() => setInspecting(null)} />
+      )}
+      {openPanel === 'about' && (
+        <LidPanel id="about" title="¿Qué es este juego?" onClose={() => setOpenPanel(null)}>
+          <AboutContent />
+        </LidPanel>
+      )}
 
       {/* Zoom modal */}
       {zp && (
