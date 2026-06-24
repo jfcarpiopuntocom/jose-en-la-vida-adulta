@@ -220,7 +220,7 @@ function BackstoryModal({ player, onClose }: { player: PlayerState; onClose: () 
         <p className="backstory-text">{story}</p>
         <div className="backstory-stats">
           <div className="bstat"><span className="bstat-label">Dinero inicial</span><span className="bstat-val">${player.liquidity}</span></div>
-          <div className="bstat"><span className="bstat-label">Barrio</span><span className="bstat-val">{player.birthBarrio.replace(/_/g, ' ')}</span></div>
+          <div className="bstat"><span className="bstat-label">Barrio</span><span className="bstat-val">{barrioById(player.birthBarrio).name}</span></div>
           <div className="bstat"><span className="bstat-label">Familia</span><span className="bstat-val">{player.family.length} personas</span></div>
         </div>
         <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={onClose}>
