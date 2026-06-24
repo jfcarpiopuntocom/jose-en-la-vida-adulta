@@ -127,6 +127,7 @@ export interface PlayerState {
   realName?: string;   // nombre real para guardar la aventura (se pide al final)
   colorIndex: number;
   avatar?: number;     // retrato elegido por el jugador (0-3 = player1..4.png)
+  fell?: boolean;      // cayó (salud crítica o quiebra); al recuperarse gana temple — narrativa de levantarse
   generation: number;  // 1 = José, 2+ = herederos (Modo Legado)
   timeLeft: number;
   liquidity: number;

@@ -254,7 +254,8 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
     const human = { id: 'p0', name: 'Tú', avatar };
     const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] = [human];
     for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1) });
-    if (withJose) players.push({ id: 'jose', name: 'José', isAI: true, aiStrategy: 'empresa', aiDifficulty: 2 });
+    const joseDiff = (tier <= 1 ? 1 : tier === 2 ? 2 : 3) as 1|2|3; // José da ejemplo ajustado al nivel
+    if (withJose) players.push({ id: 'jose', name: 'José', isAI: true, aiStrategy: 'empresa', aiDifficulty: joseDiff });
     const { label: _l, desc: _d, cpuMult: _c, ...goals } = tierGoals;
     onStart(newGame(players, goals, tier));
   }
@@ -336,7 +337,7 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             </button>
             <button style={{ flex:'0 0 auto', padding:'0 14px' }} onClick={() => {
               const { label: _l, desc: _d, cpuMult: _c, ...goals } = TIER_GOALS[1];
-              onStart(newGame([{ id:'p0', name:'Jugador 1' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:2 }], goals, 1));
+              onStart(newGame([{ id:'p0', name:'Jugador 1' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:1 }], goals, 1));
             }} title="Modo Rapido: 1 jugador + José, Principiante, sin configuracion">
               Rapido
             </button>
@@ -453,14 +454,15 @@ function StatsPanel({
         <div className="cuadrante-chip sml" data-cq={cq}>{CUADRANTE_ICON[cq]} {CUADRANTE_LABEL[cq]}</div>
         {indBars.map(b => {
           const pct = Math.min(100, (b.val / b.goal) * 100);
+          const almost = pct >= 90 && pct < 100; // #2 ¡casi!
           const display = b.key === 'emergencia'
             ? b.val.toFixed(1) + 'm'
             : b.key === 'pasivo'
             ? Math.round(b.val) + '%'
             : Math.round(b.val) + '/' + b.goal;
           return (
-            <div key={b.key} className="ind-row-mini">
-              <span className="ind-lbl-mini">{b.label}</span>
+            <div key={b.key} className={'ind-row-mini' + (almost ? ' ind-almost' : '')}>
+              <span className="ind-lbl-mini">{b.label}{almost && <span className="ind-almost-tag">¡casi!</span>}</span>
               <div className="ind-bar-mini"><div className="ind-fill" style={{ width: pct+'%', '--bc': b.color } as any} /></div>
               <span className="ind-val-mini">{display}{pct >= 100 ? ' ✓' : ''}</span>
             </div>
@@ -1017,6 +1019,18 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
   const [saved, setSaved] = useState(false);
   const hist = game.log.filter(l => l.importance >= 2).slice(-10);
 
+  // #14 Final temático según el área donde más floreciste
+  const vm = metrics(winner);
+  const piRatio = passiveIncome(winner) / Math.max(expensesPerTurn(winner), 1);
+  const themes: { key: string; score: number; title: string; epi: string }[] = [
+    { key:'pasivo',  score: piRatio,                                         title:'Inversionista Pleno', epi:'Hiciste que el dinero trabajara por ti. La libertad fue tu cosecha.' },
+    { key:'legado',  score: winner.impact.comunitario / game.goals.comunitario, title:'Pilar de la Comunidad', epi:'Tu nombre quedó en la gente que ayudaste. Ese legado no se gasta.' },
+    { key:'conoc',   score: vm.conocimientos / game.goals.conocimientos,      title:'El Sabio', epi:'Cada lección te abrió una puerta. Llegaste lejos pensando lejos.' },
+    { key:'impacto', score: vm.impacto / game.goals.impacto,                  title:'El Constructor', epi:'Tejiste una red que te sostuvo y sostuvo a otros.' },
+    { key:'biene',   score: vm.bienestar / game.goals.bienestar,             title:'El Bien Vivido', epi:'Cuidaste cuerpo y alma. Viviste pleno, no solo ocupado.' },
+  ];
+  const theme = themes.reduce((a, b) => (b.score > a.score ? b : a));
+
   async function saveStory() {
     const summary = `${winner.name} alcanzó sus metas en la quincena ${game.turn}.\n` +
       hist.map(l => `Q${l.turn} · ${l.text}`).join('\n');
@@ -1033,10 +1047,11 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
           <div className="setup-title" style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'center' }}>
             <Portrait p={winner} size={56} /> Victoria
           </div>
+          <div className="victory-epithet">{winner.name}, {theme.title}</div>
           <div className="victory-title" style={{ color: col, WebkitTextFillColor: col }}>
-            {winner.name} — quincena {game.turn}
+            quincena {game.turn}
           </div>
-          <p className="victory-sub">Bienestar, carrera, patrimonio y legado — todo a la vez. Eso es una vida construida.</p>
+          <p className="victory-sub">{theme.epi} Bienestar, carrera, patrimonio y legado, todo a la vez: eso es una vida plena.</p>
           {unlockedNew && nextTier <= 4 && (
             <div className="tier-unlock-badge">
               Nivel desbloqueado: {TIER_GOALS[nextTier].label}
@@ -1052,7 +1067,7 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
             <div className="vstat"><span className="vstat-label">Quincenas</span><span className="vstat-val">{game.turn}</span></div>
             <div className="vstat"><span className="vstat-label">Patrimonio neto</span><span className="vstat-val">${winner.liquidity + winner.bank + winner.businesses.reduce((s,b)=>s+b.capital,0)}</span></div>
             <div className="vstat"><span className="vstat-label">Nivel carrera</span><span className="vstat-val">{winner.careerLevel + 1}/9</span></div>
-            <div className="vstat"><span className="vstat-label">Titulos</span><span className="vstat-val">{winner.education.completed.length}</span></div>
+            <div className="vstat"><span className="vstat-label">Títulos académicos</span><span className="vstat-val">{winner.education.completed.length}</span></div>
             <div className="vstat"><span className="vstat-label">Vivienda</span><span className="vstat-val">{winner.housing === 'own_apartment' ? 'Propia' : winner.housing === 'rent_cheap' ? 'Alquiler' : 'Familiar'}</span></div>
             <div className="vstat"><span className="vstat-label">Negocios</span><span className="vstat-val">{winner.businesses.length}</span></div>
           </div>
@@ -1215,7 +1230,7 @@ function App() {
     if (Math.random() < 0.08) {
       const ne = g.world.economy === 'good' ? 'bad' : 'good';
       g.world.economy = ne; g.world.wageMult = ne==='good'?1:0.8; g.world.salesMult = ne==='good'?1:0.8;
-      g.log.push({ turn: g.turn, text: `La economía cambió a ${ne==='good'?'buen año':'mal año'}`, kind: ne==='good'?'pos':'neg', importance: 2 });
+      g.log.push({ turn: g.turn, text: `La economía del país cambió a ${ne==='good'?'buen año económico':'mal año económico'}`, kind: ne==='good'?'pos':'neg', importance: 2 });
     }
     setGame({ ...g }); setQueue(pend); setQi(0);
     if (pend.length === 0) finishTurn(g);
@@ -1228,9 +1243,7 @@ function App() {
 
   function finishTurn(g0: GameState) {
     const g: GameState = deepClone(g0);
-    const winner = g.players.find(p => hasWon(p, g.goals));
-    if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
-    // Apply passive income + deduct living expenses at end of turn
+    // Pasivos + gastos PRIMERO, para evaluar la victoria con el estado real de cierre
     for (const p of g.players) {
       const pi = passiveIncome(p);
       const exp = expensesPerTurn(p);
@@ -1250,7 +1263,23 @@ function App() {
           g.log.push({ turn: g.turn, text: `${p.name}: sin fondos — estres +15`, kind: 'neg', importance: 3 });
         }
       }
+      // #10 Volver a levantarse: caer marca, recuperarse da temple y José celebra
+      const broke = p.liquidity <= 0 && p.bank <= 0;
+      if (p.stats.health < 20 || broke) {
+        p.fell = true;
+      } else if (p.fell && p.stats.health >= 60) {
+        p.fell = false;
+        p.stats.resilience = Math.min(100, p.stats.resilience + 8);
+        p.stats.happiness = Math.min(100, p.stats.happiness + 4);
+        g.log.push({ turn: g.turn, text: `${p.name} se levantó después de una caída (+temple).`, kind: 'pos', importance: 3 });
+        if (!p.isAI && g.players.some(x => x.isAI)) {
+          g.log.push({ turn: g.turn, text: 'José: caer no te define; lo que haces después, sí.', kind: 'jose', importance: 2 });
+        }
+      }
     }
+    // Victoria (ya con pasivos aplicados)
+    const winner = g.players.find(p => hasWon(p, g.goals));
+    if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
     // Flash turn summary
     const firstP = g.players[0];
     const piSum = Math.round(passiveIncome(firstP));

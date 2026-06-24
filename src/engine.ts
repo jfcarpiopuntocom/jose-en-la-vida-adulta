@@ -19,7 +19,7 @@ export interface TierMeta extends Goals {
 }
 
 export const TIER_GOALS: Record<number, TierMeta> = {
-  1: { label: 'Vida Bendecida', desc: 'Naciste con buena estrella: familia que apoya, salud firme y la suerte de tu lado.',
+  1: { label: 'Vida Afortunada', desc: 'Naciste con buena estrella: familia que apoya, salud firme y la suerte de tu lado.',
        bienestar:55, conocimientos:38, impacto:38, comunitario:10, emergencyMonths:3, passiveGoalPct:15, cpuMult:0.55, luckMult:1.30 },
   2: { label: 'Vida Pareja',    desc: 'Suerte normal. La familia ayuda a ratos y la vida trae sustos de vez en cuando.',
        bienestar:68, conocimientos:52, impacto:52, comunitario:18, emergencyMonths:6, passiveGoalPct:35, cpuMult:0.78, luckMult:1.00 },
@@ -795,10 +795,6 @@ export function hasWon(p: PlayerState, g: Goals): boolean {
 }
 
 /* ---------- CPU OPPONENT — JOSÉ ---------- */
-// Preferred locations per strategy: ordered priority lists
-const CPU_PREF_EMPLEADO = ['zona_universitaria','terminal_terrestre','zona_financiera','mall_rio','estadio','casa'];
-const CPU_PREF_EMPRESA  = ['feria_libre','zona_financiera','zona_industrial','mall_rio','casa'];
-
 function cpuNextTarget(p: PlayerState, world: World, strategy: 'empleado'|'empresa'): { locId: string; actionId: string } | null {
   // Emergency: health crisis → rest at home
   if (p.stats.health < 35) return { locId: 'casa', actionId: 'rest' };
@@ -807,7 +803,7 @@ function cpuNextTarget(p: PlayerState, world: World, strategy: 'empleado'|'empre
     // Priority 1: study if enrolled
     if (p.education.enrolledId) return { locId: 'zona_universitaria', actionId: 'study' };
     // Priority 2: enroll if no degree and can afford
-    if (p.education.completed.length === 0 && p.liquidity >= 80) return { locId: 'zona_universitaria', actionId: '_enroll' };
+    if (p.education.completed.length === 0 && p.liquidity >= 80) return { locId: 'zona_universitaria', actionId: 'enroll' };
     // Priority 3: work if has job
     if (p.job) {
       const jobLoc = LOCATIONS.find(l => jobsAt(l.id).some(j => j.id === p.job!.id));
@@ -903,7 +899,8 @@ export function canRetire(p: PlayerState, turn: number): boolean {
 // Crea heredero que hereda patrimonio (con costo), reputación y ~30% resiliencia
 export function makeHeir(parent: PlayerState, idx: number): PlayerState {
   const heir = newPlayer(parent.id, parent.name + ' Jr.', idx, parent.generation + 1);
-  const inherited = Math.round((parent.bank + patrimonio(parent) * 0.5));
+  // patrimonio ya incluye el banco; el heredero recibe la mitad del patrimonio total
+  const inherited = Math.round(patrimonio(parent) * 0.5);
   heir.bank = inherited;
   heir.businesses = parent.businesses.map(b => ({ ...b, employees: [...b.employees] }));
   heir.stats.reputation = Math.round(parent.stats.reputation * 0.6);
