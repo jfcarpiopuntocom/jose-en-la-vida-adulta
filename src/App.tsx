@@ -34,7 +34,7 @@ const ACT_COLORS = ['emerald','sky','amber','violet','rose','lime'];
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type Phase = 'setup' | 'play' | 'victory';
-type PanelId = 'indicators' | 'historia' | 'about' | null;
+type PanelId = 'indicators' | 'about' | null;
 
 interface Pending { p: PlayerState; ev: GameEvent; silvered: boolean }
 
@@ -604,8 +604,6 @@ function TopBar({ openPanel, setOpenPanel, turn }: {
       <div className="bar-right">
         <button className={'hud-btn'+(openPanel==='indicators'?' on':'')}
           onClick={() => toggle('indicators')} title="Indicadores">📊</button>
-        <button className={'hud-btn'+(openPanel==='historia'?' on':'')}
-          onClick={() => toggle('historia')} title="Historia">📜</button>
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
           onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
           {musicOn ? '🎷' : '🔇'}
@@ -686,6 +684,21 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
   );
 }
 
+// ── Log Bar — live feed junto al board, siempre visible ──
+function LogBar({ game }: { game: GameState }) {
+  const last = [...game.log].slice(-5).reverse();
+  if (last.length === 0) return null;
+  return (
+    <div id="log-bar">
+      {last.map((l, i) => (
+        <span key={i} className={'lb-entry lb-' + l.kind}>
+          <span className="lb-q">Q{l.turn}</span>{l.text}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ── Event Modal ──
 function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
   const { p, ev, silvered } = pend;
@@ -693,6 +706,7 @@ function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
   return (
     <div className="modal-bg">
       <div className="modal">
+        <div className="ev-tag">¿Qué pasó en mi fin de semana?</div>
         <h3>
           <span style={{ color: ev.neg ? 'var(--rose)' : 'var(--green)', WebkitTextFillColor: ev.neg ? 'var(--rose)' : 'var(--green)' }}>
             {ev.neg ? '✗' : '✦'}
@@ -774,6 +788,26 @@ export function App() {
     commit(g, persist);
   }
 
+  // ── Auto-run CPU turns — MUST be before early returns (Rules of Hooks) ──
+  useEffect(() => {
+    if (phase !== 'play' || !game || cpuThinking || queue.length > 0) return;
+    const p = game.players[game.activePlayerIndex];
+    if (!p?.isAI) return;
+    setCpuThinking(true);
+    const snap = game;
+    const delay = 900 + Math.random() * 700;
+    const timer = setTimeout(() => {
+      const g: GameState = deepClone(snap);
+      const ai = g.players[g.activePlayerIndex];
+      const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
+      logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
+      setCpuThinking(false);
+      endPlayerTurn(g);
+    }, delay);
+    return () => { clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.activePlayerIndex, game?.turn, phase, queue.length]);
+
   if (phase === 'setup') return <Setup onStart={g => { setGame(g); setPhase('play'); saveLocal(g); }} />;
   if (!game) return null;
   if (phase === 'victory') return <Victory game={game} onRestart={() => { clearLocal(); location.reload(); }} />;
@@ -810,25 +844,6 @@ export function App() {
     } else { runEvents(g); }
     setInspecting(null);
   }
-
-  // Auto-run CPU (José) turns
-  useEffect(() => {
-    if (phase !== 'play' || !game || cpuThinking || queue.length > 0) return;
-    const p = game.players[game.activePlayerIndex];
-    if (!p.isAI) return;
-    setCpuThinking(true);
-    const snap = game; // capture current state
-    const delay = 900 + Math.random() * 700;
-    const timer = setTimeout(() => {
-      const g: GameState = deepClone(snap);
-      const ai = g.players[g.activePlayerIndex];
-      const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
-      logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
-      setCpuThinking(false);
-      endPlayerTurn(g);
-    }, delay);
-    return () => { clearTimeout(timer); };
-  }, [game?.activePlayerIndex, game?.turn, phase, queue.length]);
 
   function retire() {
     mutate(g => {
@@ -892,6 +907,7 @@ export function App() {
         onInspect={id => { setInspecting(id); setOpenPanel(null); }}
         inspecting={inspecting}
       />
+      <LogBar game={game} />
 
       <div id="hud">
         <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} />
@@ -902,11 +918,6 @@ export function App() {
         {openPanel === 'indicators' && (
           <LidPanel id="indicators" title="📊 Indicadores" onClose={() => setOpenPanel(null)}>
             <IndicatorsContent game={game} />
-          </LidPanel>
-        )}
-        {openPanel === 'historia' && (
-          <LidPanel id="historia" title="📜 Historia" onClose={() => setOpenPanel(null)}>
-            <HistoriaContent game={game} />
           </LidPanel>
         )}
         {openPanel === 'about' && (
