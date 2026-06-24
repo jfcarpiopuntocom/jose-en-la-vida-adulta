@@ -337,6 +337,18 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     }
   }
 
+  // Housing progression: upgrading is a major life decision
+  if (loc === 'casa') {
+    if (p.housing === 'family') {
+      out.push({ id: 'rent_apartment', label: 'Alquilar apartamento ($300 dep.)', hours: 4, desc: 'Independencia: +$110/quincena en gastos, +felicidad', ok: p.timeLeft >= 4 && p.liquidity >= 300,
+        run: () => { p.housing = 'rent_cheap'; applyEff(p, [['time', -4], ['liq', -300], ['stat', 'happiness', 8], ['stat', 'stress', -5]]); return `${p.name} se independizo: alquilo un apartamento`; } });
+    }
+    if (p.housing === 'rent_cheap' && p.bank >= 5000) {
+      out.push({ id: 'buy_apartment', label: 'Comprar apartamento (banco: -$5000)', hours: 4, desc: 'Patrimonio real. Gastos bajan a $20/quincena', ok: p.timeLeft >= 4 && p.bank >= 5000,
+        run: () => { p.housing = 'own_apartment'; p.bank -= 5000; applyEff(p, [['time', -4], ['stat', 'happiness', 12], ['impact', 'profesional', 5]]); return `${p.name} compro un apartamento (patrimonio: +5000)`; } });
+    }
+  }
+
   if (loc === 'zona_universitaria') {
     // matricularse en un grado
     for (const d of availableDegrees(p)) {
