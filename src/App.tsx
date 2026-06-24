@@ -258,7 +258,7 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
       <div className="setup-screen">
         <div className="setup-card">
           <div className="setup-title">JOSÉ EN LA VIDA ADULTA</div>
-          <div className="setup-sub">simulador de vida adulta · Cuenca, Ecuador</div>
+          <div className="setup-sub">el juego de la vida plena · Cuenca, Ecuador</div>
 
           {/* Tier selector */}
           <div className="setup-label">Nivel de dificultad</div>
@@ -450,6 +450,19 @@ function StatsPanel({
       )}
       <details className="metas-detail">
         <summary className="metas-summary">Ver metas de victoria</summary>
+        <div className="metas-philo">
+          <p className="philo-lead">Esto no se gana acumulando plata. Se gana viviendo <b>pleno</b>.</p>
+          <p>José busca la <b>vida plena</b>: el equilibrio entre seis áreas que se sostienen unas a otras, como en el coaching ontológico. Es la <b>eudaimonía</b> de Aristóteles, el florecer humano: no un solo número alto, sino una vida entera bien vivida.</p>
+          <p>Sí cuentan la <b>seguridad financiera</b> y, por qué no, una fortuna, pequeña o grande, hecha con <b>medios éticos</b> y con productos buenos para la vida. Abundancia entendida como lo que es: <b>multidimensional</b>. Salud, saber, vínculos, comunidad, libertad y legado, todo junto.</p>
+          <div className="philo-areas">
+            <div className="philo-area"><b>Bienestar</b> — salud, ánimo y calma. El cuerpo y la mente primero.</div>
+            <div className="philo-area"><b>Conocimiento</b> — lo que aprendes te abre puertas para siempre.</div>
+            <div className="philo-area"><b>Impacto</b> — tu red: profesional, familiar, empresarial y comunitaria.</div>
+            <div className="philo-area"><b>Legado</b> — lo que dejas a tu comunidad. Buenas acciones que perduran.</div>
+            <div className="philo-area"><b>Emergencia</b> — meses de gastos cubiertos. Dormir tranquilo.</div>
+            <div className="philo-area"><b>Ingresos pasivos</b> — libertad: que el dinero trabaje por ti, no al revés.</div>
+          </div>
+        </div>
         <div className="metas-list">
           {indBars.map(b => {
             const pct = Math.min(100, (b.val / b.goal) * 100);
@@ -613,7 +626,7 @@ function HistoriaContent({ game }: { game: GameState }) {
 function AboutContent() {
   return (
     <div className="about-box-inner">
-      <p className="about-welcome">Bienvenido a <b>José En La Vida Adulta</b> — el juego de la vida adulta, ambientado en Cuenca, Ecuador.</p>
+      <p className="about-welcome">Bienvenido a <b>José En La Vida Adulta</b>, el juego de la vida plena, ambientado en Cuenca, Ecuador.</p>
 
       <p>Cada quincena tienes 112 horas. Decides dónde invertirlas: trabajo, familia, educación, negocios, descanso. No hay camino correcto. Hay decisiones.</p>
 
@@ -784,7 +797,7 @@ function TopBar({ openPanel, setOpenPanel, turn, economy }: {
   return (
     <div id="top-bar">
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
-      <span className="bar-motto">el juego de la vida · Cuenca, Ecuador</span>
+      <span className="bar-motto">el juego de la vida plena · Cuenca, Ecuador</span>
       <span className={"econ-pill " + (economy === "good" ? "econ-good" : "econ-bad")}>{economy === "good" ? "Buen año" : "Mal año"}</span>
       <div className="bar-right">
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
@@ -1144,7 +1157,7 @@ function App() {
   function runEvents(g: GameState) {
     const pend: Pending[] = [];
     for (const p of g.players) {
-      const ev = rollEvent(p, g.turn);
+      const ev = rollEvent(p, g.turn, p.isAI ? 1 : (g.world.luckMult ?? 1));
       if (ev) {
         applyEff(p, ev.eff);
         let silvered = false;

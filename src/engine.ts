@@ -15,17 +15,18 @@ export interface TierMeta extends Goals {
   label: string;
   desc: string;
   cpuMult: number; // multiplicador de ingresos del CPU (handicap)
+  luckMult: number; // fortuna de partida: familia, salud inicial, frecuencia de imprevistos
 }
 
 export const TIER_GOALS: Record<number, TierMeta> = {
-  1: { label: 'Principiante', desc: 'Aprende los sistemas sin presión. Desbloquea Intermedio al ganar.',
-       bienestar:55, conocimientos:38, impacto:38, comunitario:10, emergencyMonths:3, passiveGoalPct:15, cpuMult:0.55 },
-  2: { label: 'Intermedio',   desc: 'El juego completo. Un desafío real. Desbloquea Avanzado al ganar.',
-       bienestar:68, conocimientos:52, impacto:52, comunitario:18, emergencyMonths:6, passiveGoalPct:35, cpuMult:0.78 },
-  3: { label: 'Avanzado',     desc: 'Para quienes ya dominan los sistemas. Desbloquea Leyenda al ganar.',
-       bienestar:80, conocimientos:65, impacto:65, comunitario:28, emergencyMonths:9, passiveGoalPct:60, cpuMult:0.95 },
-  4: { label: 'Leyenda',      desc: 'Sin contemplaciones. José juega sin handicap.',
-       bienestar:90, conocimientos:78, impacto:78, comunitario:40, emergencyMonths:12, passiveGoalPct:100, cpuMult:1.10 },
+  1: { label: 'Vida Bendecida', desc: 'Naciste con buena estrella: familia que apoya, salud firme y la suerte de tu lado.',
+       bienestar:55, conocimientos:38, impacto:38, comunitario:10, emergencyMonths:3, passiveGoalPct:15, cpuMult:0.55, luckMult:1.30 },
+  2: { label: 'Vida Pareja',    desc: 'Suerte normal. La familia ayuda a ratos y la vida trae sustos de vez en cuando.',
+       bienestar:68, conocimientos:52, impacto:52, comunitario:18, emergencyMonths:6, passiveGoalPct:35, cpuMult:0.78, luckMult:1.00 },
+  3: { label: 'Cuesta Arriba',  desc: 'Suerte esquiva, respaldo justo y los imprevistos no perdonan. Hay que tener temple.',
+       bienestar:80, conocimientos:65, impacto:65, comunitario:28, emergencyMonths:9, passiveGoalPct:60, cpuMult:0.95, luckMult:0.78 },
+  4: { label: 'A Pulso',        desc: 'Mala estrella, poca red de apoyo y la vida golpea duro. José juega sin ventaja.',
+       bienestar:90, conocimientos:78, impacto:78, comunitario:40, emergencyMonths:12, passiveGoalPct:100, cpuMult:1.10, luckMult:0.60 },
 };
 
 export const DEFAULT_GOALS: Goals = TIER_GOALS[1] as Goals;
@@ -102,8 +103,9 @@ const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const UNBOUNDED = new Set<keyof PlayerStats>(['experience', 'knowledge']);
 
 /* ---------- FAMILIA ---------- */
-export function generateFamily(): FamilyMember[] {
-  const n = 2 + rnd(3);
+export function generateFamily(luckMult = 1): FamilyMember[] {
+  // Más suerte = familia más grande y con mejor relación de partida
+  const n = clamp(Math.round((2 + rnd(3)) * (0.7 + luckMult * 0.3)), 1, 5);
   const pool = RELATIONS.slice();
   for (let i = pool.length - 1; i > 0; i--) { const j = rnd(i + 1); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const fam: FamilyMember[] = [];
@@ -113,7 +115,7 @@ export function generateFamily(): FamilyMember[] {
       rel: r.rel,
       name: (r.sex === 'f' ? FNAMES_F : FNAMES_M)[rnd(10)],
       pers: pick(PERSONALITIES),
-      score: 40 + rnd(51),
+      score: clamp(Math.round((40 + rnd(51)) * (0.75 + luckMult * 0.25)), 15, 100),
     });
   }
   return fam;
@@ -127,20 +129,28 @@ function startingLiquidity(fam: FamilyMember[]): number {
 /* ---------- ESTADO INICIAL ---------- */
 export function newPlayer(
   id: string, name: string, idx: number, generation = 1,
-  aiOpts?: { isAI: boolean; aiStrategy: 'empleado'|'empresa'; aiDifficulty: 1|2|3 }
+  aiOpts?: { isAI: boolean; aiStrategy: 'empleado'|'empresa'; aiDifficulty: 1|2|3 },
+  luckMult = 1
 ): PlayerState {
-  const birth = pick(BARRIOS);
-  const family = generateFamily();
+  // La buena estrella inclina el barrio de origen hacia los más tranquilos
+  const sorted = BARRIOS.slice().sort((a, b) => a.crimeRisk - b.crimeRisk);
+  const span = sorted.length;
+  const biasIdx = clamp(Math.floor(rnd(span) * (luckMult >= 1 ? 0.7 : 1.2)), 0, span - 1);
+  const birth = luckMult >= 1 ? sorted[biasIdx] : sorted[span - 1 - biasIdx];
+  const family = generateFamily(luckMult);
+  // Salud y ánimo de partida escalan con la fortuna
+  const health = clamp(Math.round(72 + 14 * luckMult), 55, 95);
+  const happiness = clamp(Math.round(50 + 12 * luckMult), 40, 80);
   return {
     id, name, colorIndex: idx, generation,
-    timeLeft: HOURS_PER_TURN, liquidity: startingLiquidity(family), bank: 0,
+    timeLeft: HOURS_PER_TURN, liquidity: Math.max(80, Math.round(startingLiquidity(family) * (0.8 + luckMult * 0.2))), bank: 0,
     businesses: [], vehicles: [],
     housing: 'family', transport: 'walk',
     birthBarrio: birth.id, birthCrime: birth.crimeRisk, currentLocation: 'casa',
     family, job: null, careerLevel: 0,
     education: { completed: [], enrolledId: null, hoursInvested: 0 },
     impact: { profesional: 5, familiar: 10, comunitario: 5, empresarial: 0 },
-    stats: { experience: 0, dependability: 50, leadership: 0, health: 80, stress: 20, happiness: 60, reputation: 30, resilience: 0, knowledge: 5 },
+    stats: { experience: 0, dependability: 50, leadership: 0, health, stress: 20, happiness, reputation: 30, resilience: 0, knowledge: 5 },
     retired: false,
     collectibles: [],
     ...(aiOpts ?? {}),
@@ -153,12 +163,14 @@ export function newGame(
   tier: 1|2|3|4 = 1
 ): GameState {
   const bad = Math.random() < 0.5;
+  const lm = TIER_GOALS[tier]?.luckMult ?? 1;
   return {
     turn: 1, activePlayerIndex: 0, gameTier: tier,
     players: players.map((p, i) => newPlayer(p.id, p.name, i,1,
-      p.isAI ? { isAI: true, aiStrategy: p.aiStrategy!, aiDifficulty: p.aiDifficulty! } : undefined
+      p.isAI ? { isAI: true, aiStrategy: p.aiStrategy!, aiDifficulty: p.aiDifficulty! } : undefined,
+      p.isAI ? 1 : lm // la suerte de la dificultad afecta al humano; el CPU corre parejo
     )),
-    world: { economy: bad ? 'bad' : 'good', wageMult: bad ? 0.8 : 1, salesMult: bad ? 0.8 : 1, cpuMult: (TIER_GOALS[tier]?.cpuMult ?? 0.78) },
+    world: { economy: bad ? 'bad' : 'good', wageMult: bad ? 0.8 : 1, salesMult: bad ? 0.8 : 1, cpuMult: (TIER_GOALS[tier]?.cpuMult ?? 0.78), luckMult: lm },
     goals: { ...goals }, log: [], over: false, winnerId: null,
   };
 }
@@ -323,10 +335,12 @@ function weightOf(ev: GameEvent, p: PlayerState, turn: number): number {
   return w;
 }
 // 25% de las quincenas no pasa nada: el jugador es el timón.
-export function rollEvent(p: PlayerState, turn: number): GameEvent | null {
+export function rollEvent(p: PlayerState, turn: number, luckMult = 1): GameEvent | null {
   const cands = EVENTS.filter(e => e.cond.every((c: any[]) => evalCond(c, p, turn)));
   if (cands.length === 0) return null;
-  if (Math.random() < 0.25) return null;
+  // Más suerte = más quincenas tranquilas; cuesta arriba = los imprevistos no perdonan
+  const skip = clamp(0.25 * luckMult, 0.12, 0.42);
+  if (Math.random() < skip) return null;
   const ws = cands.map(e => weightOf(e, p, turn));
   const total = ws.reduce((s, w) => s + w, 0);
   let r = Math.random() * total, pickEv = cands[cands.length - 1];

@@ -1358,3 +1358,26 @@ input[type=text], input[type=number] {
   transform: translateY(-2px);
 }
 .btn-end-footer:active { transform: translateY(0); }
+
+/* ── Metas: explicación de la vida plena (eudaimonía / 6 áreas) ── */
+.metas-philo {
+  margin: 10px 0 14px; padding: 12px 14px;
+  background: linear-gradient(160deg, rgba(40,52,78,0.55), rgba(17,28,45,0.7));
+  border: 1px solid rgba(196,158,72,0.35); border-radius: 12px;
+}
+.metas-philo p {
+  font-size: 0.95rem; line-height: 1.5; margin: 0 0 9px;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.metas-philo b { color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important; font-weight: 800; }
+.philo-lead {
+  font-size: 1.05rem !important; font-weight: 800;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.philo-areas { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
+.philo-area {
+  font-size: 0.9rem; line-height: 1.4; padding: 7px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.05); border-left: 3px solid var(--gold);
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.philo-area b { color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important; font-weight: 800; }

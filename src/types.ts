@@ -10,6 +10,7 @@ export interface World {
   wageMult: number;
   salesMult: number;
   cpuMult: number; // handicap: CPU earns this fraction of calculated wages (1.0 = fair, <1 = easier for human)
+  luckMult: number; // fortuna de la partida: >1 = más suerte (mejor familia, menos accidentes), <1 = vida cuesta arriba
 }
 
 // stop funcional del TABLERO (donde el jugador se mueve y actúa) — NO es un barrio
