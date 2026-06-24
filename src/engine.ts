@@ -467,6 +467,19 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       out.push(buyCol('tarjeta', 'tarjeta de béisbol', 60 + rnd(140), 1));
     if (p.collectibles.filter(c => c.kind === 'bitcoin').length < 2 && p.liquidity >= 100)
       out.push(buyCol('bitcoin', 'fracción BTC', 100, 1));
+    // Transport upgrades
+    if (p.transport === 'walk' || p.transport === 'bus') {
+      out.push({ id: 'buy_bicycle', label: 'Comprar bicicleta ($150)', hours: 2, desc: 'Mas rapido que caminar, gratis a futuro', ok: p.timeLeft >= 2 && p.liquidity >= 150,
+        run: () => { p.transport = 'bicycle'; applyEff(p, [['time', -2], ['liq', -150], ['stat', 'health', 3]]); return `${p.name} compro una bicicleta`; } });
+    }
+    if (p.transport !== 'motorcycle' && p.transport !== 'car') {
+      out.push({ id: 'buy_moto', label: 'Comprar moto ($800)', hours: 2, desc: 'Veloz y economica. Ahorra tiempo en viajes', ok: p.timeLeft >= 2 && p.liquidity >= 800,
+        run: () => { p.transport = 'motorcycle'; applyEff(p, [['time', -2], ['liq', -800], ['stat', 'happiness', 5]]); return `${p.name} compro una motocicleta`; } });
+    }
+    if (p.transport !== 'car' && p.bank >= 3000) {
+      out.push({ id: 'buy_car', label: 'Comprar carro (banco: -$3000)', hours: 3, desc: 'El mas rapido. +$30/quincena en gastos', ok: p.timeLeft >= 3 && p.bank >= 3000,
+        run: () => { p.transport = 'car'; p.bank -= 3000; applyEff(p, [['time', -3], ['stat', 'happiness', 8], ['impact', 'profesional', 3]]); return `${p.name} compro un carro`; } });
+    }
   }
 
   if (loc === 'rio_tomebamba') {
