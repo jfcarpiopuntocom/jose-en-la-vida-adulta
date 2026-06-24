@@ -379,7 +379,7 @@ function StatsPanel({
     { key:'impacto',    label:'Impacto',    color:'var(--pink)',   val: m.impacto,            goal: game.goals.impacto },
     { key:'legado',     label:'Legado',    color:'var(--teal)',   val: p.impact.comunitario, goal: game.goals.comunitario },
     { key:'emergencia', label:'Emergencia',  color:'var(--gold)',   val: emMonths,             goal: game.goals.emergencyMonths },
-    { key:'pasivo',     label:'Pasivo', color:'var(--orange)', val: piPct,                goal: 100 },
+    { key:'pasivo',     label:'Ingresos Pasivos', color:'var(--orange)', val: piPct,                goal: 100 },
   ];
   // Win progress: average of all 6 bars capped at 100%
   const winPct = Math.round(indBars.reduce((s, b) => s + Math.min(100, (b.val / b.goal) * 100), 0) / indBars.length);

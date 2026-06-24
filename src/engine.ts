@@ -233,7 +233,8 @@ export function tryPromote(p: PlayerState): string | null {
 
 // ── Historia de origen procedural ──
 export function generateBackstory(p: import('./types').PlayerState): string {
-  const barrio = p.birthBarrio.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const barrioEntry = BARRIOS.find(b => b.id === p.birthBarrio);
+  const barrio = barrioEntry ? barrioEntry.name : p.birthBarrio;
   const crimeLevel = p.birthCrime;
   const famNames = p.family.map(f => f.name);
   const fam = famNames.length === 0 ? 'solo' :

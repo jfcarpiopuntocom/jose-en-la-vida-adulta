@@ -1069,6 +1069,7 @@ input[type=text], input[type=number] {
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(17,30,56,0.9), rgba(11,18,37,0.95));
   flex-shrink: 0;
+  flex: 1; min-height: 0;
 }
 
 .board-edge {
@@ -1119,13 +1120,14 @@ input[type=text], input[type=number] {
 
 /* ── Tile (each board square) ── */
 .tile {
-  flex: 1; min-width: 62px; min-height: 52px;
-  padding: 4px 3px;
+  flex: 1; min-width: 78px; min-height: 68px;
+  padding: 5px 4px;
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 1px;
+  justify-content: center; gap: 2px;
   cursor: pointer; position: relative;
   border: 1px solid transparent;
   transition: background .2s, border-color .2s;
+  overflow: hidden;
 }
 .tile:hover {
   background: rgba(200,160,64,0.08);
@@ -1140,11 +1142,11 @@ input[type=text], input[type=number] {
   background: rgba(30,90,153,0.15) !important;
   border-color: var(--sky) !important;
 }
-.tile-icon { font-size: 1.1rem; line-height: 1; }
+.tile-icon { font-size: 1.3rem; line-height: 1; }
 .tile-label {
-  font-size: 0.58rem; font-weight: 700; text-align: center;
-  line-height: 1.1; max-width: 72px;
-  color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important;
+  font-size: 0.65rem; font-weight: 700; text-align: center;
+  line-height: 1.1; max-width: 76px; word-break: break-word;
+  color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
 }
 .tile-pawns {
   display: flex; gap: 1px; flex-wrap: wrap; justify-content: center;
