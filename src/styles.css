@@ -1154,3 +1154,18 @@ input[type=text], input[type=number] {
 @media (prefers-reduced-motion: reduce) {
   .stress-warning { animation: none; }
 }
+
+/* ── Economy indicator pill in TopBar ── */
+.econ-pill {
+  padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700;
+  margin: 0 8px;
+}
+.econ-good {
+  background: rgba(40,236,170,0.15); border: 1px solid #28ECAA;
+  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
+}
+.econ-bad {
+  background: rgba(251,113,133,0.15); border: 1px solid #fb7185;
+  color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important;
+  animation: stressPulse 3s ease-in-out infinite;
+}

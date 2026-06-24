@@ -768,10 +768,11 @@ function Board({ game, onMove, onInspect, inspecting }: {
 }
 
 // ── Top bar HUD ──
-function TopBar({ openPanel, setOpenPanel, turn }: {
+function TopBar({ openPanel, setOpenPanel, turn, economy }: {
   openPanel: PanelId;
   setOpenPanel: (p: PanelId) => void;
   turn: number;
+  economy: string;
 }) {
   const [musicOn, setMusicOn] = useState(false);
   function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
@@ -783,6 +784,7 @@ function TopBar({ openPanel, setOpenPanel, turn }: {
     <div id="top-bar">
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
       <span className="bar-motto">el juego de la vida · Cuenca, Ecuador</span>
+      <span className={"econ-pill " + (economy === "good" ? "econ-good" : "econ-bad")}>{economy === "good" ? "Buen año" : "Mal año"}</span>
       <div className="bar-right">
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
           onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
@@ -1209,7 +1211,7 @@ function App() {
       <TurnHint turn={game.turn} />
 
       <div id="hud">
-        <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} />
+        <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
         <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
         <ActionsBar game={game} onAction={doAction} />
 
