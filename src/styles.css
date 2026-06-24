@@ -1138,3 +1138,19 @@ input[type=text], input[type=number] {
   color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
   font-size: 0.8rem; font-weight: 900;
 }
+
+/* ── Stress warning banner ── */
+.stress-warning {
+  padding: 5px 8px; border-radius: 6px; margin: 4px 0;
+  background: rgba(251,113,133,0.15); border: 1px solid rgba(251,113,133,0.4);
+  font-size: 0.72rem; font-weight: 700; line-height: 1.3;
+  color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important;
+  animation: stressPulse 2s ease-in-out infinite;
+}
+@keyframes stressPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stress-warning { animation: none; }
+}

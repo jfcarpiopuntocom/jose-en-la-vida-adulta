@@ -418,6 +418,11 @@ function StatsPanel({
       {canRetire(p, game.turn) && (
         <button className="btn-legacy" onClick={onLegacy}>Pasar el legado ✦</button>
       )}
+      {p.stats.stress >= 80 && (
+        <div className="stress-warning">
+          Estres critico ({p.stats.stress}%) — salario reducido. Descansa ya.
+        </div>
+      )}
       <details className="metas-detail">
         <summary className="metas-summary">Ver metas de victoria</summary>
         <div className="metas-list">
