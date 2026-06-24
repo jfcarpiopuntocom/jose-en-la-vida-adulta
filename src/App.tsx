@@ -387,7 +387,9 @@ function StatsPanel({
       <div className="resources">
         <div className="resource"><span className="res-icon">💰</span><span className="res-val">${p.liquidity}</span></div>
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
-        <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos</span></div>
+        <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} titulos</span></div>
+        {p.job && <div className="resource"><span className="res-icon">W</span><span className="res-val" style={{fontSize:"0.78rem"}}>{p.job.title}</span></div>}
+        {p.education.enrolledId && <div className="resource"><span className="res-icon">E</span><span className="res-val" style={{fontSize:"0.78rem"}}>Estudiando...</span></div>}
         <div className="resource"><span className="res-icon">Q</span><span className="res-val">Quincena {game.turn}</span></div>
       <div className="resource"><span className="res-icon" style={{color:"#E8A020",WebkitTextFillColor:"#E8A020"}}>T</span><span className="res-val" style={{fontSize:"0.75rem",color:"#E8A020",WebkitTextFillColor:"#E8A020"}}>{TIER_GOALS[game.gameTier ?? 1].label}</span></div>
       </div>
