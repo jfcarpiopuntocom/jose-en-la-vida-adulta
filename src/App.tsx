@@ -29,6 +29,49 @@ function PawnAvatar({ p, size = 22, glow = false }: { p: PlayerState; size?: num
   );
 }
 
+// ── Portrait: large face for active turn ──
+function Portrait({ p, size = 72 }: { p: PlayerState; size?: number }) {
+  const col = PLAYER_COLORS[p.colorIndex];
+  // Jose has custom artwork; humans get placeholder smileys until assets land
+  if (p.isAI && p.name.toLowerCase().startsWith('jos')) {
+    return (
+      <img src="/jose-en-la-vida-adulta/avatars/jose.png"
+        width={size} height={size}
+        alt={p.name}
+        style={{
+          borderRadius: '50%', objectFit: 'cover',
+          border: '3px solid ' + col,
+          boxShadow: '0 0 18px ' + col + '88, 0 4px 14px rgba(0,0,0,0.5)',
+          background: '#f4e5c8',
+        }} />
+    );
+  }
+  // Smiley placeholder for human players — different color per slot
+  const smileyColors = ['#F4D03F', '#F5B041', '#EC7063', '#AF7AC5'];
+  const bg = smileyColors[p.colorIndex % 4];
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{
+      borderRadius: '50%', border: '3px solid ' + col,
+      boxShadow: '0 0 18px ' + col + '88, 0 4px 14px rgba(0,0,0,0.5)',
+    }}>
+      {/* Sun-yellow face */}
+      <circle cx="50" cy="50" r="48" fill={bg} />
+      {/* Eyes */}
+      <circle cx="35" cy="42" r="5" fill="#2c1810" />
+      <circle cx="65" cy="42" r="5" fill="#2c1810" />
+      {/* Eye highlights */}
+      <circle cx="36.5" cy="40.5" r="1.6" fill="#fff" />
+      <circle cx="66.5" cy="40.5" r="1.6" fill="#fff" />
+      {/* Happy smile */}
+      <path d="M 30 60 Q 50 78 70 60" stroke="#2c1810" strokeWidth="4"
+        fill="none" strokeLinecap="round" />
+      {/* Rosy cheeks */}
+      <circle cx="25" cy="58" r="5" fill="#ff8a8a" opacity="0.55" />
+      <circle cx="75" cy="58" r="5" fill="#ff8a8a" opacity="0.55" />
+    </svg>
+  );
+}
+
 // Zone → node color type
 const ZONE_T: Record<string, string> = {
   hogar:'home', universitaria:'edu', financiera:'finance',
@@ -169,7 +212,7 @@ function BackstoryModal({ player, onClose }: { player: PlayerState; onClose: () 
     <div className="backstory-overlay" onClick={onClose}>
       <div className="backstory-card" onClick={e => e.stopPropagation()}>
         <div className="backstory-avatar">
-          <PawnAvatar p={player} size={56} glow />
+          <Portrait p={player} size={96} />
         </div>
         <div className="backstory-title" style={{ color: col, WebkitTextFillColor: col }}>
           Tu historia
@@ -342,10 +385,17 @@ function StatsPanel({
   const winPct = Math.round(indBars.reduce((s, b) => s + Math.min(100, (b.val / b.goal) * 100), 0) / indBars.length);
   return (
     <div id="stats-panel">
+      <div className="turn-banner">
+        <Portrait p={p} size={72} />
+        <div className="turn-banner-text">
+          <div className="turn-of">Turno de</div>
+          <div className="turn-name" style={{ color: col, WebkitTextFillColor: col }}>{p.name}</div>
+        </div>
+      </div>
       <TimeRing hours={p.timeLeft} />
       <div className="player-block">
-        <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6 }}>
-          <PawnAvatar p={p} size={24} glow /> {p.name}
+        <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
+          {p.name}
         </div>
         <div className="player-loc">{loc.icon} {loc.name}</div>
         <div className="econ-line">
@@ -941,7 +991,7 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
       <div className="setup-screen">
         <div className="victory-card">
           <div className="setup-title" style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'center' }}>
-            <PawnAvatar p={winner} size={36} glow /> Victoria
+            <Portrait p={winner} size={56} /> Victoria
           </div>
           <div className="victory-title" style={{ color: col, WebkitTextFillColor: col }}>
             {winner.name} — quincena {game.turn}
