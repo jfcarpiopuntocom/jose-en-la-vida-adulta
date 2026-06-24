@@ -16,9 +16,9 @@
   --line2: rgba(196,158,72,0.07);
 
   /* ── Texto — crema caliza colonial, no blanco frío ── */
-  --white: #F0E8D6;
-  --soft: #C8B898;
-  --muted: #A89878;
+  --white: #FFFFFF;
+  --soft: #F0E8D6;
+  --muted: #D8C9A6;
   --gold: #C8A040;
   --text-gold: #E8C058;
 
@@ -686,28 +686,28 @@ input[type=text], input[type=number] {
   #log-bar { right: 0; bottom: 50vh; left: 0; max-height: 60px; padding: 3px 8px; }
 }
 
-/* ── Portrait mobile: stacked layout (board top, actions bottom) ── */
+/* ── Portrait mobile: stacked layout (board top, dashboard strip, actions bottom) ── */
 @media (max-width: 600px) and (orientation: portrait),
        (max-height: 500px) and (max-width: 420px) {
   /* Hide rotate blocker — we handle portrait now */
   .rotate-overlay { display: none !important; }
 
-  /* Board: top ~46% of screen, full width */
-  .board-container {
-    top: 46px; left: 0; right: 0; bottom: 52vh;
+  /* Stack the whole layout vertically and use the full screen */
+  .game-layout { flex-direction: column; }
+  .game-main { flex: 1 1 auto; min-height: 0; padding: 6px; }
+
+  /* Dashboard becomes a full-width strip below, not a hidden sidebar */
+  #stats-panel {
+    width: 100%; flex: 0 0 auto; max-height: 38vh;
+    border-left: none; border-top: 2px solid var(--gold);
+    flex-direction: row; flex-wrap: wrap; gap: 8px;
+    align-items: flex-start; overflow-y: auto;
   }
-  
+  #stats-panel .turn-banner { width: auto; flex: 1 1 100%; }
+  #stats-panel .ind-inline { flex: 1 1 100%; }
 
-  /* Stats panel: slim horizontal strip between board and actions */
-  
-  /* Show only the first stat block in portrait */
-  #stats-panel > *:not(:first-child) { display: none; }
-  #stats-panel .sp-name { font-size: 0.78rem; }
-
-  /* Actions bar: bottom ~48% */
-  
-  
-  .act-btn { min-width: calc(50% - 4px); flex: 1 1 calc(50% - 4px); }
+  /* Two-up action cards */
+  .action-card { flex: 1 1 calc(50% - 8px); }
 
   /* Panels: full-width overlays */
   .lid-panel { left: 0; right: 0; width: auto; top: 46px; bottom: 0; border-radius: 0; }
@@ -1270,18 +1270,21 @@ input[type=text], input[type=number] {
 
 /* ── Turn Banner — quien juega ahora ── */
 .turn-banner {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 12px 6px 6px; width: 100%;
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  padding: 8px 10px; width: 100%;
   position: relative;
 }
+.turn-banner img, .turn-banner svg { width: 52px !important; height: 52px !important; flex-shrink: 0; }
 .turn-banner::before {
   content: ""; position: absolute; inset: 0;
   background: radial-gradient(ellipse at center top, rgba(200,160,64,0.18), transparent 70%);
   pointer-events: none; border-radius: 8px;
 }
 .turn-banner-text {
-  display: flex; flex-direction: column; align-items: center;
   position: relative; z-index: 1;
+  font-family: "Cinzel", serif; font-size: 1.05rem; font-weight: 800;
+  letter-spacing: .04em;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
 }
 .turn-of {
   font-size: 0.62rem; font-weight: 700;
