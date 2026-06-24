@@ -655,94 +655,74 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
 }
 
 // ── Board ──
-function Board({ game, onMove, onInspect, inspecting }: {
+function Board({ game, onInspect, inspecting }: {
   game: GameState;
-  onMove: (id: string) => void;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
 }) {
   const active = game.players[game.activePlayerIndex];
-  const pts = PATH_ORDER.map(id => locById(id));
+  const locs = LOCATIONS;
 
-  // We use percentage-based positioning in the container
-  // SVG viewBox is 760×480; node coords are in that space
-  const VW = 760, VH = 480;
+  // 13 locations around a rectangle: top 4, right 3, bottom 3, left 3
+  const top    = locs.slice(0, 4);
+  const right  = locs.slice(4, 7);
+  const bottom = [...locs.slice(7, 10)].reverse();
+  const left   = [...locs.slice(10, 13)].reverse();
 
-  function handleNodeClick(locId: string) {
-    if (inspecting === locId) {
-      onInspect(null);
-    } else {
-      onInspect(locId);
-    }
+  function Tile({ loc }: { loc: typeof LOCATIONS[0] }) {
+    const here = loc.id === active.currentLocation;
+    const cost = loc.tc[active.transport];
+    const reachable = !here && active.timeLeft >= cost;
+    const sel = inspecting === loc.id;
+    const pawns = game.players.filter(p => p.currentLocation === loc.id);
+
+    return (
+      <div
+        className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
+        onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
+      >
+        <div className="tile-icon">{loc.icon}</div>
+        <div className="tile-label">{loc.name.split('(')[0].trim()}</div>
+        {pawns.length > 0 && (
+          <div className="tile-pawns">
+            {pawns.map(p => <PawnAvatar key={p.id} p={p} size={18} glow={p.id === active.id} />)}
+          </div>
+        )}
+        {here && <div className="tile-you">AQUI</div>}
+        {!here && reachable && <div className="tile-cost">{cost}h</div>}
+      </div>
+    );
   }
 
-  const polyPoints = pts.map(l => `${(l.x/VW*100).toFixed(2)}% ${(l.y/VH*100).toFixed(2)}%`).join(', ');
-
   return (
-    <div id="map-world">
-      <div className="board-container">
-        <div className="board-svg-wrap">
-          {/* SVG Paths */}
-          <svg className="links" viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#2DD4BF" />
-                <stop offset="100%" stopColor="#34D399" />
-              </linearGradient>
-            </defs>
-            {/* glow layer */}
-            <polygon points={pts.map(l=>`${l.x},${l.y}`).join(' ')}
-              fill="none" stroke="rgba(45,212,191,0.06)" strokeWidth={10} />
-            {/* animated dashed loop */}
-            <polygon points={pts.map(l=>`${l.x},${l.y}`).join(' ')}
-              fill="none" stroke="rgba(232,160,32,0.38)" strokeWidth={2}
-              strokeDasharray="8 5" strokeLinecap="round"
-              style={{ animation: 'march 14s linear infinite' }} />
-            {/* decorative dots between stops */}
-            {pts.map((a, i) => {
-              const b = pts[(i+1) % pts.length];
-              return [0.33, 0.66].map((t, j) => (
-                <circle key={`d${i}${j}`}
-                  cx={a.x + (b.x-a.x)*t} cy={a.y + (b.y-a.y)*t}
-                  r={2.5} fill="rgba(255,255,255,0.08)" />
-              ));
-            })}
-          </svg>
-
-          {/* Nodes */}
-          {LOCATIONS.map(loc => {
-            const here = loc.id === active.currentLocation;
-            const cost = loc.tc[active.transport];
-            const reachable = !here && active.timeLeft >= cost;
-            const selected = inspecting === loc.id;
-            const pawns = game.players.filter(p => p.currentLocation === loc.id);
-            const nt = nodeType(loc.zone, loc.id);
-            const xPct = (loc.x / VW * 100).toFixed(2) + '%';
-            const yPct = (loc.y / VH * 100).toFixed(2) + '%';
-            return (
-              <div key={loc.id}
-                className={'node' + (here?' here':'') + (reachable?' reachable':'') + (selected?' selected':'')}
-                data-t={nt}
-                style={{ left: xPct, top: yPct }}
-                onClick={() => handleNodeClick(loc.id)}>
-                <div className="node-icon">{loc.icon}</div>
-                <div className="node-name">{loc.name}</div>
-                <div className="node-time">{here ? 'aquí' : `${cost}h`}</div>
-                {pawns.length > 0 && (
-                  <div className="node-pawns">
-                    {pawns.map(p => (
-                      <PawnAvatar key={p.id} p={p} size={20} glow={p.id === active.id} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+    <div className="board">
+      <div className="board-edge board-top">
+        {top.map(l => <Tile key={l.id} loc={l} />)}
+      </div>
+      <div className="board-body">
+        <div className="board-edge board-left">
+          {left.map(l => <Tile key={l.id} loc={l} />)}
         </div>
+        <div className="board-center">
+          <div className="bc-city">CUENCA</div>
+          <div className="bc-turn">Quincena {game.turn}</div>
+          <div className="bc-log">
+            {game.log.slice(-5).map((l, i) => (
+              <div key={i} className={'bc-line bc-' + l.kind}>{l.text}</div>
+            ))}
+          </div>
+        </div>
+        <div className="board-edge board-right">
+          {right.map(l => <Tile key={l.id} loc={l} />)}
+        </div>
+      </div>
+      <div className="board-edge board-bottom">
+        {bottom.map(l => <Tile key={l.id} loc={l} />)}
       </div>
     </div>
   );
 }
+
 
 // ── Top bar HUD ──
 function TopBar({ openPanel, setOpenPanel, turn, economy }: {
@@ -1197,7 +1177,7 @@ function App() {
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
       <div className="game-layout">
         <div className="game-main">
-          <Board game={game} onMove={moveTo}
+          <Board game={game}
             onInspect={id => { setInspecting(id); setOpenPanel(null); }}
             inspecting={inspecting}
           />
