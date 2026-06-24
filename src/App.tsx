@@ -1138,12 +1138,25 @@ function App() {
     const g: GameState = deepClone(g0);
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
-    // Apply passive income for each player at end of turn
+    // Apply passive income + deduct living expenses at end of turn
     for (const p of g.players) {
       const pi = passiveIncome(p);
+      const exp = expensesPerTurn(p);
       if (pi > 0) {
         p.liquidity += pi;
         g.log.push({ turn: g.turn, text: `${p.name}: ingresos pasivos +$${pi}`, kind: 'pos', importance: 1 });
+      }
+      p.liquidity -= exp;
+      g.log.push({ turn: g.turn, text: `${p.name}: gastos de vida -$${exp}`, kind: 'neg', importance: 1 });
+      if (p.liquidity < 0) {
+        // Borrow from bank if possible
+        if (p.bank >= -p.liquidity) {
+          p.bank += p.liquidity; p.liquidity = 0;
+          g.log.push({ turn: g.turn, text: `${p.name}: retiró del banco para cubrir gastos`, kind: 'neg', importance: 2 });
+        } else {
+          p.bank = 0; p.stats.stress = Math.min(100, p.stats.stress + 15);
+          g.log.push({ turn: g.turn, text: `${p.name}: sin fondos — estres +15`, kind: 'neg', importance: 3 });
+        }
       }
     }
     g.turn++; g.activePlayerIndex = 0;
