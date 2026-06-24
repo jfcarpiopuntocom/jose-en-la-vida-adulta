@@ -939,3 +939,46 @@ input[type=text], input[type=number] {
 /* LogBar: fix right edge when stats panel is 172px */
 #log-bar { right: 192px; }
 
+/* ── Onboarding modal ── */
+.onboard-modal { max-width: 420px; width: 94vw; }
+.onboard-title {
+  font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 6px;
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
+}
+.onboard-sub {
+  font-size: 0.82rem; text-align: center; margin-bottom: 16px;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+.onboard-goals { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.onboard-goal {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.og-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  background: #E8A020; display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 700;
+  color: #080808 !important; -webkit-text-fill-color: #080808 !important;
+}
+.og-body { flex: 1; }
+.og-action {
+  font-size: 0.88rem; font-weight: 700; margin-bottom: 2px;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.og-place {
+  font-size: 0.78rem; margin-bottom: 3px;
+  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
+}
+.og-why {
+  font-size: 0.75rem;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+.onboard-win {
+  font-size: 0.72rem; text-align: center; padding: 8px 12px;
+  background: rgba(232,160,32,0.08); border-radius: 6px;
+  border: 1px solid rgba(232,160,32,0.2);
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
+  line-height: 1.5;
+}
+

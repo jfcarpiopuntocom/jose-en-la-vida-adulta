@@ -714,6 +714,41 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
   );
 }
 
+// ── Onboarding modal — aparece solo en Q1, solo la primera vez ──
+const ONBOARD_KEY = 'jelva_onboard_v1';
+function OnboardModal({ onClose }: { onClose: () => void }) {
+  function dismiss() { localStorage.setItem(ONBOARD_KEY, '1'); onClose(); }
+  const goals = [
+    { icon: '🚌', place: 'Terminal (bolsa de empleo)', action: 'Busca tu primer empleo', why: 'Sin trabajo, no hay sueldo. Es tu primera parada.' },
+    { icon: '🏦', place: 'Banco (ahorrar · invertir)', action: 'Deposita $100 en el banco', why: 'El fondo de emergencia es una de las 6 metas de victoria.' },
+    { icon: '🏠', place: 'Tu Casa (hogar)', action: 'Descansa cuando el estrés suba', why: 'Si el estrés llega a 100, pierdes rendimiento en todo.' },
+  ];
+  return (
+    <div className="modal-bg">
+      <div className="modal onboard-modal">
+        <div className="onboard-title">Bienvenido a la vida adulta</div>
+        <div className="onboard-sub">Tienes 112 horas esta quincena. Aquí hay 3 cosas para hacer ahora:</div>
+        <div className="onboard-goals">
+          {goals.map((g, i) => (
+            <div key={i} className="onboard-goal">
+              <div className="og-num">{i + 1}</div>
+              <div className="og-body">
+                <div className="og-action">{g.action}</div>
+                <div className="og-place">{g.icon} {g.place}</div>
+                <div className="og-why">{g.why}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="onboard-win">Para ganar: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez.</div>
+        <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={dismiss}>
+          Entendido — empezar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Log Bar — live feed junto al board, siempre visible ──
 function LogBar({ game }: { game: GameState }) {
   const last = [...game.log].slice(-5).reverse();
@@ -806,6 +841,9 @@ export function App() {
   const [openPanel, setOpenPanel] = useState<PanelId>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
+  const [showOnboard, setShowOnboard] = useState(() =>
+    localStorage.getItem(ONBOARD_KEY) !== '1'
+  );
 
   function commit(g: GameState, persist = false) {
     setGame({ ...g });
@@ -981,6 +1019,11 @@ export function App() {
           {active.aiStrategy === 'empleado' ? ' (ruta 💼 Empleado)' : ' (ruta 🏭 Empresa)'}
           {active.aiDifficulty === 3 ? ' — Difícil' : active.aiDifficulty === 1 ? ' — Fácil' : ''}
         </div>
+      )}
+
+      {/* Onboarding — solo Q1, solo primera vez */}
+      {showOnboard && game.turn === 1 && queue.length === 0 && (
+        <OnboardModal onClose={() => setShowOnboard(false)} />
       )}
 
       {/* Event modals */}
