@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#040810">
+<title>José en la Vida Adulta</title>
+<link rel="stylesheet" href="game-styles.css">
+</head>
+<body>
+
+<!-- ═══ ATMOSPHERE ═══ -->
+<div id="atmosphere">
+  <div class="bokeh" style="left:8%;top:15%;--s:300px;--c:rgba(160,90,20,0.045)"></div>
+  <div class="bokeh" style="left:82%;top:12%;--s:220px;--c:rgba(40,80,180,0.04)"></div>
+  <div class="bokeh" style="left:52%;top:68%;--s:350px;--c:rgba(120,50,180,0.028)"></div>
+  <div class="bokeh" style="left:22%;top:78%;--s:200px;--c:rgba(40,190,160,0.03)"></div>
+  <div class="bokeh" style="left:70%;top:45%;--s:260px;--c:rgba(200,120,40,0.025)"></div>
+  <canvas id="particles"></canvas>
+  <div id="vignette"></div>
+</div>
+
+<!-- ═══ MAP WORLD ═══ -->
+<div id="map-world">
+
+  <!-- SVG Paths -->
+  <svg id="map-paths" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#5eead4"/>
+        <stop offset="50%" stop-color="#a78bfa"/>
+        <stop offset="100%" stop-color="#fbbf24"/>
+      </linearGradient>
+    </defs>
+    <g class="path-glow">
+      <line x1="48" y1="12" x2="28" y2="18"/>
+      <line x1="48" y1="12" x2="68" y2="16"/>
+      <line x1="28" y1="18" x2="13" y2="32"/>
+      <line x1="68" y1="16" x2="83" y2="30"/>
+      <line x1="13" y1="32" x2="8"  y2="46"/>
+      <line x1="83" y1="30" x2="88" y2="44"/>
+      <line x1="8"  y1="46" x2="11" y2="60"/>
+      <line x1="88" y1="44" x2="85" y2="58"/>
+      <line x1="11" y1="60" x2="20" y2="73"/>
+      <line x1="85" y1="58" x2="76" y2="71"/>
+      <line x1="20" y1="73" x2="35" y2="84"/>
+      <line x1="76" y1="71" x2="61" y2="83"/>
+      <line x1="35" y1="84" x2="61" y2="83"/>
+    </g>
+    <g class="path-dash">
+      <line x1="48" y1="12" x2="28" y2="18"/>
+      <line x1="48" y1="12" x2="68" y2="16"/>
+      <line x1="28" y1="18" x2="13" y2="32"/>
+      <line x1="68" y1="16" x2="83" y2="30"/>
+      <line x1="13" y1="32" x2="8"  y2="46"/>
+      <line x1="83" y1="30" x2="88" y2="44"/>
+      <line x1="8"  y1="46" x2="11" y2="60"/>
+      <line x1="88" y1="44" x2="85" y2="58"/>
+      <line x1="11" y1="60" x2="20" y2="73"/>
+      <line x1="85" y1="58" x2="76" y2="71"/>
+      <line x1="20" y1="73" x2="35" y2="84"/>
+      <line x1="76" y1="71" x2="61" y2="83"/>
+      <line x1="35" y1="84" x2="61" y2="83"/>
+    </g>
+  </svg>
+
+  <!-- ═══ LOCATION NODES ═══ -->
+  <div id="nodes">
+
+    <div class="node active" data-t="home" style="left:48%;top:12%">
+      <div class="node-icon">🏠</div>
+      <span class="node-name">Tu Casa</span>
+      <span class="node-sub">aquí</span>
+    </div>
+
+    <div class="node" data-t="sport" style="left:28%;top:18%">
+      <div class="node-icon">⚽</div>
+      <span class="node-name">Estadio</span>
+      <span class="node-time">0.5h</span>
+    </div>
+
+    <div class="node" data-t="edu" style="left:68%;top:16%">
+      <div class="node-icon">🎓</div>
+      <span class="node-name">Universidad (UDA)</span>
+      <span class="node-time">0.4h</span>
+    </div>
+
+    <div class="node" data-t="shop" style="left:13%;top:32%">
+      <div class="node-icon">🛍️</div>
+      <span class="node-name">Mall del Río</span>
+      <span class="node-time">0.6h</span>
+    </div>
+
+    <div class="node" data-t="finance" style="left:83%;top:30%">
+      <div class="node-icon">🏦</div>
+      <span class="node-name">Z. Financiera</span>
+      <span class="node-time">0.5h</span>
+    </div>
+
+    <div class="node" data-t="gov" style="left:8%;top:46%">
+      <div class="node-icon">🏛️</div>
+      <span class="node-name">Municipio</span>
+      <span class="node-time">0.5h</span>
+    </div>
+
+    <div class="node" data-t="transit" style="left:88%;top:44%">
+      <div class="node-icon">🚌</div>
+      <span class="node-name">Terminal Terrestre</span>
+      <span class="node-time">1.1h</span>
+    </div>
+
+    <div class="node" data-t="river" style="left:11%;top:60%">
+      <div class="node-icon">🌊</div>
+      <span class="node-name">Río Tomebamba</span>
+      <span class="node-time">0.6h</span>
+    </div>
+
+    <div class="node" data-t="indust" style="left:85%;top:58%">
+      <div class="node-icon">🏭</div>
+      <span class="node-name">Z. Industrial</span>
+      <span class="node-time">1.2h</span>
+    </div>
+
+    <div class="node" data-t="nature" style="left:20%;top:73%">
+      <div class="node-icon">🌳</div>
+      <span class="node-name">Parque Calderón</span>
+      <span class="node-time">0.4h</span>
+    </div>
+
+    <div class="node" data-t="health" style="left:76%;top:71%">
+      <div class="node-icon">🏥</div>
+      <span class="node-name">Hospital</span>
+      <span class="node-time">0.7h</span>
+    </div>
+
+    <div class="node" data-t="hist" style="left:35%;top:84%">
+      <div class="node-icon">⛪</div>
+      <span class="node-name">Centro Histórico</span>
+      <span class="node-time">0.4h</span>
+    </div>
+
+    <div class="node" data-t="market" style="left:61%;top:83%">
+      <div class="node-icon">🏪</div>
+      <span class="node-name">Feria Libre</span>
+      <span class="node-time">0.8h</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ HUD OVERLAY ═══ -->
+<div id="hud">
+
+  <!-- Top Bar -->
+  <header id="top-bar">
+    <div class="bar-left">
+      <span class="game-name">JOSÉ EN LA VIDA ADULTA</span>
+      <span class="board-sep">·</span>
+      <span class="board-label">CUENCA</span>
+      <span class="board-motto">— tiempo es el recurso escaso</span>
+    </div>
+    <div class="bar-center">"No importa cuántas veces cambie el camino. Lo importante es seguir avanzando."</div>
+    <div class="bar-right">
+      <button class="hud-btn" data-panel="indicators" title="Indicadores">📊</button>
+      <button class="hud-btn" data-panel="historia" title="Historia">📜</button>
+      <button class="hud-btn" data-panel="help" title="Ayuda">?</button>
+    </div>
+  </header>
+
+  <!-- Stats Panel -->
+  <aside id="stats-panel">
+    <div class="time-block">
+      <svg class="time-ring" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="35" class="ring-track"/>
+        <circle cx="40" cy="40" r="35" class="ring-fill"/>
+      </svg>
+      <div class="time-display">
+        <span class="time-num">112</span>
+        <span class="time-label">h</span>
+      </div>
+    </div>
+    <div class="player-block">
+      <div class="player-name">Jugador 1</div>
+      <div class="player-quarter">Q1 · <span class="good">● buen año</span></div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="resources">
+      <div class="resource"><span class="res-icon">💰</span><span class="res-val">$400</span></div>
+      <div class="resource"><span class="res-icon">❤️</span><span class="res-val">73%</span></div>
+      <div class="resource"><span class="res-icon">⭐</span><span class="res-val">5</span></div>
+      <div class="resource"><span class="res-icon">😰</span><span class="res-val">15%</span></div>
+    </div>
+    <div class="stat-divider"></div>
+    <button class="btn-end">Terminar quincena ▶</button>
+  </aside>
+
+  <!-- Actions Bar -->
+  <footer id="actions-bar">
+    <div class="actions-label">ACCIONES EN TU CASA</div>
+    <div class="actions-row">
+      <button class="action-card" data-c="emerald">
+        <span class="act-name">Descansar (8h)</span>
+        <span class="act-desc">+salud, -estrés</span>
+      </button>
+      <button class="action-card" data-c="blue">
+        <span class="act-name">Socializar (4h)</span>
+        <span class="act-desc">+felicidad, +impacto comunitario, -$15</span>
+      </button>
+      <button class="action-card" data-c="amber">
+        <span class="act-name">Visitar a la familia (3h)</span>
+        <span class="act-desc">azar: apoyo, consejo, regalo o lío</span>
+      </button>
+    </div>
+    <div class="save-note">Se guarda solo al cerrar cada quincena</div>
+  </footer>
+
+</div>
+
+<!-- ═══ LID PANELS ═══ -->
+
+<!-- Indicators -->
+<div id="panel-indicators" class="lid-panel" hidden>
+  <div class="lid-header">
+    <h2>📊 Indicadores</h2>
+    <button class="lid-close">✕</button>
+  </div>
+  <div class="lid-body">
+    <div class="ind-grid">
+      <div class="ind-card">
+        <span class="ind-label">Salud</span>
+        <div class="ind-bar"><div class="ind-fill" style="width:73%;--bc:#34d399"></div></div>
+        <span class="ind-val">73%</span>
+      </div>
+      <div class="ind-card">
+        <span class="ind-label">Felicidad</span>
+        <div class="ind-bar"><div class="ind-fill" style="width:68%;--bc:#fbbf24"></div></div>
+        <span class="ind-val">★★★★☆</span>
+      </div>
+      <div class="ind-card">
+        <span class="ind-label">Estrés</span>
+        <div class="ind-bar"><div class="ind-fill" style="width:15%;--bc:#fb7185"></div></div>
+        <span class="ind-val">15%</span>
+      </div>
+      <div class="ind-card">
+        <span class="ind-label">Educación</span>
+        <div class="ind-bar"><div class="ind-fill" style="width:40%;--bc:#a78bfa"></div></div>
+        <span class="ind-val">Nivel 2</span>
+      </div>
+      <div class="ind-card">
+        <span class="ind-label">Impacto Social</span>
+        <div class="ind-bar"><div class="ind-fill" style="width:30%;--bc:#38bdf8"></div></div>
+        <span class="ind-val">12 pts</span>
+      </div>
+      <div class="ind-card">
+        <span class="ind-label">Reputación</span>
+        <div class="ind-bar"><div class="ind-fill" style="width:55%;--bc:#fb923c"></div></div>
+        <span class="ind-val">55%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Historia -->
+<div id="panel-historia" class="lid-panel" hidden>
+  <div class="lid-header">
+    <h2>📜 Historia</h2>
+    <button class="lid-close">✕</button>
+  </div>
+  <div class="lid-body hist-scroll">
+    <div class="hist-entry"><span class="hist-time">Q1·S1</span> José firmó el contrato de arriendo de su primer departamento en El Vecino. La vecina doña Carmen, con esa generosidad cuencana que no pide permiso, le apareció con un encebollado bien servido: "Para que la casa nueva huela a hogar, mijo."</div>
+    <div class="hist-entry"><span class="hist-time">Q1·S1</span> Visitó a la familia un domingo. Su tía Lourdes, con la sutileza de quien lleva décadas practicando, le deslizó un billete de $20 en el bolsillo del saco. "Esto no se devuelve. Y no me vengas con que no necesitas."</div>
+    <div class="hist-entry hl"><span class="hist-time">Q1·S2</span> 🎲 Se le pinchó la llanta de la bici a medio camino por la Av. Solano. Un señor del mercado 10 de Agosto, sin que nadie le pidiera, sacó un parche y se la dejó como nueva. "En Cuenca nos ayudamos, joven." Perdió 2h pero ganó algo que no se compra. <em>-2h, +reputación</em></div>
+    <div class="hist-entry"><span class="hist-time">Q1·S2</span> Fue al Parque Calderón a despejarse. Se encontró con un ex compañero del colegio que ahora vende café artesanal junto a la Catedral. Conversaron una hora sin ver el reloj. <em>+felicidad, -1h</em></div>
+    <div class="hist-entry hl"><span class="hist-time">Q1·S3</span> 🎲 Le llegó una multa del municipio por una infracción que ni recuerda. $35 menos y la certeza de que la burocracia no distingue entre culpables e inocentes. <em>-$35, +estrés</em></div>
+  </div>
+</div>
+
+<!-- Help -->
+<div id="panel-help" class="lid-panel" hidden>
+  <div class="lid-header">
+    <h2>? Cómo jugar</h2>
+    <button class="lid-close">✕</button>
+  </div>
+  <div class="lid-body help-body">
+    <p>José acaba de cumplir 22 años en Cuenca. Tiene <strong>112 horas</strong> cada quincena para trabajar, estudiar, descansar, socializar y simplemente vivir. Cada decisión cuesta tiempo — y el tiempo no se recupera.</p>
+    <p><strong>Moverse:</strong> Haz clic en un lugar del mapa para viajar. El trayecto cuesta las horas que ves bajo cada lugar.</p>
+    <p><strong>Acciones:</strong> Al llegar a un lugar, aparecen las acciones disponibles. Cada una consume horas y afecta tus indicadores.</p>
+    <p><strong>Eventos:</strong> La vida no pide permiso. Eventos aleatorios te sorprenderán cada quincena — algunos buenos, otros no tanto. Así es Cuenca, así es la vida.</p>
+    <p><strong>Indicadores 📊:</strong> No se puede controlar lo que no se mide. Revisa salud, felicidad, estrés, educación, impacto social y reputación.</p>
+    <p><strong>Objetivo:</strong> Sobrevivir el año con dignidad, criterio y — si hay suerte — algo de felicidad. No hay una sola forma de ganar.</p>
+  </div>
+</div>
+
+<script src="game-effects.js"></script>
+</body>
+</html>

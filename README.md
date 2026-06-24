@@ -1,45 +1,97 @@
-# José En La Vida Adulta — v0.90
+# José En La Vida Adulta — v0.91
 
-**El juego de la vida**, ambientado en Cuenca, Ecuador. Tributo libre a *Jones in the Fast Lane* (Sierra On-Line, 1990) — el viejo "juego de la vida" en disquete — llevado más allá.
+**El juego de la vida adulta**, ambientado en Cuenca, Ecuador.
+Tributo libre a *Jones in the Fast Lane* (Sierra On-Line, 1990) — el viejo "juego de la vida" en disquete — llevado más allá con mecánicas modernas, barrios reales y una tesis sobre cómo construir una vida con criterio.
 
 > "No importa cuántas veces cambie el camino. Lo importante es seguir avanzando."
 
 🎮 **Jugar:** https://jfcarpiopuntocom.github.io/jose-en-la-vida-adulta/
 
-## Qué es
+---
 
-1 a 4 jugadores, por turnos **quincenales** (hotseat, uno se turna por mesa — como en Jones). Cada jugador nace al azar en un barrio real de Cuenca con una familia procedural propia, y se mueve por un **tablero** de la ciudad tomando decisiones: estudiar, trabajar, ascender, emprender, contratar gente, criar una familia, dejar un legado. El tiempo es el recurso escaso — esa es la mecánica central.
+## El tema central
 
-Al ganar (alcanzar las 4 metas a la vez), se pide tu nombre real para guardar tu historia. Antes de eso solo eres "Jugador 1", "Jugador 2"...
+**El tiempo es el recurso escaso.** No el dinero. No el talento. El tiempo.
+
+Cada quincena son 112 horas. Decides dónde invertirlas — trabajo, familia, educación, negocios, descanso. Las cuatro métricas para ganar (Patrimonio, Bienestar, Conocimientos, Impacto) deben cumplirse *todas a la vez*. No sirve ser rico si no tienes salud. No sirve ser culto si no has dejado huella.
+
+---
+
+## Dos rutas, una lección
+
+El juego propone dos caminos que se bifurcan y que se necesitan mutuamente:
+
+**Ruta empleado:** escalera de 9 peldaños (Aprendiz → Director). El empleado comprometido sostiene la empresa, genera valor real y merece aprecio genuino — no es un recurso intercambiable.
+
+**Ruta empresario:** emprender requiere capital, clientes, empleados y resiliencia. El emprendedor crea el espacio donde otros pueden crecer.
+
+**La lección que une ambas rutas:** hay aprecio mutuo necesario entre empleado y empresario. El uno no existe sin el otro. El juego lo muestra en ambas direcciones — no hay ruta superior.
+
+### Negocio → Empresa: el salto que más cuesta
+
+Un negocio con empleados que depende del fundador para apagar todos los fuegos no es una empresa — es un autoempleo de alta complejidad. El salto a empresa ocurre cuando existen **procedimientos documentados y manuales claros** que permiten que el sistema funcione sin que el fundador esté presente en cada decisión. Sin eso, la dependencia del fundador es total y el negocio no escala.
+
+---
 
 ## El tablero
 
-13 paradas funcionales en un recorrido tipo loop (Casa, Universidad/UDA, Z. Financiera, Terminal Terrestre, Z. Industrial, Hospital, Feria Libre, Centro Histórico, Parque Calderón, Río Tomebamba, Municipio, Mall del Río, Estadio) — no son zonas sueltas, es un tablero por el que tu ícono camina, como en Monopoly/Jones.
+13 paradas funcionales en un loop cerrado inspirado en Jones/Monopoly:
 
-**Los barrios de nacimiento son una lista aparte**, sin posición en el tablero: 18 barrios reales de Cuenca (María Auxiliadora, Bellavista, San Sebastián, El Vado, Todos Santos, Remigio Crespo, Totoracocha, Yanuncay, El Vergel, Sayausí, Monay, etc.) — núcleo tradicional del Centro + alrededores del río. Ahí solo naces; "Tu Casa" en el tablero es el lugar genérico donde descansas y ves a tu familia, sin importar tu barrio de origen.
+| Stop | Zona | Color |
+|---|---|---|
+| 🏠 Tu Casa | Hogar | Dorado |
+| 🎓 Universidad (UDA) | Educativa | Violeta |
+| 🏦 Z. Financiera | Financiera | Amarillo |
+| 🚌 Terminal Terrestre | Transporte | Cielo |
+| 🏭 Z. Industrial | Industrial | Naranja |
+| 🏥 Hospital | Salud | Rosa |
+| 🛒 Feria Libre | Comercial | Teal |
+| ⛪ Centro Histórico | Centro | Ámbar |
+| 🌳 Parque Calderón | Naturaleza | Verde |
+| 🌉 Río Tomebamba | Río | Azul |
+| 🏛️ Municipio | Político | Azul oscuro |
+| 🛍️ Mall del Río | Comercial | Cian |
+| ⚽ Estadio | Deporte | Lima |
 
-**Tiempos de viaje calibrados a Cuenca real.** Cuenca tiene tranvía y es una ciudad compacta — cruzar el centro a pie toma 15-20 minutos reales, llegar a la periferia (Terminal, Z. Industrial) 45-70 minutos. Nada que ver con los tiempos de Quito, Guayaquil o incluso Ambato. Los costos de movimiento del juego reflejan eso: la mayoría de trayectos cuestan fracciones de hora, no horas completas.
+**Barrios de nacimiento** (lista separada — no son stops del tablero): 18 barrios reales de Cuenca, núcleo histórico + alrededores del río. San Sebastián, El Vado, Todos Santos, Las Herrerías, El Ejido, Yanuncay, Remigio Crespo, Gran Colombia, Totoracocha, Miraflores, Bellavista, María Auxiliadora, Sayausí, Monay, El Arenal, etc.
+
+**Tiempos calibrados a Cuenca real:** ciudad compacta con tranvía. La mayoría de trayectos cuestan 0.15–0.5h. Periferia (Terminal, Z. Industrial) 0.5–1.2h. Muy por debajo de Quito, Guayaquil o Ambato.
+
+---
 
 ## Las 4 métricas (todas a la vez para ganar)
 
-- **Patrimonio** (oro) — liquidez + banco + negocios + vehículos
-- **Bienestar** (verde) — salud, felicidad, estrés invertido
-- **Conocimientos** (rosa) — conocimiento formal + experiencia
-- **Impacto** (magenta) — red de 4 dimensiones: profesional, familiar, comunitario, empresarial
+- **Patrimonio** `●` liquidez + banco + negocios + vehículos
+- **Bienestar** `●` salud, felicidad, estrés invertido
+- **Conocimientos** `●` educación formal + experiencia + autodidacta
+- **Impacto** `●` red de 4 dimensiones: profesional, familiar, comunitario, empresarial
 
-## Sistemas (espiral de complejidad — arrancan rudimentarios, expandibles)
+---
 
-- **Career Engine** — escalera de 9 peldaños (Aprendiz → Auxiliar → Asistente → Técnico → Supervisor → Coordinador → Jefe → Gerente → Director). Asciendes por experiencia + confiabilidad; la educación da un boost.
-- **Education Engine** — árbol formal (bachillerato → técnico/universidad → especialización/maestría/doctorado) + técnica (electricidad, gastronomía) + autodidacta (ventas, programación).
-- **Empleados persistentes** — contratas gente con honestidad/iniciativa/lealtad/competencia propias; cada quincena puede haber robo, innovación o renuncia según esos atributos.
-- **Impacto como red (4D)** — cada acción/evento alimenta una dimensión distinta (profesional/familiar/comunitario/empresarial); el indicador mostrado es el promedio.
-- **Modo Legado** — desde ~1 año de juego puedes "pasar el legado": tu heredero arranca con parte de tu patrimonio, reputación y resiliencia, generación tras generación.
+## Sistemas
 
-## Diseño duro (no negociable)
+- **Career Engine** — 9 peldaños: Aprendiz → Auxiliar → Asistente → Técnico → Supervisor → Coordinador → Jefe → Gerente → Director
+- **Education Engine** — árbol formal (bachillerato → técnico/universidad → especialización/maestría/doctorado) + técnica + autodidacta
+- **Empleados persistentes** — honestidad, iniciativa, lealtad, competencia propias; cada quincena puede haber robo, innovación o renuncia
+- **Impacto 4D** — cada acción/evento alimenta una dimensión independiente
+- **Modo Legado** — desde ~1 año puedes pasar el antorcha: heredero arranca con parte de tu patrimonio y reputación
 
-- Todo evento negativo **tiene** un `silverLining` — validado en runtime al cargar `data.ts`, el juego no arranca si falta uno.
-- ~25% de las quincenas no pasa nada al azar: el jugador retiene el timón. El destino es ~70-80% decisiones.
-- Resiliencia es una estadística oculta.
+---
+
+## Diseño duro
+
+- Todo evento negativo **tiene** un `silverLining` — el juego no arranca sin él (validación en runtime)
+- ~25% de quincenas sin evento aleatorio: el jugador retiene el timón
+- El destino es ~70-80% decisiones
+- Resiliencia es una estadística oculta que crece con cada adversidad
+
+---
+
+## Visual
+
+Tema cinematográfico oscuro (Claude Design): fuente Cinzel + Nunito, partículas flotantes, atmósfera de gradientes radiales, nodos con color semántico por tipo de lugar, animación de path tipo "marching ants", panel de stats fijo a la derecha, barra de acciones en la parte inferior, panels colapsables (indicadores, historia, about).
+
+---
 
 ## Stack
 
@@ -47,40 +99,42 @@ Vite + React 18 + TypeScript. Motor puro en `src/engine.ts` (+ `data.ts`, `types
 
 ```
 src/
-  types.ts      tipos centrales (GameState, PlayerState, Location, Barrio, Effect, ...)
-  data.ts       tablero (13 stops), barrios reales de Cuenca, empleos, grados, eventos
+  types.ts      tipos centrales
+  data.ts       tablero (13 stops), barrios reales, empleos, grados, 33 eventos
   engine.ts     lógica pura: familia, métricas, carrera, educación, empleados, eventos, legado
   nostr.ts      keypair, localStorage, publish a relays Nostr
-  App.tsx       UI React: tablero, reloj de tiempo, acciones, modal de eventos
-  styles.css    tema oscuro, accesible en iOS/WhatsApp
+  App.tsx       UI React: tablero cinematográfico, overlays HUD, lid panels
+  styles.css    tema oscuro cinematográfico, iOS/WhatsApp seguro
 ```
+
+---
 
 ## Persistencia
 
-- **localStorage** — autosave al cerrar cada quincena + "continuar partida guardada".
-- **Nostr** (mejor esfuerzo, nunca bloquea el juego) — keypair propio generado en el navegador, guardado de partida como evento kind `30078`, historia al ganar como kind `1` en relays públicos (damus.io, nos.lol, nostr.band).
-- **GitHub** (pendiente) — guardar scores/historias también en el repo está en el roadmap, no implementado aún.
+- **localStorage** — autosave al cerrar cada quincena
+- **Nostr** (mejor esfuerzo) — keypair generado en el navegador, partida como kind `30078`, historia al ganar como kind `1`
+- **GitHub** — pendiente en roadmap
 
-## Deploy — importante
+---
 
-El token de `gh` de esta cuenta no tiene scope `workflow`, así que no se pueden pushear archivos de GitHub Actions. Pages está en modo **legacy**, sirviendo desde `main` → `/docs`.
+## Deploy
+
+Token sin scope `workflow`. Pages en modo legacy desde `main` → `/docs`.
 
 ```bash
-npm run build        # genera /docs (vite build.outDir = 'docs')
+npm run build        # genera /docs
+touch docs/.nojekyll # necesario después de cada build (Vite limpia /docs)
 git add docs && git commit -m "..." && git push
-```
-
-Si Pages tarda en reflejar el cambio:
-
-```bash
+# Si Pages tarda:
 gh api -X POST repos/jfcarpiopuntocom/jose-en-la-vida-adulta/pages/builds
-gh api repos/jfcarpiopuntocom/jose-en-la-vida-adulta/pages/builds/latest --jq '.status+" "+.commit'
 ```
+
+---
 
 ## Desarrollo local
 
 ```bash
 npm install
-npm run dev      # servidor local con HMR
+npm run dev      # HMR local
 npm run build    # build de producción a /docs
 ```

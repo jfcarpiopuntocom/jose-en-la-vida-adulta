@@ -1,38 +1,596 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GameState, PlayerState, GameEvent, Goals } from './types';
 import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
   hasWon, canRetire, makeHeir, HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
 } from './engine';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
+import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
 
 const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾'];
-import {
-  saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory,
-} from './nostr';
+
+// Zone → node color type
+const ZONE_T: Record<string, string> = {
+  hogar:'home', universitaria:'edu', financiera:'finance',
+  transporte:'transit', industrial:'indust', salud:'health',
+  centro:'hist', rio:'river', politico:'gov', deporte:'sport',
+};
+function nodeType(zone: string, id: string): string {
+  if (id === 'feria_libre') return 'market';
+  if (id === 'mall_rio') return 'shop';
+  if (id === 'parque_calderon') return 'nature';
+  return ZONE_T[zone] || 'home';
+}
+
+// Action card accent colors cycle
+const ACT_COLORS = ['emerald','sky','amber','violet','rose','lime'];
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type Phase = 'setup' | 'play' | 'victory';
+type PanelId = 'indicators' | 'historia' | 'about' | null;
 
 interface Pending { p: PlayerState; ev: GameEvent; silvered: boolean }
 
+// ── Particle canvas effect ──
+function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let W = canvas.width, H = canvas.height, raf = 0;
+    const C = [[255,195,55],[94,234,212],[167,139,250],[251,113,133],[255,255,240],[56,189,248],[251,146,60]];
+    const P: {x:number;y:number;vx:number;vy:number;s:number;r:number;g:number;b:number;life:number;ml:number}[] = [];
+    const N = 45;
+    function resize() { W = canvas!.width = innerWidth; H = canvas!.height = innerHeight; }
+    function spawn(rAge: boolean) {
+      const c = C[(Math.random() * C.length) | 0];
+      const ml = 300 + Math.random() * 400;
+      return { x: Math.random() * W, y: rAge ? Math.random() * H : H + 10,
+        vx: (Math.random() - 0.5) * 0.2, vy: -(0.1 + Math.random() * 0.28),
+        s: 0.8 + Math.random() * 2, r: c[0], g: c[1], b: c[2], life: rAge ? Math.random() * ml : ml, ml };
+    }
+    resize();
+    for (let i = 0; i < N; i++) P.push(spawn(true));
+    function loop() {
+      ctx!.clearRect(0, 0, W, H);
+      for (let i = 0; i < P.length; i++) {
+        const p = P[i]; p.x += p.vx; p.y += p.vy; p.life--;
+        const t = p.life / p.ml;
+        const a = (t > .8 ? (1-t)*5 : t < .2 ? t*5 : 1) * 0.35;
+        ctx!.beginPath(); ctx!.arc(p.x, p.y, p.s, 0, 6.283);
+        ctx!.fillStyle = `rgba(${p.r},${p.g},${p.b},${a})`; ctx!.fill();
+        ctx!.beginPath(); ctx!.arc(p.x, p.y, p.s * 3.5, 0, 6.283);
+        ctx!.fillStyle = `rgba(${p.r},${p.g},${p.b},${a * .15})`; ctx!.fill();
+        if (p.life <= 0 || p.y < -20) P[i] = spawn(false);
+      }
+      raf = requestAnimationFrame(loop);
+    }
+    loop();
+    addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); removeEventListener('resize', resize); };
+  }, []);
+}
+
+// ── Atmosphere background ──
+function AtmosphereBg() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useParticles(canvasRef);
+  return (
+    <>
+      <div id="atmosphere" />
+      <canvas id="particles" ref={canvasRef} />
+      <div id="vignette" />
+    </>
+  );
+}
+
+// ── Rotating overlay for portrait mobile ──
+function RotateOverlay() {
+  return (
+    <div className="rotate-overlay">
+      <div className="rotate-icon">⤵️📱⤴️</div>
+      <div>Gira tu teléfono — este tablero se juega en horizontal</div>
+    </div>
+  );
+}
+
+// ── Setup screen ──
+function Setup({ onStart }: { onStart: (g: GameState) => void }) {
+  const [n, setN] = useState(1);
+  function start() {
+    const players = Array.from({ length: n }, (_, i) => ({ id: 'p'+i, name: 'Jugador '+(i+1) }));
+    onStart(newGame(players, DEFAULT_GOALS));
+  }
+  return (
+    <>
+      <AtmosphereBg />
+      <div id="map-world" />
+      <div className="setup-screen">
+        <div className="setup-card">
+          <div className="setup-title">JOSÉ EN LA VIDA ADULTA</div>
+          <div className="setup-sub">el juego de la vida · ambientado en Cuenca, Ecuador</div>
+          <p className="setup-p">
+            Gestiona tu tiempo, tu familia, tu carrera y tu negocio. Empiezas como "Jugador 1" — como en Jones in the Fast Lane.
+            Tu nombre real se pide solo al ganar.
+          </p>
+          <div className="setup-label">¿Cuántos jugadores? (1 a 4)</div>
+          <input type="number" min={1} max={4} value={n}
+            onChange={e => setN(clamp(parseInt(e.target.value)||1,1,4))}
+            style={{ width: 90, marginBottom: 14 }} />
+          <button className="primary" style={{ width:'100%' }} onClick={start}>Empezar a jugar</button>
+          {hasLocalSave() && (
+            <button style={{ width:'100%', marginTop: 8 }} onClick={() => { const g = loadLocal(); if (g) onStart(g); }}>
+              Continuar partida guardada
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── SVG Time Ring ──
+function TimeRing({ hours }: { hours: number }) {
+  const pct = clamp(hours / HOURS_PER_TURN, 0, 1);
+  const circumference = 220;
+  const offset = circumference - pct * circumference;
+  return (
+    <div className="time-block">
+      <svg className="time-ring" viewBox="0 0 36 36">
+        <defs>
+          <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={pct > 0.5 ? '#2DD4BF' : pct > 0.2 ? '#E8A020' : '#E11D48'} />
+            <stop offset="100%" stopColor={pct > 0.5 ? '#34D399' : pct > 0.2 ? '#FCD34D' : '#FB7185'} />
+          </linearGradient>
+        </defs>
+        <circle className="ring-track" cx="18" cy="18" r="16" />
+        <circle className="ring-fill" cx="18" cy="18" r="16"
+          strokeDasharray={`${pct * circumference} ${circumference}`}
+          strokeDashoffset="0" />
+      </svg>
+      <div className="time-display">
+        <span className="time-num">{Math.round(hours)}</span>
+        <span className="time-label">horas</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Stats Panel (right side overlay) ──
+function StatsPanel({
+  game, onEnd, onLegacy
+}: { game: GameState; onEnd: () => void; onLegacy: () => void }) {
+  const p = game.players[game.activePlayerIndex];
+  const m = metrics(p);
+  const col = PLAYER_COLORS[p.colorIndex];
+  const loc = locById(p.currentLocation);
+  return (
+    <div id="stats-panel">
+      <TimeRing hours={p.timeLeft} />
+      <div className="player-block">
+        <div className="player-name" style={{ color: col, WebkitTextFillColor: col }}>
+          {PAWN_ICONS[p.colorIndex]} {p.name}
+        </div>
+        <div className="player-loc">{loc.icon} {loc.name}</div>
+        <div className="econ-line">
+          {game.world.economy === 'good'
+            ? <span className="econ-good">● buen año</span>
+            : <span className="econ-bad">● mal año</span>}
+        </div>
+      </div>
+      <div className="stat-divider" />
+      <div className="resources">
+        <div className="resource"><span className="res-icon">💰</span><span className="res-val">${p.liquidity}</span></div>
+        <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
+        <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos</span></div>
+        <div className="resource"><span className="res-icon">Q</span><span className="res-val">Quincena {game.turn}</span></div>
+      </div>
+      <div className="stat-divider" />
+      {canRetire(p, game.turn) && (
+        <button className="btn-legacy" onClick={onLegacy}>Pasar el legado ✦</button>
+      )}
+      <button className="btn-end" onClick={onEnd}>
+        Terminar quincena ▶
+      </button>
+    </div>
+  );
+}
+
+// ── Actions Bar (bottom overlay) ──
+function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number) => void }) {
+  const p = game.players[game.activePlayerIndex];
+  const loc = locById(p.currentLocation);
+  const acts = actionsFor(p, game.world);
+  const [savedAt] = useState('');
+  return (
+    <div id="actions-bar">
+      <div className="actions-label">Acciones en {loc.icon} {loc.name}</div>
+      {acts.length === 0
+        ? <div className="actions-empty">Sin acciones aquí — muévete o termina tu quincena.</div>
+        : (
+          <div className="actions-row">
+            {acts.map((a, i) => (
+              <button key={a.id} className="action-card"
+                style={{ '--ac': 'var(--'+ACT_COLORS[i%ACT_COLORS.length]+')' } as any}
+                onClick={() => onAction(i)}>
+                <span className="act-name">{a.label}</span>
+                <span className="act-desc">{a.desc}</span>
+              </button>
+            ))}
+          </div>
+        )}
+    </div>
+  );
+}
+
+// ── Lid Panel ──
+function LidPanel({ id, title, onClose, children }: {
+  id: string; title: string; onClose: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="lid-panel" id={'panel-'+id}>
+      <div className="lid-header">
+        <h2>{title}</h2>
+        <button className="lid-close" onClick={onClose}>✕</button>
+      </div>
+      <div className="lid-body">{children}</div>
+    </div>
+  );
+}
+
+// ── Indicators Panel Content ──
+function IndicatorsContent({ game }: { game: GameState }) {
+  const bars = [
+    { key:'patrimonio', label:'Patrimonio', color:'var(--gold)' },
+    { key:'bienestar',  label:'Bienestar',  color:'var(--green)' },
+    { key:'conocimientos', label:'Saber', color:'var(--violet)' },
+    { key:'impacto',    label:'Impacto',    color:'var(--pink)' },
+  ] as const;
+  return (
+    <div>
+      {game.players.map(p => {
+        const m = metrics(p);
+        const col = PLAYER_COLORS[p.colorIndex];
+        const isActive = p.id === game.players[game.activePlayerIndex].id;
+        return (
+          <div key={p.id} className="ind-section">
+            <div className="ind-pname" style={{ color: col, WebkitTextFillColor: col }}>
+              {isActive ? '▶ ' : ''}{p.name}
+            </div>
+            {bars.map(b => {
+              const val = m[b.key as keyof typeof m] as number;
+              const goal = game.goals[b.key as keyof Goals];
+              const pct = Math.min(100, (val / goal) * 100);
+              return (
+                <div key={b.key} className="ind-row">
+                  <span className="ind-label">{b.label}</span>
+                  <div className="ind-bar">
+                    <div className="ind-fill" style={{ width: pct+'%', '--bc': b.color } as any} />
+                  </div>
+                  <span className="ind-val">
+                    {Math.round(val)}/{goal}{val >= goal ? <span className="check-icon"> ✓</span> : ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Historia Panel Content ──
+function HistoriaContent({ game }: { game: GameState }) {
+  return (
+    <div>
+      {[...game.log].slice(-20).reverse().map((l, i) => (
+        <div key={i} className={'hist-entry ' + (l.kind==='pos'?'hist-pos':l.kind==='neg'?'hist-neg':'')}>
+          <span className="hist-q">Q{l.turn}</span>{l.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── About Panel Content ──
+function AboutContent() {
+  return (
+    <div className="about-box-inner">
+      <p>Tributo libre a <b>Jones in the Fast Lane</b> (Sierra On-Line, 1990) — el viejo "juego de la vida" en disquete — llevado más allá.</p>
+      <p style={{marginTop:8}}><b>El tema central:</b> el tiempo es el recurso escaso. No el dinero. No el talento. El tiempo.</p>
+      <p style={{marginTop:8}}><b>Dos rutas, una lección:</b> ser empleado o ser empresario/a. Ninguna es superior. Ambas exigen gestión, criterio y aprecio mutuo. El empleado sostiene la empresa; el empresario crea el espacio donde el empleado puede crecer.</p>
+      <p style={{marginTop:8}}><b>Negocio → Empresa:</b> el salto ocurre cuando existen procedimientos documentados y manuales claros. Sin eso, la dependencia del fundador para apagar fuegos es total — y eso no escala.</p>
+      <p style={{marginTop:8}}>Sistema de 4 métricas: Patrimonio · Bienestar · Conocimientos · Impacto. Las cuatro a la vez para ganar.</p>
+    </div>
+  );
+}
+
+// ── Node Inspect Tooltip ──
+function NodeInspect({ locId, game, onMove, onAction, onClose }: {
+  locId: string; game: GameState;
+  onMove: () => void; onAction: (i: number) => void; onClose: () => void;
+}) {
+  const p = game.players[game.activePlayerIndex];
+  const loc = locById(locId);
+  const cost = loc.tc[p.transport];
+  const isHere = locId === p.currentLocation;
+  const canMove = !isHere && p.timeLeft >= cost;
+  // actions available AT this location (simulate)
+  const mockP = { ...p, currentLocation: locId };
+  const acts = actionsFor(mockP as typeof p, game.world);
+
+  return (
+    <div className="node-inspect">
+      <button className="insp-close-btn" onClick={onClose}>✕</button>
+      <div className="insp-title">{loc.icon} {loc.name}</div>
+      {acts.length > 0 && (
+        <div className="insp-actions">
+          {acts.slice(0,3).map((a, i) => (
+            <button key={a.id} className="insp-action" onClick={() => { if (isHere) onAction(i); else { onMove(); } }}>
+              <span className="act-name">{a.label}</span>
+              <span className="act-desc">{a.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <button className="insp-move" disabled={isHere || !canMove} onClick={onMove}>
+        {isHere ? 'Estás aquí' : canMove ? `Ir aquí · ${cost}h` : `Sin tiempo suficiente (${cost}h)`}
+      </button>
+    </div>
+  );
+}
+
+// ── Board ──
+function Board({ game, onMove, onInspect, inspecting }: {
+  game: GameState;
+  onMove: (id: string) => void;
+  onInspect: (id: string | null) => void;
+  inspecting: string | null;
+}) {
+  const active = game.players[game.activePlayerIndex];
+  const pts = PATH_ORDER.map(id => locById(id));
+
+  // We use percentage-based positioning in the container
+  // SVG viewBox is 760×480; node coords are in that space
+  const VW = 760, VH = 480;
+
+  function handleNodeClick(locId: string) {
+    if (inspecting === locId) {
+      onInspect(null);
+    } else {
+      onInspect(locId);
+    }
+  }
+
+  const polyPoints = pts.map(l => `${(l.x/VW*100).toFixed(2)}% ${(l.y/VH*100).toFixed(2)}%`).join(', ');
+
+  return (
+    <div id="map-world">
+      <div className="board-container">
+        <div className="board-svg-wrap">
+          {/* SVG Paths */}
+          <svg className="links" viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#2DD4BF" />
+                <stop offset="100%" stopColor="#34D399" />
+              </linearGradient>
+            </defs>
+            {/* glow layer */}
+            <polygon points={pts.map(l=>`${l.x},${l.y}`).join(' ')}
+              fill="none" stroke="rgba(45,212,191,0.06)" strokeWidth={10} />
+            {/* animated dashed loop */}
+            <polygon points={pts.map(l=>`${l.x},${l.y}`).join(' ')}
+              fill="none" stroke="rgba(232,160,32,0.38)" strokeWidth={2}
+              strokeDasharray="8 5" strokeLinecap="round"
+              style={{ animation: 'march 14s linear infinite' }} />
+            {/* decorative dots between stops */}
+            {pts.map((a, i) => {
+              const b = pts[(i+1) % pts.length];
+              return [0.33, 0.66].map((t, j) => (
+                <circle key={`d${i}${j}`}
+                  cx={a.x + (b.x-a.x)*t} cy={a.y + (b.y-a.y)*t}
+                  r={2.5} fill="rgba(255,255,255,0.08)" />
+              ));
+            })}
+          </svg>
+
+          {/* Nodes */}
+          {LOCATIONS.map(loc => {
+            const here = loc.id === active.currentLocation;
+            const cost = loc.tc[active.transport];
+            const reachable = !here && active.timeLeft >= cost;
+            const selected = inspecting === loc.id;
+            const pawns = game.players.filter(p => p.currentLocation === loc.id);
+            const nt = nodeType(loc.zone, loc.id);
+            const xPct = (loc.x / VW * 100).toFixed(2) + '%';
+            const yPct = (loc.y / VH * 100).toFixed(2) + '%';
+            return (
+              <div key={loc.id}
+                className={'node' + (here?' here':'') + (reachable?' reachable':'') + (selected?' selected':'')}
+                data-t={nt}
+                style={{ left: xPct, top: yPct }}
+                onClick={() => handleNodeClick(loc.id)}>
+                <div className="node-icon">{loc.icon}</div>
+                <div className="node-name">{loc.name}</div>
+                <div className="node-time">{here ? 'aquí' : `${cost}h`}</div>
+                {pawns.length > 0 && (
+                  <div className="node-pawns">
+                    {pawns.map(p => (
+                      <span key={p.id}
+                        style={{ filter: p.id===active.id ? `drop-shadow(0 0 4px ${PLAYER_COLORS[p.colorIndex]})` : 'none' }}>
+                        {PAWN_ICONS[p.colorIndex]}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Top bar HUD ──
+function TopBar({ openPanel, setOpenPanel, turn }: {
+  openPanel: PanelId;
+  setOpenPanel: (p: PanelId) => void;
+  turn: number;
+}) {
+  function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
+  return (
+    <div id="top-bar">
+      <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
+      <span className="bar-motto">el juego de la vida · Cuenca, Ecuador</span>
+      <div className="bar-right">
+        <button className={'hud-btn'+(openPanel==='indicators'?' on':'')}
+          onClick={() => toggle('indicators')} title="Indicadores">📊</button>
+        <button className={'hud-btn'+(openPanel==='historia'?' on':'')}
+          onClick={() => toggle('historia')} title="Historia">📜</button>
+        <button className={'about-btn-hud'+(openPanel==='about'?' on':'')}
+          onClick={() => toggle('about')} title="¿Qué es este juego?">?</button>
+      </div>
+    </div>
+  );
+}
+
+// ── PlayerCard for zoom modal ──
+function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
+  const m = metrics(p);
+  const col = PLAYER_COLORS[p.colorIndex];
+  const loc = locById(p.currentLocation);
+  const bars = [
+    { key:'patrimonio', label:'Patrimonio', color:'var(--gold)', goal: game.goals.patrimonio },
+    { key:'bienestar',  label:'Bienestar',  color:'var(--green)', goal: game.goals.bienestar },
+    { key:'conocimientos', label:'Saber', color:'var(--violet)', goal: game.goals.conocimientos },
+    { key:'impacto',    label:'Impacto',    color:'var(--pink)', goal: game.goals.impacto },
+  ] as const;
+  return (
+    <div className="pcard-zoom">
+      <div className="pcard-name" style={{ color: col, WebkitTextFillColor: col }}>
+        {PAWN_ICONS[p.colorIndex]} {p.name}{p.generation > 1 ? ` (gen.${p.generation})` : ''}
+      </div>
+      <div className="pcard-meta">
+        nació en {barrioById(p.birthBarrio).name} · ahora en {loc.icon} {loc.name}<br />
+        {p.job ? p.job.title : 'sin empleo'} · <b>{careerTitle(p.careerLevel)}</b><br />
+        <span className="money-val">${p.liquidity}</span> efectivo · banco ${p.bank}<br />
+        estudios: {p.education.completed.length ? p.education.completed.join(', ') : '—'}
+        {p.education.enrolledId ? ` (cursando ${p.education.enrolledId})` : ''}
+      </div>
+      {p.family.length > 0 && (
+        <div className="pcard-fam">
+          <span className="fam-tag">Familia</span><br />
+          {p.family.map((f, i) => (
+            <span key={i}>
+              <span style={{ color: col, WebkitTextFillColor: col }}>●</span>
+              {' '}{f.rel} {f.name}<br />
+            </span>
+          ))}
+        </div>
+      )}
+      {bars.map(b => {
+        const val = m[b.key as keyof typeof m] as number;
+        const pct = Math.min(100, (val / b.goal) * 100);
+        return (
+          <div key={b.key} className="metric">
+            <div className="lab">
+              <span>{b.label}</span>
+              <span>{Math.round(val)}/{b.goal}{val >= b.goal ? ' ✓' : ''}</span>
+            </div>
+            <div className="barbg"><div className="barfill" style={{ width: pct+'%', background: b.color }} /></div>
+          </div>
+        );
+      })}
+      <div className="pcard-dims">
+        impacto → prof {p.impact.profesional} · fam {p.impact.familiar} · com {p.impact.comunitario} · emp {p.impact.empresarial}
+      </div>
+    </div>
+  );
+}
+
+// ── Event Modal ──
+function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
+  const { p, ev, silvered } = pend;
+  const col = PLAYER_COLORS[p.colorIndex];
+  return (
+    <div className="modal-bg">
+      <div className="modal">
+        <h3>
+          <span style={{ color: ev.neg ? 'var(--rose)' : 'var(--green)', WebkitTextFillColor: ev.neg ? 'var(--rose)' : 'var(--green)' }}>
+            {ev.neg ? '✗' : '✦'}
+          </span>{' '}
+          <span style={{ color: col, WebkitTextFillColor: col }}>{p.name}</span> — {ev.title}
+        </h3>
+        <div className="body">{ev.body}</div>
+        {silvered && ev.sl && <div className="silver">↪ {ev.sl}</div>}
+        <button className="primary" onClick={onNext}>Continuar</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Victory screen ──
+function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }) {
+  const winner = game.players.find(p => p.id === game.winnerId) || game.players[0];
+  const col = PLAYER_COLORS[winner.colorIndex];
+  const [realName, setRealName] = useState('');
+  const [saved, setSaved] = useState(false);
+  const hist = game.log.filter(l => l.importance >= 2).slice(-10);
+
+  async function saveStory() {
+    const summary = `${winner.name} alcanzó sus metas en la quincena ${game.turn}.\n` +
+      hist.map(l => `Q${l.turn} · ${l.text}`).join('\n');
+    await publishStory(realName || winner.name, summary);
+    setSaved(true);
+  }
+
+  return (
+    <>
+      <AtmosphereBg />
+      <div id="map-world" />
+      <div className="setup-screen">
+        <div className="victory-card">
+          <div className="setup-title">🏆 Victoria</div>
+          <div className="victory-title" style={{ color: col, WebkitTextFillColor: col }}>
+            {winner.name} — quincena {game.turn}
+          </div>
+          <p className="victory-sub">Patrimonio, bienestar, conocimientos e impacto — las cuatro a la vez. Eso es una vida construida.</p>
+          <div style={{ marginBottom: 16 }}>
+            {hist.map((l, i) => <div key={i} className="log-entry">Q{l.turn} · {l.text}</div>)}
+          </div>
+          <input type="text" value={realName} onChange={e => setRealName(e.target.value)}
+            placeholder="Tu nombre real (opcional)" style={{ marginBottom: 8 }} />
+          <button onClick={saveStory} disabled={saved} style={{ width:'100%', marginBottom: 8 }}>
+            {saved ? 'Historia guardada en Nostr ✓' : 'Guardar mi historia'}
+          </button>
+          <button className="primary" style={{ width:'100%' }} onClick={onRestart}>Jugar de nuevo</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════
 export function App() {
   const [phase, setPhase] = useState<Phase>('setup');
   const [game, setGame] = useState<GameState | null>(null);
   const [queue, setQueue] = useState<Pending[]>([]);
   const [qi, setQi] = useState(0);
   const [flash, setFlash] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<string>('');
+  const [savedAt, setSavedAt] = useState('');
   const [zoom, setZoom] = useState<string | null>(null);
+  const [openPanel, setOpenPanel] = useState<PanelId>(null);
+  const [inspecting, setInspecting] = useState<string | null>(null);
 
-  // autosave + nostr en cada cambio de quincena
   function commit(g: GameState, persist = false) {
     setGame({ ...g });
-    if (persist) {
-      saveLocal(g);
-      setSavedAt(new Date().toLocaleTimeString());
-      publishToNostr(g); // mejor esfuerzo, no bloquea
-    }
+    if (persist) { saveLocal(g); setSavedAt(new Date().toLocaleTimeString()); publishToNostr(g); }
   }
   function mutate(fn: (g: GameState) => void, persist = false) {
     if (!game) return;
@@ -41,46 +599,45 @@ export function App() {
     commit(g, persist);
   }
 
-  if (phase === 'setup') return <Setup onStart={(g) => { setGame(g); setPhase('play'); saveLocal(g); }} />;
+  if (phase === 'setup') return <Setup onStart={g => { setGame(g); setPhase('play'); saveLocal(g); }} />;
   if (!game) return null;
   if (phase === 'victory') return <Victory game={game} onRestart={() => { clearLocal(); location.reload(); }} />;
 
   const active = game.players[game.activePlayerIndex];
 
   function doAction(idx: number) {
-    mutate((g) => {
+    mutate(g => {
       const p = g.players[g.activePlayerIndex];
-      const acts = actionsFor(p, g.world);
-      const a = acts[idx];
+      const a = actionsFor(p, g.world)[idx];
       if (!a) return;
       const log = a.run();
       g.log.push({ turn: g.turn, text: log, kind: 'plain', importance: 1 });
     });
+    setInspecting(null);
   }
 
   function moveTo(locId: string) {
     if (locId === active.currentLocation) return;
     const cost = locById(locId).tc[active.transport];
     if (active.timeLeft < cost) { setFlash('No te alcanza el tiempo para moverte.'); return; }
-    mutate((g) => {
+    mutate(g => {
       const p = g.players[g.activePlayerIndex];
       p.timeLeft -= cost; p.currentLocation = locId;
     });
+    setInspecting(null);
   }
 
   function endPlayerTurn() {
     const g: GameState = structuredClone(game!);
     g.players[g.activePlayerIndex].timeLeft = 0;
     if (g.activePlayerIndex < g.players.length - 1) {
-      g.activePlayerIndex++;
-      commit(g);
-    } else {
-      runEvents(g);
-    }
+      g.activePlayerIndex++; commit(g);
+    } else { runEvents(g); }
+    setInspecting(null);
   }
 
   function retire() {
-    mutate((g) => {
+    mutate(g => {
       const i = g.activePlayerIndex;
       const heir = makeHeir(g.players[i], i);
       g.players[i] = heir;
@@ -96,349 +653,108 @@ export function App() {
         applyEff(p, ev.eff);
         let silvered = false;
         if (ev.neg && ev.silver.length) { applyEff(p, ev.silver); silvered = true; }
-        if (ev.firesJob) { p.job = null; }
-        if (ev.setEcon) { g.world.economy = ev.setEcon; g.world.wageMult = ev.setEcon === 'good' ? 1 : 0.8; g.world.salesMult = ev.setEcon === 'good' ? 1 : 0.8; }
-        g.log.push({ turn: g.turn, text: `${p.name}: ${ev.title}`, kind: ev.neg ? 'neg' : 'pos', importance: ev.imp });
+        if (ev.firesJob) p.job = null;
+        if (ev.setEcon) { g.world.economy = ev.setEcon; g.world.wageMult = ev.setEcon==='good'?1:0.8; g.world.salesMult = ev.setEcon==='good'?1:0.8; }
+        g.log.push({ turn: g.turn, text: `${p.name}: ${ev.title}`, kind: ev.neg?'neg':'pos', importance: ev.imp });
         pend.push({ p, ev, silvered });
       }
     }
-    // cierre de negocios/empleados
     for (const p of g.players) {
       const logs = closeBusinessAndEmployees(p);
-      logs.forEach((t) => g.log.push({ turn: g.turn, text: `${p.name}: ${t}`, kind: 'neg', importance: 1 }));
+      logs.forEach(t => g.log.push({ turn: g.turn, text: `${p.name}: ${t}`, kind: 'neg', importance: 1 }));
     }
-    // cambio económico raro
     if (Math.random() < 0.08) {
       const ne = g.world.economy === 'good' ? 'bad' : 'good';
-      g.world.economy = ne; g.world.wageMult = ne === 'good' ? 1 : 0.8; g.world.salesMult = ne === 'good' ? 1 : 0.8;
-      g.log.push({ turn: g.turn, text: `La economía cambió a ${ne === 'good' ? 'buen año' : 'mal año'}`, kind: ne === 'good' ? 'pos' : 'neg', importance: 2 });
+      g.world.economy = ne; g.world.wageMult = ne==='good'?1:0.8; g.world.salesMult = ne==='good'?1:0.8;
+      g.log.push({ turn: g.turn, text: `La economía cambió a ${ne==='good'?'buen año':'mal año'}`, kind: ne==='good'?'pos':'neg', importance: 2 });
     }
-    setGame({ ...g });
-    setQueue(pend); setQi(0);
+    setGame({ ...g }); setQueue(pend); setQi(0);
     if (pend.length === 0) finishTurn(g);
   }
 
   function advanceQueue() {
-    if (qi + 1 < queue.length) { setQi(qi + 1); }
+    if (qi + 1 < queue.length) setQi(qi + 1);
     else { setQueue([]); finishTurn(game!); }
   }
 
   function finishTurn(g0: GameState) {
     const g: GameState = structuredClone(g0);
-    const winner = g.players.find((p) => hasWon(p, g.goals));
-    if (winner) {
-      g.over = true; g.winnerId = winner.id;
-      commit(g, true);
-      setPhase('victory');
-      return;
-    }
+    const winner = g.players.find(p => hasWon(p, g.goals));
+    if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
     g.turn++; g.activePlayerIndex = 0;
     for (const p of g.players) p.timeLeft = HOURS_PER_TURN;
-    commit(g, true); // autosave al cerrar quincena
+    commit(g, true);
   }
 
-  const acts = actionsFor(active, game.world);
+  const zp = zoom ? game.players.find(p => p.id === zoom) : null;
 
   return (
     <>
       <RotateOverlay />
-      <Hdr />
+      <AtmosphereBg />
+      <Board
+        game={game}
+        onMove={moveTo}
+        onInspect={id => { setInspecting(id); setOpenPanel(null); }}
+        inspecting={inspecting}
+      />
 
-      <div className="game-layout">
-        <Board game={game} onMove={moveTo} onZoom={() => setZoom(active.id)} />
+      <div id="hud">
+        <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} />
+        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
+        <ActionsBar game={game} onAction={doAction} />
 
-        <div className="dash">
-          <div className="dash-block">
-            <div className="who">{active.name} — {Math.round(active.timeLeft)}h</div>
-            <div className="dash-sub">Q{game.turn} · {game.world.economy === 'good'
-              ? <span className="econ-good">● buen año</span> : <span className="econ-bad">● mal año</span>}</div>
-            {canRetire(active, game.turn) && <button onClick={retire} title="Modo Legado">Pasar el legado ✦</button>}
-            <button className="primary" onClick={endPlayerTurn}>Terminar quincena ▶</button>
-          </div>
+        {/* Lid panels */}
+        {openPanel === 'indicators' && (
+          <LidPanel id="indicators" title="📊 Indicadores" onClose={() => setOpenPanel(null)}>
+            <IndicatorsContent game={game} />
+          </LidPanel>
+        )}
+        {openPanel === 'historia' && (
+          <LidPanel id="historia" title="📜 Historia" onClose={() => setOpenPanel(null)}>
+            <HistoriaContent game={game} />
+          </LidPanel>
+        )}
+        {openPanel === 'about' && (
+          <LidPanel id="about" title="¿Qué es este juego?" onClose={() => setOpenPanel(null)}>
+            <AboutContent />
+          </LidPanel>
+        )}
 
-          <div className="dash-block dash-mini">
-            {game.players.map((p) => {
-              const m = metrics(p);
-              const col = PLAYER_COLORS[p.colorIndex];
-              const isActive = p.id === active.id;
-              return (
-                <div key={p.id} className={'mini-row' + (isActive ? ' here' : '')} onClick={() => setZoom(p.id)}>
-                  <span style={{ color: col, WebkitTextFillColor: col }}>{PAWN_ICONS[p.colorIndex]} {p.name}</span>
-                  <span className="mini-stats">${Math.round(m.patrimonio)} · {Math.round(m.bienestar)}♥ · {Math.round(m.conocimientos)}✎</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="dash-block dash-log">
-            <div className="section-tag">Historia</div>
-            <div className="log">
-              {[...game.log].slice(-10).reverse().map((l, i) => (
-                <div key={i} className={'logline ' + (l.kind === 'pos' ? 'ev-pos' : l.kind === 'neg' ? 'ev-neg' : '')}>
-                  Q{l.turn} · {l.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Node inspect tooltip */}
+        {inspecting && (
+          <NodeInspect
+            locId={inspecting}
+            game={game}
+            onMove={() => moveTo(inspecting)}
+            onAction={doAction}
+            onClose={() => setInspecting(null)}
+          />
+        )}
       </div>
 
-      <div className="card">
-        <div className="section-tag">Acciones en {locById(active.currentLocation).name}</div>
-        <div className="actions">
-          {acts.length === 0
-            ? <div className="pmeta">No hay acciones aquí. Muévete o termina tu quincena.</div>
-            : acts.map((a, i) => (
-              <button key={a.id} onClick={() => doAction(i)}>
-                <span>{a.label}</span><span className="desc">{a.desc}</span>
-              </button>
-            ))}
-        </div>
-        <div className="saveline">{savedAt ? `Guardado automático ${savedAt} · local + Nostr` : 'Se guarda solo al cerrar cada quincena'}</div>
-      </div>
-
-      {zoom && (() => {
-        const zp = game.players.find((p) => p.id === zoom);
-        return zp ? (
-          <div className="modal-bg" onClick={() => setZoom(null)}>
-            <div className="modal modal-zoom" onClick={(e) => e.stopPropagation()}>
-              <button className="zoom-close" onClick={() => setZoom(null)}>✕</button>
-              <PlayerCard p={zp} game={game} />
-            </div>
+      {/* Zoom modal */}
+      {zp && (
+        <div className="modal-bg" onClick={() => setZoom(null)}>
+          <div className="modal modal-zoom" onClick={e => e.stopPropagation()}>
+            <button className="zoom-close" onClick={() => setZoom(null)}>✕</button>
+            <PlayerCardZoom p={zp} game={game} />
           </div>
-        ) : null;
-      })()}
+        </div>
+      )}
 
+      {/* Event modals */}
       {queue.length > 0 && qi < queue.length && (
         <EventModal pend={queue[qi]} onNext={advanceQueue} />
       )}
       {flash && (
-        <div className="modal-bg"><div className="modal"><div className="body">{flash}</div>
-          <button className="primary" onClick={() => setFlash(null)}>Ok</button></div></div>
-      )}
-    </>
-  );
-}
-
-function Hdr() {
-  const [about, setAbout] = useState(false);
-  return (
-    <header>
-      <div className="title">JOSÉ EN LA VIDA ADULTA</div>
-      <button className="about-btn" onClick={() => setAbout(!about)} title="¿Qué es esto?">?</button>
-      <div className="ver">v0.90 · el juego de la vida, ambientado en Cuenca, Ecuador</div>
-      <div className="sub">"No importa cuántas veces cambie el camino. Lo importante es seguir avanzando."</div>
-      {about && (
-        <div className="about-box">
-          Tributo libre a <b>Jones in the Fast Lane</b> (Sierra On-Line, 1990) — el viejo "juego de la vida" en disquete —
-          llevado más allá: con familia procedural, barrios reales de Cuenca, carrera, educación, negocios con empleados
-          persistentes, impacto comunitario en 4 dimensiones y Modo Legado entre generaciones.
+        <div className="modal-bg">
+          <div className="modal">
+            <div className="body">{flash}</div>
+            <button className="primary" onClick={() => setFlash(null)}>Ok</button>
+          </div>
         </div>
       )}
-    </header>
-  );
-}
-
-function Setup({ onStart }: { onStart: (g: GameState) => void }) {
-  const [n, setN] = useState(1);
-
-  function start() {
-    const players = Array.from({ length: n }, (_, i) => ({ id: 'p' + i, name: 'Jugador ' + (i + 1) }));
-    onStart(newGame(players, DEFAULT_GOALS));
-  }
-  function resume() {
-    const g = loadLocal();
-    if (g) onStart(g);
-  }
-
-  return (
-    <>
-      <Hdr />
-      <div className="card">
-        <div className="section-tag">Nueva partida — 1 a 4 jugadores, por turnos quincenales</div>
-        <p className="pmeta">Empiezas como "Jugador 1", "Jugador 2"... como en Jones in the Fast Lane. Tu nombre real se pide al final, al ganar.</p>
-        <div className="row">
-          <label>¿Cuántos jugadores? (1-4)</label>
-          <input type="number" min={1} max={4} value={n}
-            onChange={(e) => setN(clamp(parseInt(e.target.value) || 1, 1, 4))} style={{ width: 80 }} />
-          <button className="primary" onClick={start}>Empezar a jugar</button>
-        </div>
-        {hasLocalSave() && (
-          <div className="row"><button onClick={resume}>Continuar partida guardada</button></div>
-        )}
-      </div>
-    </>
-  );
-}
-
-function TimeClock({ hours }: { hours: number }) {
-  const pct = clamp(hours / 112, 0, 1);
-  const color = pct > 0.5 ? '#28ECAA' : pct > 0.2 ? '#E8A020' : '#FF5A4D';
-  const deg = pct * 360;
-  return (
-    <div className="clock" style={{ background: `conic-gradient(${color} ${deg}deg, #242424 0deg)` }}>
-      <div className="clock-inner">
-        <span className="clock-h">{Math.round(hours)}</span>
-        <span className="clock-u">h</span>
-      </div>
-    </div>
-  );
-}
-
-function RotateOverlay() {
-  return (
-    <div className="rotate-overlay">
-      <div className="rotate-icon">⤵️📱⤴️</div>
-      <div>Gira tu teléfono — este tablero se juega en horizontal</div>
-    </div>
-  );
-}
-
-function Board({ game, onMove, onZoom }: { game: GameState; onMove: (id: string) => void; onZoom: () => void }) {
-  const active = game.players[game.activePlayerIndex];
-  const pts = PATH_ORDER.map((id) => locById(id));
-  const loopPts = [...pts, pts[0]];
-  // tiles decorativos intermedios entre stops, para que se vea tablero/snake, no zonas sueltas
-  const dots: { x: number; y: number }[] = [];
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[i], b = loopPts[i + 1];
-    dots.push({ x: a.x + (b.x - a.x) * 0.33, y: a.y + (b.y - a.y) * 0.33 });
-    dots.push({ x: a.x + (b.x - a.x) * 0.66, y: a.y + (b.y - a.y) * 0.66 });
-  }
-  return (
-    <div className="board-wrap">
-      <div className="board-title-row">
-        <div className="board-title">CUENCA · tu tablero — tiempo es el recurso escaso</div>
-        <button className="zoom-btn" onClick={onZoom} title="Ver mi ficha en grande">🔍</button>
-        <TimeClock hours={active.timeLeft} />
-      </div>
-      <div className="board">
-        <svg className="links" viewBox="0 0 760 480">
-          <polygon points={pts.map((l) => `${l.x},${l.y}`).join(' ')} fill="none" stroke="var(--gold)" strokeWidth={3} strokeDasharray="2 10" strokeLinecap="round" />
-          {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={3} fill="#3a3a3a" />)}
-        </svg>
-        {LOCATIONS.map((loc) => {
-          const here = loc.id === active.currentLocation;
-          const cost = loc.tc[active.transport];
-          const reachable = !here && active.timeLeft >= cost;
-          const pawns = game.players.filter((p) => p.currentLocation === loc.id);
-          return (
-            <div key={loc.id} className={'node' + (here ? ' here' : '') + (reachable ? ' reachable' : '')}
-              style={{ left: loc.x, top: loc.y }} onClick={() => onMove(loc.id)}>
-              <span className="stop-icon">{loc.icon}</span>
-              <span className="nm">{loc.name}</span>
-              {here ? <span className="nm">aquí</span> : <span className="cost">{cost}h</span>}
-              <div className="pawns">
-                {pawns.map((p) => (
-                  <span key={p.id} title={p.name} style={{ filter: p.id === active.id ? `drop-shadow(0 0 4px ${PLAYER_COLORS[p.colorIndex]})` : 'none' }}>
-                    {PAWN_ICONS[p.colorIndex]}
-                  </span>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function MetricBar({ label, val, goal, color }: { label: string; val: number; goal: number; color: string }) {
-  const pct = Math.min(100, (val / goal) * 100);
-  return (
-    <div className="metric">
-      <div className="lab"><span>{label}</span><span>{Math.round(val)} / {goal}{val >= goal ? <span className="check"> ✓</span> : ''}</span></div>
-      <div className="barbg"><div className="barfill" style={{ width: pct + '%', background: color }} /></div>
-    </div>
-  );
-}
-
-function PlayerCard({ p, game }: { p: PlayerState; game: GameState }) {
-  const m = metrics(p);
-  const col = PLAYER_COLORS[p.colorIndex];
-  const active = p.id === game.players[game.activePlayerIndex].id;
-  const loc = locById(p.currentLocation);
-  const eduCount = p.education.completed.length;
-  return (
-    <div className={'pcard' + (active ? ' active' : '')}>
-      <div className="pname" style={{ color: col, WebkitTextFillColor: col }}>{active ? '▶ ' : ''}{p.name}{p.generation > 1 ? ` (gen.${p.generation})` : ''}</div>
-      <div className="pmeta">
-        nació en {barrioById(p.birthBarrio).name} · ahora en {loc.icon} {loc.name}<br />
-        {p.job ? `${p.job.title}` : 'sin empleo'} · <b>{careerTitle(p.careerLevel)}</b><br />
-        tiempo <b>{Math.round(p.timeLeft)}</b>/112h · <span className="money">${p.liquidity}</span> · banco ${p.bank}<br />
-        estudios: {eduCount ? p.education.completed.join(', ') : '—'}{p.education.enrolledId ? ` (cursando ${p.education.enrolledId})` : ''}
-      </div>
-      <div className="famblock">
-        <span className="famtag">Familia</span><br />
-        {p.family.map((f, i) => (
-          <span key={i}>
-            <span style={{ color: col, WebkitTextFillColor: col }}>●</span> {f.rel} {f.name} <span className="famp">({f.pers})</span><br />
-          </span>
-        ))}
-      </div>
-      <MetricBar label="Patrimonio" val={m.patrimonio} goal={game.goals.patrimonio} color="var(--gold)" />
-      <MetricBar label="Bienestar" val={m.bienestar} goal={game.goals.bienestar} color="var(--green)" />
-      <MetricBar label="Conocimientos" val={m.conocimientos} goal={game.goals.conocimientos} color="var(--pink)" />
-      <MetricBar label="Impacto" val={m.impacto} goal={game.goals.impacto} color="var(--magenta)" />
-      <div className="subdims">
-        impacto → prof {p.impact.profesional} · fam {p.impact.familiar} · com {p.impact.comunitario} · emp {p.impact.empresarial}
-      </div>
-    </div>
-  );
-}
-
-function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
-  const { p, ev, silvered } = pend;
-  const col = PLAYER_COLORS[p.colorIndex];
-  return (
-    <div className="modal-bg">
-      <div className="modal">
-        <h3>
-          <span style={{ color: ev.neg ? 'var(--red)' : 'var(--green)', WebkitTextFillColor: ev.neg ? 'var(--red)' : 'var(--green)' }}>{ev.neg ? '✗' : '✦'}</span>{' '}
-          <span style={{ color: col, WebkitTextFillColor: col }}>{p.name}</span> — {ev.title}
-        </h3>
-        <div className="body">{ev.body}</div>
-        {silvered && ev.sl && <div className="silver">↪ {ev.sl}</div>}
-        <button className="primary" onClick={onNext}>Continuar</button>
-      </div>
-    </div>
-  );
-}
-
-function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }) {
-  const winner = game.players.find((p) => p.id === game.winnerId) || game.players[0];
-  const col = PLAYER_COLORS[winner.colorIndex];
-  const [realName, setRealName] = useState('');
-  const [saved, setSaved] = useState(false);
-  const hist = game.log.filter((l) => l.importance >= 2).slice(-10);
-
-  async function saveStory() {
-    const summary = `${winner.name} alcanzó sus metas en la quincena ${game.turn}.\n` +
-      hist.map((l) => `Q${l.turn} · ${l.text}`).join('\n');
-    await publishStory(realName || winner.name, summary);
-    setSaved(true);
-  }
-
-  return (
-    <>
-      <Hdr />
-      <div className="card">
-        <div className="section-tag" style={{ fontSize: 16 }}>🏆 Victoria</div>
-        <div style={{ fontSize: 24, fontWeight: 800, margin: '8px 0', color: col, WebkitTextFillColor: col }}>
-          {winner.name} alcanzó sus metas en la quincena {game.turn}
-        </div>
-        <p className="pmeta">Patrimonio, bienestar, conocimientos e impacto: las cuatro al tiempo. Eso es una vida construida.</p>
-        <div style={{ marginTop: 14 }}>
-          <b>Momentos de tu historia:</b>
-          {hist.map((l, i) => <div key={i} className="logline">Q{l.turn} · {l.text}</div>)}
-        </div>
-        <div className="row" style={{ marginTop: 16 }}>
-          <label>Tu nombre real (para guardar tu aventura)</label>
-          <input type="text" value={realName} onChange={(e) => setRealName(e.target.value)} placeholder="opcional" />
-          <button onClick={saveStory} disabled={saved}>{saved ? 'Historia guardada en Nostr ✓' : 'Guardar mi historia'}</button>
-        </div>
-        <button className="primary" style={{ maxWidth: 240 }} onClick={onRestart}>Jugar de nuevo</button>
-      </div>
     </>
   );
 }
