@@ -338,8 +338,8 @@ function StatsPanel({
     <div id="stats-panel">
       <TimeRing hours={p.timeLeft} />
       <div className="player-block">
-        <div className="player-name" style={{ color: col, WebkitTextFillColor: col }}>
-          {PAWN_ICONS[p.colorIndex]} {p.name}
+        <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6 }}>
+          <PawnAvatar p={p} size={24} glow /> {p.name}
         </div>
         <div className="player-loc">{loc.icon} {loc.name}</div>
         <div className="econ-line">
@@ -902,7 +902,9 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
       <div id="map-world" />
       <div className="setup-screen">
         <div className="victory-card">
-          <div className="setup-title">🏆 Victoria</div>
+          <div className="setup-title" style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'center' }}>
+            <PawnAvatar p={winner} size={36} glow /> Victoria
+          </div>
           <div className="victory-title" style={{ color: col, WebkitTextFillColor: col }}>
             {winner.name} — quincena {game.turn}
           </div>
@@ -935,7 +937,24 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
 // ═══════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════
-export function App() {
+export // ── Turn-based contextual hints (visible Q1-Q3 only) ──
+const TURN_HINTS: Record<number, { icon: string; text: string }> = {
+  1: { icon: 'T', text: 'Q1: Ve a Terminal y busca empleo. Sin trabajo no hay progreso.' },
+  2: { icon: 'B', text: 'Q2: Deposita algo en el Banco. El fondo de emergencia es clave para ganar.' },
+  3: { icon: 'U', text: 'Q3: Visita la UDA y estudia. El conocimiento abre mejores empleos.' },
+};
+function TurnHint({ turn }: { turn: number }) {
+  const hint = TURN_HINTS[turn];
+  if (!hint) return null;
+  return (
+    <div className="turn-hint">
+      <span className="turn-hint-icon">{hint.icon}</span>
+      <span className="turn-hint-text">{hint.text}</span>
+    </div>
+  );
+}
+
+function App() {
   const [phase, setPhase] = useState<Phase>('setup');
   const [game, setGame] = useState<GameState | null>(null);
   const [queue, setQueue] = useState<Pending[]>([]);
@@ -1081,6 +1100,7 @@ export function App() {
         inspecting={inspecting}
       />
       <LogBar game={game} />
+      <TurnHint turn={game.turn} />
 
       <div id="hud">
         <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} />
@@ -1146,3 +1166,5 @@ export function App() {
     </>
   );
 }
+
+export default App;
