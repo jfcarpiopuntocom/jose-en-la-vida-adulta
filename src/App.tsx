@@ -80,7 +80,7 @@ function actionIcon(id: string): string {
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type Phase = 'setup' | 'play' | 'victory';
-type PanelId = 'indicators' | 'about' | null;
+type PanelId = 'about' | null;
 
 interface Pending { p: PlayerState; ev: GameEvent; silvered: boolean }
 
