@@ -52,6 +52,31 @@ function nodeType(zone: string, id: string): string {
 
 // Action card accent colors cycle
 const ACT_COLORS = ['emerald','sky','amber','violet','rose','lime'];
+const ACTION_ICONS: Record<string, string> = {
+  rest:'Z', sleep:'Z', social:'C', family:'H', family_ally:'H',
+  enroll_:'E', study:'E', lecture:'E',
+  work:'W', overtime:'W', parttime:'W',
+  save100:'$', save500:'$', invest_bolsa:'S', fondo_500:'F', fondo_2000:'F',
+  startbiz:'N', runbiz:'N', hirebiz:'N', expandbiz:'N',
+  startmanufactura:'M', runmanufactura:'M',
+  empleo_:'J', cambio_empleo:'J',
+  consulta:'R', recuperar:'R', fisio:'R',
+  entrenar:'T', partido_inf:'T',
+  parque_descanso:'P', parque_foto:'P', parque_familia:'P',
+  proyecto_com:'G', tramite:'G', donacion:'G',
+  meditacion:'M', rio_contemp:'M',
+  comprar_obra:'A', presentar:'A', escuchar_musica:'A',
+  mall_colect:'S', mall_browse:'S',
+  terminal_empleo:'J', bolsa_empleo:'J',
+};
+function actionIcon(id: string): string {
+  const exact = ACTION_ICONS[id];
+  if (exact) return exact;
+  for (const [k, v] of Object.entries(ACTION_ICONS)) {
+    if (id.startsWith(k)) return v;
+  }
+  return '·';
+}
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type Phase = 'setup' | 'play' | 'victory';
@@ -417,7 +442,7 @@ function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number)
               <button key={a.id} className="action-card"
                 style={{ '--ac': 'var(--'+ACT_COLORS[i%ACT_COLORS.length]+')' } as any}
                 onClick={() => onAction(i)}>
-                <span className="act-name">{a.label}</span>
+                <span className="act-name"><span className="act-icon">{actionIcon(a.id)}</span>{a.label}</span>
                 <span className="act-desc">{a.desc}</span>
               </button>
             ))}

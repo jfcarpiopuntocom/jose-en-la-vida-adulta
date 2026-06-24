@@ -1108,3 +1108,13 @@ input[type=text], input[type=number] {
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
   mix-blend-mode: difference;
 }
+
+/* ── Action card icon badge ── */
+.act-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 4px; margin-right: 5px;
+  background: var(--ac, rgba(255,255,255,0.15));
+  font-size: 0.65rem; font-weight: 900; flex-shrink: 0;
+  color: var(--dark, #080808) !important; -webkit-text-fill-color: var(--dark, #080808) !important;
+  vertical-align: middle;
+}
