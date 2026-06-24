@@ -387,10 +387,7 @@ function StatsPanel({
     <div id="stats-panel">
       <div className="turn-banner">
         <Portrait p={p} size={72} />
-        <div className="turn-banner-text">
-          <div className="turn-of">Turno de</div>
-          <div className="turn-name" style={{ color: col, WebkitTextFillColor: col }}>{p.name}</div>
-        </div>
+        <div className="turn-banner-text">Tu Turno</div>
       </div>
       <div className="player-block">
         <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
