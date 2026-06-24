@@ -821,11 +821,11 @@ function TopBar({ openPanel, setOpenPanel, turn, economy }: {
   turn: number;
   economy: string;
 }) {
-  const [musicOn, setMusicOn] = useState(false);
+  const [musicOn, setMusicOn] = useState(cityMusic.wanted);
   function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
   function toggleMusic() {
     cityMusic.toggle();
-    setMusicOn(cityMusic.playing);
+    setMusicOn(cityMusic.wanted);
   }
   return (
     <div id="top-bar">
@@ -1106,6 +1106,9 @@ function App() {
   const [showOnboard, setShowOnboard] = useState(() =>
     localStorage.getItem(ONBOARD_KEY) !== '1'
   );
+
+  // Tema oficial: suena siempre (arranca al primer gesto en iOS/mobile)
+  useEffect(() => { cityMusic.arm(); }, []);
 
   function commit(g: GameState, persist = false) {
     setGame({ ...g });
