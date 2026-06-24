@@ -342,6 +342,8 @@ function StatsPanel({
     { key:'emergencia', label:'Emerg',  color:'var(--gold)',   val: emMonths,             goal: game.goals.emergencyMonths },
     { key:'pasivo',     label:'Pasivo', color:'var(--orange)', val: piPct,                goal: 100 },
   ];
+  // Win progress: average of all 6 bars capped at 100%
+  const winPct = Math.round(indBars.reduce((s, b) => s + Math.min(100, (b.val / b.goal) * 100), 0) / indBars.length);
   return (
     <div id="stats-panel">
       <TimeRing hours={p.timeLeft} />
@@ -362,6 +364,11 @@ function StatsPanel({
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
         <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos</span></div>
         <div className="resource"><span className="res-icon">Q</span><span className="res-val">Quincena {game.turn}</span></div>
+      <div className="resource"><span className="res-icon" style={{color:"#E8A020",WebkitTextFillColor:"#E8A020"}}>T</span><span className="res-val" style={{fontSize:"0.75rem",color:"#E8A020",WebkitTextFillColor:"#E8A020"}}>{TIER_GOALS[game.gameTier ?? 1].label}</span></div>
+      </div>
+      <div className="win-pct-bar">
+        <div className="win-pct-fill" style={{ width: winPct + '%' }} />
+        <span className="win-pct-label">{winPct}% hacia la victoria</span>
       </div>
       <div className="stat-divider" />
       <div className="ind-inline">
