@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { GameState, PlayerState, GameEvent, Goals } from './types';
 import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
-  hasWon, canRetire, makeHeir, HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
+  hasWon, canRetire, makeHeir, cpuTurn, HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
 } from './engine';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
@@ -95,13 +95,30 @@ function RotateOverlay() {
   );
 }
 
+const DIFFICULTY_LABEL: Record<number, string> = { 1: 'Fácil', 2: 'Normal', 3: 'Difícil' };
+const DIFFICULTY_DESC: Record<number, string> = {
+  1: 'José comete errores — bueno para aprender el juego',
+  2: 'José juega con criterio — una competencia real',
+  3: 'José optimiza cada hora — sin contemplaciones',
+};
+
 // ── Setup screen ──
 function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const [n, setN] = useState(1);
+  const [withJose, setWithJose] = useState(false);
+  const [joseSide, setJoseSide] = useState<'empleado'|'empresa'>('empresa');
+  const [joseDiff, setJoseDiff] = useState<1|2|3>(2);
+
   function start() {
-    const players = Array.from({ length: n }, (_, i) => ({ id: 'p'+i, name: 'Jugador '+(i+1) }));
+    const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] =
+      Array.from({ length: n }, (_, i) => ({ id: 'p'+i, name: 'Jugador '+(i+1) }));
+    if (withJose) players.push({
+      id: 'jose', name: 'José',
+      isAI: true, aiStrategy: joseSide, aiDifficulty: joseDiff,
+    });
     onStart(newGame(players, DEFAULT_GOALS));
   }
+
   return (
     <>
       <AtmosphereBg />
@@ -111,14 +128,56 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
           <div className="setup-title">JOSÉ EN LA VIDA ADULTA</div>
           <div className="setup-sub">el juego de la vida · ambientado en Cuenca, Ecuador</div>
           <p className="setup-p">
-            Gestiona tu tiempo, tu familia, tu carrera y tu negocio. Empiezas como "Jugador 1" — como en Jones in the Fast Lane.
-            Tu nombre real se pide solo al ganar.
+            Gestiona tu tiempo, tu familia, tu carrera y tu negocio.
+            Empiezas como "Jugador 1" — tu nombre real se pide solo al ganar.
           </p>
-          <div className="setup-label">¿Cuántos jugadores? (1 a 4)</div>
-          <input type="number" min={1} max={4} value={n}
-            onChange={e => setN(clamp(parseInt(e.target.value)||1,1,4))}
-            style={{ width: 90, marginBottom: 14 }} />
-          <button className="primary" style={{ width:'100%' }} onClick={start}>Empezar a jugar</button>
+
+          <div className="setup-label">¿Cuántos jugadores humanos? (1–4)</div>
+          <div className="setup-row" style={{ marginBottom: 18 }}>
+            {[1,2,3,4].map(i => (
+              <button key={i} className={n===i?'setup-sel':'setup-opt'} onClick={() => setN(i)}>{i}</button>
+            ))}
+          </div>
+
+          {/* José (CPU) section */}
+          <div className="jose-section">
+            <label className="jose-toggle-label">
+              <input type="checkbox" checked={withJose} onChange={e => setWithJose(e.target.checked)}
+                style={{ marginRight: 8 }} />
+              Jugar contra <b>José</b> (CPU) — como Jones in the Fast Lane
+            </label>
+            {withJose && (
+              <div className="jose-config">
+                <div className="setup-label" style={{ marginTop: 12 }}>Ruta de José:</div>
+                <div className="setup-row">
+                  <button className={joseSide==='empleado'?'setup-sel':'setup-opt'} onClick={() => setJoseSide('empleado')}>
+                    💼 Empleado
+                  </button>
+                  <button className={joseSide==='empresa'?'setup-sel':'setup-opt'} onClick={() => setJoseSide('empresa')}>
+                    🏭 Empresa
+                  </button>
+                </div>
+                <div className="side-desc">
+                  {joseSide === 'empleado'
+                    ? 'José buscará empleo, subirá la escalera y priorizará educación y estabilidad.'
+                    : 'José ahorrará, abrirá un negocio, contratará y escalará a empresa.'}
+                </div>
+                <div className="setup-label" style={{ marginTop: 12 }}>Dificultad:</div>
+                <div className="setup-row">
+                  {([1,2,3] as const).map(d => (
+                    <button key={d} className={joseDiff===d?'setup-sel':'setup-opt'} onClick={() => setJoseDiff(d)}>
+                      {DIFFICULTY_LABEL[d]}
+                    </button>
+                  ))}
+                </div>
+                <div className="side-desc">{DIFFICULTY_DESC[joseDiff]}</div>
+              </div>
+            )}
+          </div>
+
+          <button className="primary" style={{ width:'100%', marginTop: 18 }} onClick={start}>
+            {withJose ? `Jugar contra José (${DIFFICULTY_LABEL[joseDiff]} · ${joseSide === 'empleado' ? '💼 Empleado' : '🏭 Empresa'})` : 'Empezar a jugar'}
+          </button>
           {hasLocalSave() && (
             <button style={{ width:'100%', marginTop: 8 }} onClick={() => { const g = loadLocal(); if (g) onStart(g); }}>
               Continuar partida guardada
@@ -587,6 +646,7 @@ export function App() {
   const [zoom, setZoom] = useState<string | null>(null);
   const [openPanel, setOpenPanel] = useState<PanelId>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
+  const [cpuThinking, setCpuThinking] = useState(false);
 
   function commit(g: GameState, persist = false) {
     setGame({ ...g });
@@ -627,14 +687,33 @@ export function App() {
     setInspecting(null);
   }
 
-  function endPlayerTurn() {
-    const g: GameState = structuredClone(game!);
+  function endPlayerTurn(override?: GameState) {
+    const g: GameState = structuredClone(override || game!);
     g.players[g.activePlayerIndex].timeLeft = 0;
     if (g.activePlayerIndex < g.players.length - 1) {
       g.activePlayerIndex++; commit(g);
     } else { runEvents(g); }
     setInspecting(null);
   }
+
+  // Auto-run CPU (José) turns
+  useEffect(() => {
+    if (phase !== 'play' || !game || cpuThinking || queue.length > 0) return;
+    const p = game.players[game.activePlayerIndex];
+    if (!p.isAI) return;
+    setCpuThinking(true);
+    const snap = game; // capture current state
+    const delay = 900 + Math.random() * 700;
+    const timer = setTimeout(() => {
+      const g: GameState = structuredClone(snap);
+      const ai = g.players[g.activePlayerIndex];
+      const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
+      logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
+      setCpuThinking(false);
+      endPlayerTurn(g);
+    }, delay);
+    return () => { clearTimeout(timer); };
+  }, [game?.activePlayerIndex, game?.turn, phase, queue.length]);
 
   function retire() {
     mutate(g => {
@@ -740,6 +819,16 @@ export function App() {
             <button className="zoom-close" onClick={() => setZoom(null)}>✕</button>
             <PlayerCardZoom p={zp} game={game} />
           </div>
+        </div>
+      )}
+
+      {/* CPU thinking overlay */}
+      {cpuThinking && (
+        <div className="cpu-thinking">
+          <span className="cpu-dot" />
+          José está pensando
+          {active.aiStrategy === 'empleado' ? ' (ruta 💼 Empleado)' : ' (ruta 🏭 Empresa)'}
+          {active.aiDifficulty === 3 ? ' — Difícil' : active.aiDifficulty === 1 ? ' — Fácil' : ''}
         </div>
       )}
 

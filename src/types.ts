@@ -142,6 +142,9 @@ export interface PlayerState {
   impact: ImpactNet;
   stats: PlayerStats;
   retired: boolean;
+  isAI?: boolean;
+  aiStrategy?: 'empleado' | 'empresa';
+  aiDifficulty?: 1 | 2 | 3;
 }
 
 export interface Goals {

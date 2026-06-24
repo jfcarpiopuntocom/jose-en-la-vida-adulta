@@ -40,7 +40,10 @@ function startingLiquidity(fam: FamilyMember[]): number {
 }
 
 /* ---------- ESTADO INICIAL ---------- */
-export function newPlayer(id: string, name: string, idx: number, generation = 1): PlayerState {
+export function newPlayer(
+  id: string, name: string, idx: number, generation = 1,
+  aiOpts?: { isAI: boolean; aiStrategy: 'empleado'|'empresa'; aiDifficulty: 1|2|3 }
+): PlayerState {
   const birth = pick(BARRIOS);
   const family = generateFamily();
   return {
@@ -54,14 +57,20 @@ export function newPlayer(id: string, name: string, idx: number, generation = 1)
     impact: { profesional: 5, familiar: 10, comunitario: 5, empresarial: 0 },
     stats: { experience: 0, dependability: 50, leadership: 0, health: 80, stress: 20, happiness: 60, reputation: 30, resilience: 0, knowledge: 5 },
     retired: false,
+    ...(aiOpts ?? {}),
   };
 }
 
-export function newGame(players: { id: string; name: string }[], goals: Goals = DEFAULT_GOALS): GameState {
+export function newGame(
+  players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[],
+  goals: Goals = DEFAULT_GOALS
+): GameState {
   const bad = Math.random() < 0.5;
   return {
     turn: 1, activePlayerIndex: 0,
-    players: players.map((p, i) => newPlayer(p.id, p.name, i)),
+    players: players.map((p, i) => newPlayer(p.id, p.name, i,1,
+      p.isAI ? { isAI: true, aiStrategy: p.aiStrategy!, aiDifficulty: p.aiDifficulty! } : undefined
+    )),
     world: { economy: bad ? 'bad' : 'good', wageMult: bad ? 0.8 : 1, salesMult: bad ? 0.8 : 1 },
     goals: { ...goals }, log: [], over: false, winnerId: null,
   };
@@ -309,6 +318,108 @@ export function closeBusinessAndEmployees(p: PlayerState): string[] {
 export function hasWon(p: PlayerState, g: Goals): boolean {
   const m = metrics(p);
   return m.patrimonio >= g.patrimonio && m.bienestar >= g.bienestar && m.conocimientos >= g.conocimientos && m.impacto >= g.impacto;
+}
+
+/* ---------- CPU OPPONENT — JOSÉ ---------- */
+// Preferred locations per strategy: ordered priority lists
+const CPU_PREF_EMPLEADO = ['zona_universitaria','terminal_terrestre','zona_financiera','mall_rio','estadio','casa'];
+const CPU_PREF_EMPRESA  = ['feria_libre','zona_financiera','zona_industrial','mall_rio','casa'];
+
+function cpuNextTarget(p: PlayerState, world: World, strategy: 'empleado'|'empresa'): { locId: string; actionId: string } | null {
+  // Emergency: health crisis → rest at home
+  if (p.stats.health < 35) return { locId: 'casa', actionId: 'rest' };
+
+  if (strategy === 'empleado') {
+    // Priority 1: study if enrolled
+    if (p.education.enrolledId) return { locId: 'zona_universitaria', actionId: 'study' };
+    // Priority 2: enroll if no degree and can afford
+    if (p.education.completed.length === 0 && p.liquidity >= 80) return { locId: 'zona_universitaria', actionId: '_enroll' };
+    // Priority 3: work if has job
+    if (p.job) {
+      const jobLoc = LOCATIONS.find(l => jobsAt(l.id).some(j => j.id === p.job!.id));
+      if (jobLoc) return { locId: jobLoc.id, actionId: 'work_' + p.job.id };
+    }
+    // Priority 4: apply for a job
+    if (!p.job) {
+      for (const loc of LOCATIONS) {
+        const jobs = jobsAt(loc.id).filter(j => p.careerLevel >= j.minLevel);
+        if (jobs.length > 0) return { locId: loc.id, actionId: 'apply_' + jobs[0].id };
+      }
+    }
+    // Priority 5: save when flush
+    if (p.liquidity >= 200) return { locId: 'zona_financiera', actionId: 'save' };
+    // Fallback: rest
+    return { locId: 'casa', actionId: 'rest' };
+  }
+
+  // empresa strategy
+  // Priority 1: open business when ready
+  if (p.businesses.length === 0 && p.liquidity >= 500) return { locId: 'feria_libre', actionId: 'startbiz' };
+  // Priority 2: operate existing business
+  if (p.businesses.length > 0) {
+    const biz = p.businesses[0];
+    if (biz.employees.length < 2 && p.timeLeft > 10) return { locId: 'feria_libre', actionId: 'hire' };
+    return { locId: 'feria_libre', actionId: 'operate' };
+  }
+  // Priority 3: save to reach $500 for business
+  if (p.liquidity >= 150) return { locId: 'zona_financiera', actionId: 'save' };
+  // Priority 4: get a job to earn capital
+  if (p.job) {
+    const jobLoc = LOCATIONS.find(l => jobsAt(l.id).some(j => j.id === p.job!.id));
+    if (jobLoc) return { locId: jobLoc.id, actionId: 'work_' + p.job.id };
+  }
+  if (!p.job) {
+    for (const loc of LOCATIONS) {
+      const jobs = jobsAt(loc.id).filter(j => p.careerLevel >= j.minLevel);
+      if (jobs.length > 0) return { locId: loc.id, actionId: 'apply_' + jobs[0].id };
+    }
+  }
+  return { locId: 'casa', actionId: 'rest' };
+}
+
+export function cpuTurn(
+  p: PlayerState, world: World,
+  strategy: 'empleado'|'empresa', difficulty: 1|2|3
+): string[] {
+  const logs: string[] = [];
+  const noiseRate = difficulty === 1 ? 0.50 : difficulty === 2 ? 0.20 : 0;
+  let safety = 0;
+
+  while (p.timeLeft >= 0.5 && safety++ < 40) {
+    const target = cpuNextTarget(p, world, strategy);
+    if (!target) break;
+
+    // Move if needed
+    if (target.locId !== p.currentLocation) {
+      const loc = locById(target.locId);
+      const cost = loc.tc[p.transport];
+      if (p.timeLeft < cost) {
+        // Try casa as fallback
+        const casaCost = locById('casa').tc[p.transport];
+        if (p.currentLocation !== 'casa' && p.timeLeft >= casaCost) {
+          p.currentLocation = 'casa'; p.timeLeft -= casaCost;
+        } else break;
+      } else {
+        p.currentLocation = target.locId;
+        p.timeLeft -= cost;
+      }
+    }
+
+    // Get available actions at current location
+    const acts = actionsFor(p, world);
+    if (acts.length === 0) break;
+
+    // Noise: pick random action instead of best
+    let act = acts.find(a => a.id === target.actionId || a.id.startsWith(target.actionId));
+    if (!act || Math.random() < noiseRate) act = acts[Math.floor(Math.random() * acts.length)];
+    if (!act) break;
+
+    const log = act.run();
+    logs.push(log);
+  }
+
+  p.timeLeft = 0;
+  return logs;
 }
 
 /* ---------- MODO LEGADO ---------- */
