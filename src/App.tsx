@@ -231,6 +231,19 @@ function StatsPanel({
   const m = metrics(p);
   const col = PLAYER_COLORS[p.colorIndex];
   const loc = locById(p.currentLocation);
+  const cq = cuadrante(p);
+  const pi = passiveIncome(p);
+  const exp = expensesPerTurn(p);
+  const emMonths = emergencyFundMonths(p);
+  const piPct = Math.min(100, (pi / Math.max(exp, 1)) * 100);
+  const indBars = [
+    { key:'bienestar',  label:'Bien',   color:'var(--green)',  val: m.bienestar,          goal: game.goals.bienestar },
+    { key:'conoc',      label:'Conoc',  color:'var(--violet)', val: m.conocimientos,      goal: game.goals.conocimientos },
+    { key:'impacto',    label:'Imp',    color:'var(--pink)',   val: m.impacto,            goal: game.goals.impacto },
+    { key:'legado',     label:'Leg',    color:'var(--teal)',   val: p.impact.comunitario, goal: game.goals.comunitario },
+    { key:'emergencia', label:'Emerg',  color:'var(--gold)',   val: emMonths,             goal: game.goals.emergencyMonths },
+    { key:'pasivo',     label:'Pasivo', color:'var(--orange)', val: piPct,                goal: 100 },
+  ];
   return (
     <div id="stats-panel">
       <TimeRing hours={p.timeLeft} />
@@ -251,6 +264,25 @@ function StatsPanel({
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
         <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos</span></div>
         <div className="resource"><span className="res-icon">Q</span><span className="res-val">Quincena {game.turn}</span></div>
+      </div>
+      <div className="stat-divider" />
+      <div className="ind-inline">
+        <div className="cuadrante-chip sml" data-cq={cq}>{CUADRANTE_ICON[cq]} {CUADRANTE_LABEL[cq]}</div>
+        {indBars.map(b => {
+          const pct = Math.min(100, (b.val / b.goal) * 100);
+          const display = b.key === 'emergencia'
+            ? b.val.toFixed(1) + 'm'
+            : b.key === 'pasivo'
+            ? Math.round(b.val) + '%'
+            : Math.round(b.val) + '/' + b.goal;
+          return (
+            <div key={b.key} className="ind-row-mini">
+              <span className="ind-lbl-mini">{b.label}</span>
+              <div className="ind-bar-mini"><div className="ind-fill" style={{ width: pct+'%', '--bc': b.color } as any} /></div>
+              <span className="ind-val-mini">{display}{pct >= 100 ? ' ✓' : ''}</span>
+            </div>
+          );
+        })}
       </div>
       <div className="stat-divider" />
       {canRetire(p, game.turn) && (
@@ -602,8 +634,6 @@ function TopBar({ openPanel, setOpenPanel, turn }: {
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
       <span className="bar-motto">el juego de la vida · Cuenca, Ecuador</span>
       <div className="bar-right">
-        <button className={'hud-btn'+(openPanel==='indicators'?' on':'')}
-          onClick={() => toggle('indicators')} title="Indicadores">📊</button>
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
           onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
           {musicOn ? '🎷' : '🔇'}
@@ -915,11 +945,6 @@ export function App() {
         <ActionsBar game={game} onAction={doAction} />
 
         {/* Lid panels */}
-        {openPanel === 'indicators' && (
-          <LidPanel id="indicators" title="📊 Indicadores" onClose={() => setOpenPanel(null)}>
-            <IndicatorsContent game={game} />
-          </LidPanel>
-        )}
         {openPanel === 'about' && (
           <LidPanel id="about" title="¿Qué es este juego?" onClose={() => setOpenPanel(null)}>
             <AboutContent />

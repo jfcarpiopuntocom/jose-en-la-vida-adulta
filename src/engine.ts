@@ -336,8 +336,22 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   }
 
   if (loc === 'zona_financiera') {
-    out.push({ id: 'save', label: 'Ahorrar $100 en banco', hours: 1, desc: 'mueve liquidez a patrimonio', ok: p.timeLeft >= 1 && p.liquidity >= 100,
-      run: () => { applyEff(p, [['time', -1], ['liq', -100], ['bank', 100]]); return `${p.name} ahorró $100 en el banco`; } });
+    if (p.liquidity >= 100)
+      out.push({ id: 'save100', label: 'Ahorrar $100 en banco (1h)', hours: 1, desc: 'mueve liquidez a patrimonio', ok: p.timeLeft >= 1 && p.liquidity >= 100,
+        run: () => { applyEff(p, [['time', -1], ['liq', -100], ['bank', 100]]); return `${p.name} ahorró $100 en el banco`; } });
+    if (p.liquidity >= 500)
+      out.push({ id: 'save500', label: 'Ahorrar $500 en banco (1h)', hours: 1, desc: 'depósito grande', ok: p.timeLeft >= 1 && p.liquidity >= 500,
+        run: () => { applyEff(p, [['time', -1], ['liq', -500], ['bank', 500]]); return `${p.name} depositó $500 en el banco`; } });
+    if (p.liquidity >= 200)
+      out.push({ id: 'invest_bolsa', label: 'Invertir en bolsa (2h · $200)', hours: 2, desc: 'especulativo: puede ganar o perder', ok: p.timeLeft >= 2 && p.liquidity >= 200,
+        run: () => {
+          const win = Math.random() > 0.45;
+          const delta = win ? rnd(120) + 60 : -(rnd(80) + 30);
+          applyEff(p, [['time', -2], ['liq', -200 + delta], ['stat', 'knowledge', 1]]);
+          return win
+            ? `${p.name} invirtió en bolsa y ganó $${delta}`
+            : `${p.name} invirtió en bolsa y perdió $${-delta}`;
+        } });
   }
 
   if (loc === 'feria_libre') {
@@ -399,6 +413,103 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   if (loc === 'rio_tomebamba') {
     out.push({ id: 'meditar', label: 'Meditar junto al río (2h)', hours: 2, desc: '+salud, -estrés, +legado comunitario', ok: p.timeLeft >= 2,
       run: () => { applyEff(p, [['time', -2], ['stat', 'health', 4], ['stat', 'stress', -8], ['stat', 'happiness', 4], ['impact', 'comunitario', 2]]); return `${p.name} meditó junto al Tomebamba (+salud, -estrés)`; } });
+  }
+
+  if (loc === 'terminal') {
+    if (!p.job) {
+      out.push({ id: 'buscar_empleo', label: 'Buscar empleo en agencia (2h)', hours: 2, desc: 'aplica a mejor vacante según tu nivel', ok: p.timeLeft >= 2,
+        run: () => {
+          const candidates = JOBS.filter(j => p.careerLevel >= j.minLevel && p.stats.dependability >= j.minDep);
+          if (candidates.length === 0) { applyEff(p, [['time', -2]]); return `${p.name} buscó empleo: aún no cumple requisitos`; }
+          const best = candidates.sort((a, b) => b.wage - a.wage)[0];
+          p.job = best; applyEff(p, [['time', -2], ['stat', 'happiness', 3], ['impact', 'profesional', 2]]);
+          return `${p.name} fue contratado: ${best.title} (+$${best.wage}/turno)`;
+        }
+      });
+    }
+    if (p.job) {
+      out.push({ id: 'cambiar_trabajo', label: 'Buscar trabajo mejor (2h)', hours: 2, desc: 'busca vacante de mayor salario', ok: p.timeLeft >= 2,
+        run: () => {
+          const better = JOBS.filter(j => j.wage > (p.job?.wage ?? 0) && p.careerLevel >= j.minLevel && p.stats.dependability >= j.minDep);
+          if (better.length === 0) { applyEff(p, [['time', -2]]); return `${p.name} buscó trabajo mejor: ninguna oferta supera la actual`; }
+          const best = better.sort((a, b) => b.wage - a.wage)[0];
+          p.job = best; applyEff(p, [['time', -2], ['impact', 'profesional', 1]]);
+          return `${p.name} cambió de trabajo: ahora es ${best.title} (+$${best.wage}/turno)`;
+        }
+      });
+    }
+    out.push({ id: 'secap', label: 'Curso SECAP (4h · gratis)', hours: 4, desc: '+confiabilidad, +experiencia', ok: p.timeLeft >= 4,
+      run: () => { applyEff(p, [['time', -4], ['stat', 'dependability', 5], ['stat', 'experience', 3], ['stat', 'knowledge', 2]]); return `${p.name} completó un curso en el SECAP (+confiabilidad)`; }
+    });
+  }
+
+  if (loc === 'zona_industrial') {
+    if (p.businesses.length === 0) {
+      out.push({ id: 'startmanufactura', label: 'Abrir manufactura ($800, 12h)', hours: 12, desc: 'negocio industrial · mejor margen que la Feria', ok: p.timeLeft >= 12 && p.liquidity >= 800,
+        run: () => {
+          applyEff(p, [['time', -12], ['liq', -800], ['stat', 'experience', 4], ['impact', 'empresarial', 5]]);
+          p.businesses.push({ id: 'mfg_' + p.id, type: 'manufactura', capital: 800, ticket: 22, clientes: 7, costosFijos: 65, employees: [] });
+          return `${p.name} abrió una manufactura en la Z. Industrial`;
+        }
+      });
+    }
+    if (!p.job)
+      out.push({ id: 'jornadaextra', label: 'Jornada contratista (6h)', hours: 6, desc: '+$38 sin empleo formal', ok: p.timeLeft >= 6,
+        run: () => { applyEff(p, [['time', -6], ['liq', 38], ['stat', 'experience', 3], ['stat', 'stress', 6]]); return `${p.name} hizo jornada contratista en la Z. Industrial (+$38)`; }
+      });
+  }
+
+  if (loc === 'hospital') {
+    out.push({ id: 'consulta', label: 'Consulta médica (2h · $30)', hours: 2, desc: '+salud, -estrés', ok: p.timeLeft >= 2 && p.liquidity >= 30,
+      run: () => { applyEff(p, [['time', -2], ['liq', -30], ['stat', 'health', 8], ['stat', 'stress', -6]]); return `${p.name} fue a consulta médica (+salud, -estrés)`; }
+    });
+    if (p.stats.health < 60)
+      out.push({ id: 'recuperacion', label: 'Recuperación completa (8h · $80)', hours: 8, desc: 'solo cuando salud < 60: recuperación total', ok: p.timeLeft >= 8 && p.liquidity >= 80,
+        run: () => { applyEff(p, [['time', -8], ['liq', -80], ['stat', 'health', 25], ['stat', 'stress', -15]]); return `${p.name} se recuperó en la clínica Kennedy`; }
+      });
+    out.push({ id: 'check_prev', label: 'Chequeo preventivo (1h · $15)', hours: 1, desc: '+salud ligera, +conocimiento', ok: p.timeLeft >= 1 && p.liquidity >= 15,
+      run: () => { applyEff(p, [['time', -1], ['liq', -15], ['stat', 'health', 3], ['stat', 'knowledge', 1]]); return `${p.name} hizo chequeo preventivo en la clínica`; }
+    });
+  }
+
+  if (loc === 'parque_calderon') {
+    out.push({ id: 'parque_descanso', label: 'Descansar en el parque (3h)', hours: 3, desc: '+felicidad, -estrés, gratis', ok: p.timeLeft >= 3,
+      run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 6], ['stat', 'stress', -7], ['stat', 'health', 2]]); return `${p.name} descansó en el Parque Calderón`; }
+    });
+    if (p.family.length > 0)
+      out.push({ id: 'picnic_fam', label: 'Picnic familiar (3h · $10)', hours: 3, desc: '+felicidad, +legado familiar, +salud', ok: p.timeLeft >= 3 && p.liquidity >= 10,
+        run: () => { applyEff(p, [['time', -3], ['liq', -10], ['stat', 'happiness', 8], ['stat', 'health', 3], ['impact', 'familiar', 4], ['impact', 'comunitario', 1]]); return `${p.name} hizo picnic con la familia en el parque`; }
+      });
+    out.push({ id: 'networking_parque', label: 'Red de contactos (2h)', hours: 2, desc: '+confiabilidad, +impacto profesional', ok: p.timeLeft >= 2,
+      run: () => { applyEff(p, [['time', -2], ['stat', 'dependability', 3], ['impact', 'profesional', 3], ['stat', 'happiness', 2]]); return `${p.name} expandió su red en el Parque Calderón`; }
+    });
+  }
+
+  if (loc === 'municipio') {
+    out.push({ id: 'proyecto_com', label: 'Proyecto comunitario (4h)', hours: 4, desc: '+legado comunitario, +conocimiento', ok: p.timeLeft >= 4,
+      run: () => { applyEff(p, [['time', -4], ['stat', 'knowledge', 3], ['stat', 'happiness', 4], ['impact', 'comunitario', 6]]); return `${p.name} participó en proyecto comunitario en el Municipio`; }
+    });
+    if (p.businesses.length > 0)
+      out.push({ id: 'licencia_neg', label: 'Licencia de negocio (3h · $40)', hours: 3, desc: '+confiabilidad, +impacto empresarial', ok: p.timeLeft >= 3 && p.liquidity >= 40,
+        run: () => { applyEff(p, [['time', -3], ['liq', -40], ['stat', 'dependability', 4], ['impact', 'empresarial', 5]]); return `${p.name} tramitó licencia de negocio en el Municipio`; }
+      });
+    if (p.impact.comunitario >= 10)
+      out.push({ id: 'cargo_publico', label: 'Cargo público voluntario (6h)', hours: 6, desc: 'legado alto: +reputación, +impacto', ok: p.timeLeft >= 6,
+        run: () => { applyEff(p, [['time', -6], ['stat', 'dependability', 6], ['stat', 'knowledge', 2], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `${p.name} asumió un cargo público voluntario`; }
+      });
+  }
+
+  if (loc === 'estadio') {
+    out.push({ id: 'entrenar', label: 'Entrenar físico (4h)', hours: 4, desc: '+salud grande, -estrés, gratis', ok: p.timeLeft >= 4,
+      run: () => { applyEff(p, [['time', -4], ['stat', 'health', 10], ['stat', 'stress', -8], ['stat', 'happiness', 3]]); return `${p.name} entrenó en el Estadio Alejandro (+salud)`; }
+    });
+    out.push({ id: 'partido_inf', label: 'Partido informal (3h · $5)', hours: 3, desc: '+salud, +felicidad, +legado comunitario', ok: p.timeLeft >= 3 && p.liquidity >= 5,
+      run: () => { applyEff(p, [['time', -3], ['liq', -5], ['stat', 'health', 6], ['stat', 'happiness', 7], ['impact', 'comunitario', 3]]); return `${p.name} jugó un partido informal en el Estadio`; }
+    });
+    if (p.businesses.length > 0)
+      out.push({ id: 'red_palco', label: 'Red empresarial en palco (2h · $20)', hours: 2, desc: '+confiabilidad, +impacto empresarial', ok: p.timeLeft >= 2 && p.liquidity >= 20,
+        run: () => { applyEff(p, [['time', -2], ['liq', -20], ['stat', 'dependability', 4], ['impact', 'empresarial', 4], ['impact', 'profesional', 2]]); return `${p.name} hizo networking empresarial en el palco del Estadio`; }
+      });
   }
 
   // Empleos: trabajar / postular según escalera
