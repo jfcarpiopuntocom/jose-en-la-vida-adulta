@@ -1072,13 +1072,16 @@ function App() {
   const active = game.players[game.activePlayerIndex];
 
   function doAction(idx: number) {
+    let result = '';
     mutate(g => {
       const p = g.players[g.activePlayerIndex];
       const a = actionsFor(p, g.world)[idx];
       if (!a) return;
       const log = a.run();
+      result = log;
       g.log.push({ turn: g.turn, text: log, kind: 'plain', importance: 1 });
     });
+    if (result) setFlash(result);
     setInspecting(null);
   }
 
