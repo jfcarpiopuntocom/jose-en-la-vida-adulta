@@ -233,7 +233,7 @@ export function tryPromote(p: PlayerState): string | null {
 
 // ── Historia de origen procedural ──
 export function generateBackstory(p: import('./types').PlayerState): string {
-  const barrio = p.birthBarrio.replace(/_/g, ' ');
+  const barrio = p.birthBarrio.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const crimeLevel = p.birthCrime;
   const famNames = p.family.map(f => f.name);
   const fam = famNames.length === 0 ? 'solo' :
@@ -248,10 +248,10 @@ export function generateBackstory(p: import('./types').PlayerState): string {
       : 'Creciste en ' + barrio + ', donde los domingos sonaban las campanas de la catedral y la mayoría de la gente pagaba sus cuentas a tiempo.';
 
   const famLine = fam === 'solo'
-    ? 'No tienes familia cercana. Lo que construyas, lo construirás desde cero y para ti.'
+    ? 'No tienes familia cercana. Lo que logres, lo vas a construir desde cero.'
     : p.family.length >= 3
-    ? 'En casa erais ' + p.family.length + ': ' + fam + '. Había amor, pero el espacio y el dinero siempre estuvieron justos.'
-    : 'Tu familia inmediata: ' + fam + '. Pequeña y con sus propios problemas, pero presente.';
+    ? 'En casa eran ' + p.family.length + ': ' + fam + '. Había cariño, pero el espacio y el dinero siempre anduvieron justos.'
+    : 'Tu familia inmediata: ' + fam + '. No muy grande, con sus propios problemas, pero siempre presente.';
 
   const parts: string[] = [origin, famLine];
   const know = (p.stats as any).knowledge ?? 0;

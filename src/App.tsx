@@ -17,23 +17,15 @@ const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
 const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾']; // fallback
 function PawnAvatar({ p, size = 22, glow = false }: { p: PlayerState; size?: number; glow?: boolean }) {
-  const url = avatarUrl(p.name, p.colorIndex);
   const col = PLAYER_COLORS[p.colorIndex];
   return (
-    <img
-      src={url}
-      width={size} height={size}
-      style={{
-        borderRadius: '50%',
-        border: `2px solid ${col}`,
-        background: '#080c1a',
-        filter: glow ? `drop-shadow(0 0 5px ${col})` : 'none',
-        flexShrink: 0,
-        display: 'inline-block',
-        verticalAlign: 'middle',
-      }}
-      alt={p.name}
-    />
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{
+      filter: glow ? 'drop-shadow(0 0 4px ' + col + ')' : 'none',
+    }}>
+      {/* Meeple shape — CC BY 3.0 game-icons.net/delapouite */}
+      <path d="M12 2C10.34 2 9 3.34 9 5s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm-7 18 2.5-7H5l3-5h1.5L8 13h2V8h4v5h2l-1.5-5H16l3 5h-2.5L19 20H5z"
+        fill={col} stroke="rgba(0,0,0,0.4)" strokeWidth="0.5"/>
+    </svg>
   );
 }
 
@@ -290,26 +282,37 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
 // ── SVG Time Ring ──
 function TimeRing({ hours }: { hours: number }) {
   const pct = clamp(hours / HOURS_PER_TURN, 0, 1);
-  const circumference = 220;
-  const offset = circumference - pct * circumference;
+  const angle = pct * 360;
+  const rad = (a: number) => (a - 90) * Math.PI / 180;
+  const x2 = 18 + 14 * Math.cos(rad(angle));
+  const y2 = 18 + 14 * Math.sin(rad(angle));
+  const largeArc = angle > 180 ? 1 : 0;
+  const arcPath = angle > 0
+    ? 'M18 4 A14 14 0 ' + largeArc + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1)
+    : '';
+  const hoursLeft = Math.round(hours);
+  const col = pct > 0.5 ? '#3A7850' : pct > 0.2 ? '#C8A040' : '#A0192C';
   return (
-    <div className="time-block">
-      <svg className="time-ring" viewBox="0 0 36 36">
-        <defs>
-          <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={pct > 0.5 ? '#2DD4BF' : pct > 0.2 ? '#E8A020' : '#E11D48'} />
-            <stop offset="100%" stopColor={pct > 0.5 ? '#34D399' : pct > 0.2 ? '#FCD34D' : '#FB7185'} />
-          </linearGradient>
-        </defs>
-        <circle className="ring-track" cx="18" cy="18" r="16" />
-        <circle className="ring-fill" cx="18" cy="18" r="16"
-          strokeDasharray={`${pct * circumference} ${circumference}`}
-          strokeDashoffset="0" />
+    <div className="clock-face">
+      <svg viewBox="0 0 36 36" className="clock-svg">
+        {/* Clock face background */}
+        <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
+        {/* Hour markers */}
+        {[0,30,60,90,120,150,180,210,240,270,300,330].map(a => {
+          const r1 = 14.5, r2 = 16;
+          const ax = (a - 90) * Math.PI / 180;
+          return <line key={a} x1={18+r1*Math.cos(ax)} y1={18+r1*Math.sin(ax)}
+            x2={18+r2*Math.cos(ax)} y2={18+r2*Math.sin(ax)}
+            stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>;
+        })}
+        {/* Time arc */}
+        {angle > 0 && <path d={arcPath} fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round"/>}
+        {/* Center text */}
+        <text x="18" y="17" textAnchor="middle" fontSize="8" fontWeight="800"
+          fill={col} style={{ fontFamily: 'Nunito, sans-serif' }}>{hoursLeft}</text>
+        <text x="18" y="22.5" textAnchor="middle" fontSize="3.5"
+          fill="rgba(255,255,255,0.5)" style={{ fontFamily: 'Nunito, sans-serif' }}>horas</text>
       </svg>
-      <div className="time-display">
-        <span className="time-num">{Math.round(hours)}</span>
-        <span className="time-label">horas</span>
-      </div>
     </div>
   );
 }
@@ -328,11 +331,11 @@ function StatsPanel({
   const emMonths = emergencyFundMonths(p);
   const piPct = Math.min(100, (pi / Math.max(exp, 1)) * 100);
   const indBars = [
-    { key:'bienestar',  label:'Bien',   color:'var(--green)',  val: m.bienestar,          goal: game.goals.bienestar },
-    { key:'conoc',      label:'Conoc',  color:'var(--violet)', val: m.conocimientos,      goal: game.goals.conocimientos },
-    { key:'impacto',    label:'Imp',    color:'var(--pink)',   val: m.impacto,            goal: game.goals.impacto },
-    { key:'legado',     label:'Leg',    color:'var(--teal)',   val: p.impact.comunitario, goal: game.goals.comunitario },
-    { key:'emergencia', label:'Emerg',  color:'var(--gold)',   val: emMonths,             goal: game.goals.emergencyMonths },
+    { key:'bienestar',  label:'Bienestar',   color:'var(--green)',  val: m.bienestar,          goal: game.goals.bienestar },
+    { key:'conoc',      label:'Conocimiento',  color:'var(--violet)', val: m.conocimientos,      goal: game.goals.conocimientos },
+    { key:'impacto',    label:'Impacto',    color:'var(--pink)',   val: m.impacto,            goal: game.goals.impacto },
+    { key:'legado',     label:'Legado',    color:'var(--teal)',   val: p.impact.comunitario, goal: game.goals.comunitario },
+    { key:'emergencia', label:'Emergencia',  color:'var(--gold)',   val: emMonths,             goal: game.goals.emergencyMonths },
     { key:'pasivo',     label:'Pasivo', color:'var(--orange)', val: piPct,                goal: 100 },
   ];
   // Win progress: average of all 6 bars capped at 100%

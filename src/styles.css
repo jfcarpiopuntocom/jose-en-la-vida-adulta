@@ -196,8 +196,8 @@ h1,h2,h3,p,span,div,button,label,li,a {
   border: 1px solid var(--line2); border-radius: 8px; pointer-events: none;
 }
 
-.time-block { position: relative; width: 72px; height: 72px; }
-.time-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+
+
 .ring-track { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 4; }
 .ring-fill {
   fill: none; stroke: url(#gauge-grad); stroke-width: 4.5;
@@ -1289,3 +1289,40 @@ input[type=text], input[type=number] {
 }
 
 
+
+/* ── Clock Face ── */
+.clock-face {
+  width: 64px; height: 64px; margin: 0 auto 6px;
+  position: relative;
+}
+.clock-svg {
+  width: 100%; height: 100%;
+  filter: drop-shadow(0 0 6px rgba(200,160,64,0.15));
+}
+
+/* ── Compact action cards ── */
+.action-card {
+  flex: 0 1 auto;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer; text-align: left;
+  transition: background .15s, border-color .15s;
+  font-size: 0.82rem;
+}
+.action-card:hover {
+  background: rgba(200,160,64,0.1);
+  border-color: var(--gold);
+}
+.act-name {
+  display: block; font-weight: 700;
+  color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
+}
+.act-desc {
+  display: block; font-size: 0.72rem; margin-top: 2px;
+  color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important;
+}
+.actions-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
