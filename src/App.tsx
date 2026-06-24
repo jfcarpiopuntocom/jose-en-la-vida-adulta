@@ -11,7 +11,7 @@ import {
 import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
-import { jazz } from './music';
+import { cityMusic } from './citymusic';
 
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -824,14 +824,14 @@ function TopBar({ openPanel, setOpenPanel, turn, economy }: {
   const [musicOn, setMusicOn] = useState(false);
   function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
   function toggleMusic() {
-    jazz.toggle();
-    setMusicOn(!jazz.muted);
+    cityMusic.toggle();
+    setMusicOn(cityMusic.playing);
   }
   return (
     <div id="top-bar">
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
       <span className="bar-motto">el juego de la vida plena · Cuenca, Ecuador</span>
-      <span className={"econ-pill " + (economy === "good" ? "econ-good" : "econ-bad")}>{economy === "good" ? "Buen año" : "Mal año"}</span>
+      <span className={"econ-pill " + (economy === "good" ? "econ-good" : "econ-bad")}>{economy === "good" ? "Buen año económico del país" : "Mal año económico del país"}</span>
       <div className="bar-right">
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
           onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
