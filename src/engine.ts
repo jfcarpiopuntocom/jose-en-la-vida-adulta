@@ -232,7 +232,9 @@ export function tryPromote(p: PlayerState): string | null {
 }
 export function wageOf(p: PlayerState, job: import('./types').Job, world: World): number {
   const base = Math.round(job.wage * (1 + p.careerLevel * 0.22) * world.wageMult);
-  return p.isAI ? Math.round(base * world.cpuMult) : base;
+  const stressPenalty = p.stats.stress > 80 ? 1 - (p.stats.stress - 80) * 0.008 : 1; // up to 16% penalty at max stress
+  const effective = Math.round(base * stressPenalty);
+  return p.isAI ? Math.round(effective * world.cpuMult) : effective;
 }
 
 /* ---------- EDUCACIÓN ---------- */
