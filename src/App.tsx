@@ -1159,6 +1159,12 @@ function App() {
         }
       }
     }
+    // Flash turn summary
+    const firstP = g.players[0];
+    const piSum = Math.round(passiveIncome(firstP));
+    const expSum = expensesPerTurn(firstP);
+    const net = piSum - expSum;
+    setFlash(`Quincena ${g.turn} cerrada. Gastos: -$${expSum}${piSum > 0 ? ` · Pasivos: +$${piSum}` : ''} · Balance: ${net >= 0 ? '+' : ''}$${net}`);
     g.turn++; g.activePlayerIndex = 0;
     for (const p of g.players) p.timeLeft = HOURS_PER_TURN;
     commit(g, true);
