@@ -320,8 +320,19 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       run: () => { applyEff(p, [['time', -8], ['stat', 'health', 6], ['stat', 'stress', -10], ['stat', 'happiness', 3]]); return `${p.name} descansó en casa`; } });
     out.push({ id: 'social', label: 'Socializar (4h)', hours: 4, desc: '+felicidad, +impacto comunitario, -$15', ok: p.timeLeft >= 4 && p.liquidity >= 15,
       run: () => { applyEff(p, [['time', -4], ['liq', -15], ['stat', 'happiness', 7], ['impact', 'comunitario', 3]]); return `${p.name} salió con amigos`; } });
-    out.push({ id: 'family', label: 'Visitar a la familia (3h)', hours: 3, desc: 'azar: apoyo, consejo, regalo o lío', ok: p.timeLeft >= 3 && p.family.length > 0,
-      run: () => { const m = pick(p.family); const r = familyVisitEffect(m, p.name); applyEff(p, [['time', -3], ...r.eff]); return r.log; } });
+       out.push({ id: 'family', label: 'Visitar familia (3h)', hours: 3, desc: 'Fortalece lazos (+relacion, +felicidad)', ok: p.timeLeft >= 3 && p.family.length > 0,
+      run: () => {
+        const m = pick(p.family);
+        m.score = Math.min(100, m.score + 8);
+        const r = familyVisitEffect(m, p.name);
+        applyEff(p, [['time', -3], ['stat', 'happiness', 5], ['impact', 'familiar', 2], ...r.eff]);
+        return r.log + ` (relacion con ${m.name}: ${m.score})`;
+      } });
+    if (p.family.some(fm => fm.score >= 80)) {
+      const ally = p.family.find(fm => fm.score >= 80)!;
+      out.push({ id: 'family_ally', label: `Consejo de ${ally.name} (2h)`, hours: 2, desc: 'Relacion solida = +conocimiento real', ok: p.timeLeft >= 2,
+        run: () => { applyEff(p, [['time', -2], ['stat', 'knowledge', 8], ['stat', 'happiness', 4]]); return `${ally.name} te dio un consejo clave (+8 conocimiento)`; } });
+    }
   }
 
   if (loc === 'zona_universitaria') {
