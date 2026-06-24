@@ -146,7 +146,7 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             <label className="jose-toggle-label">
               <input type="checkbox" checked={withJose} onChange={e => setWithJose(e.target.checked)}
                 style={{ marginRight: 8 }} />
-              Jugar contra <b>José</b> (CPU) — como Jones in the Fast Lane
+              Jugar contra <b>José</b> (CPU)
             </label>
             {withJose && (
               <div className="jose-config">
@@ -393,11 +393,43 @@ function HistoriaContent({ game }: { game: GameState }) {
 function AboutContent() {
   return (
     <div className="about-box-inner">
-      <p>Tributo libre a <b>Jones in the Fast Lane</b> (Sierra On-Line, 1990) — el viejo "juego de la vida" en disquete — llevado más allá.</p>
-      <p style={{marginTop:8}}><b>El tema central:</b> el tiempo es el recurso escaso. No el dinero. No el talento. El tiempo.</p>
-      <p style={{marginTop:8}}><b>Dos rutas, una lección:</b> ser empleado o ser empresario/a. Ninguna es superior. Ambas exigen gestión, criterio y aprecio mutuo. El empleado sostiene la empresa; el empresario crea el espacio donde el empleado puede crecer.</p>
-      <p style={{marginTop:8}}><b>Negocio → Empresa:</b> el salto ocurre cuando existen procedimientos documentados y manuales claros. Sin eso, la dependencia del fundador para apagar fuegos es total — y eso no escala.</p>
-      <p style={{marginTop:8}}>Sistema de 4 métricas: Patrimonio · Bienestar · Conocimientos · Impacto. Las cuatro a la vez para ganar.</p>
+      <p className="about-welcome">Bienvenido a <b>José En La Vida Adulta</b> — el juego de la vida adulta, ambientado en Cuenca, Ecuador.</p>
+
+      <p>Cada quincena tienes 112 horas. Decides dónde invertirlas: trabajo, familia, educación, negocios, descanso. No hay camino correcto. Hay decisiones.</p>
+
+      <div className="about-section">
+        <div className="about-section-title">El recurso más escaso</div>
+        <p>No es el dinero. No es el talento. Es el tiempo. Todo cuesta horas. Todo compite por las mismas 112 horas de tu quincena.</p>
+      </div>
+
+      <div className="about-section">
+        <div className="about-section-title">Dos rutas, un mismo respeto</div>
+        <p>Empleado o empresario. Ninguna ruta es superior. El empleado comprometido sostiene la empresa; el empresario crea el espacio donde otros pueden crecer. Ambos se necesitan.</p>
+      </div>
+
+      <div className="about-section">
+        <div className="about-section-title">De negocio a empresa</div>
+        <p>Un negocio que depende del fundador para cada decisión no es una empresa, es un autoempleo de alta complejidad. El salto ocurre cuando existen procedimientos documentados. Sin eso, la dependencia es total y nada escala.</p>
+      </div>
+
+      <div className="about-section">
+        <div className="about-section-title">Portafolio Permanente</div>
+        <p>Inspirado en Harry Browne: diversificar en activos que preservan valor. Cuadros, vinos, joyería, tarjetas de béisbol, bitcoin. La riqueza no es una cifra, es una estructura.</p>
+      </div>
+
+      <div className="about-section">
+        <div className="about-section-title">Para ganar</div>
+        <p>Bienestar, conocimientos, impacto en la comunidad y un piso de seguridad financiera. Los cuatro a la vez. No hay atajos.</p>
+      </div>
+
+      <div className="about-section">
+        <div className="about-section-title">Legado</div>
+        <p>Puedes pasar el testigo a un heredero. Lo que construiste — reputación, capital, principios — viaja con él. El linaje es el horizonte largo del juego.</p>
+      </div>
+
+      <div className="about-tribute">
+        Tributo libre a <i>Jones in the Fast Lane</i> (Sierra On-Line, 1990).
+      </div>
     </div>
   );
 }
