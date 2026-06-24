@@ -467,9 +467,7 @@ function StatsPanel({
           })}
         </div>
       </details>
-      <button className="btn-end" onClick={onEnd}>
-        Terminar quincena ▶
-      </button>
+
     </div>
   );
 }
@@ -1226,16 +1224,19 @@ function App() {
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
       <div className="game-layout">
         <div className="game-main">
-          <div className="board-section">
-            <Board game={game}
-              onInspect={id => { setInspecting(id); setOpenPanel(null); }}
-              inspecting={inspecting}
-            />
+          <Board game={game}
+            onInspect={id => { setInspecting(id); setOpenPanel(null); }}
+            inspecting={inspecting}
+          />
+          <div className="footer-bar">
+            <div className="time-section">
+              <TimeRing hours={game.activePlayerIndex >= 0 ? game.players[game.activePlayerIndex].timeLeft : HOURS_PER_TURN} />
+            </div>
+            <ActionsBar game={game} onAction={doAction} />
+            <button className="btn-end-footer" onClick={() => endPlayerTurn()}>
+              Siguiente quincena ▶
+            </button>
           </div>
-          <div className="time-section">
-            <TimeRing hours={game.activePlayerIndex >= 0 ? game.players[game.activePlayerIndex].timeLeft : HOURS_PER_TURN} />
-          </div>
-          <ActionsBar game={game} onAction={doAction} />
         </div>
         <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
       </div>
