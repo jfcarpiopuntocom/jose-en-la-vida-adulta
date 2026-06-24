@@ -142,16 +142,27 @@ export interface PlayerState {
   impact: ImpactNet;
   stats: PlayerStats;
   retired: boolean;
+  collectibles: Collectible[];
   isAI?: boolean;
   aiStrategy?: 'empleado' | 'empresa';
   aiDifficulty?: 1 | 2 | 3;
 }
 
+export type CollectibleKind = 'cuadro' | 'vino' | 'joyeria' | 'tarjeta' | 'bitcoin';
+export interface Collectible {
+  kind: CollectibleKind;
+  name: string;
+  value: number;      // current market value
+  boughtFor: number;  // original cost (for display)
+}
+
 export interface Goals {
-  patrimonio: number;
+  // NO meta económica fija — la seguridad financiera es el piso, no el techo
+  securityFloor: number;   // assets totales mínimos para sentirse seguro (muy alcanzable)
   bienestar: number;
   conocimientos: number;
   impacto: number;
+  comunitario: number;     // legado comunitario mínimo (dejar huella en Cuenca)
 }
 
 export interface LogEntry {

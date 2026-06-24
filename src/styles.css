@@ -638,6 +638,45 @@ h1,h2,h3,p,span,div,button,label,li,a {
 }
 @keyframes pulse-dot { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.4; transform:scale(0.7)} }
 
+/* ── Music button ── */
+.music-btn { font-size: 1rem; padding: 6px 10px; min-width: 36px; }
+.music-btn.on {
+  border-color: var(--violet) !important;
+  background: rgba(167,139,250,0.12) !important;
+  box-shadow: 0 0 10px rgba(167,139,250,0.3);
+}
+
+/* ── Portafolio Permanente en zoom modal ── */
+.portfolio-mini {
+  margin-top: 12px; padding: 10px 10px 8px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(232,160,32,0.15);
+}
+.pm-label {
+  display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.04em;
+  color: var(--gold) !important; -webkit-text-fill-color: var(--gold) !important;
+}
+.pm-row {
+  display: flex; justify-content: space-between; font-size: 0.78rem; padding: 2px 0;
+  color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important;
+}
+.pm-row b { color: var(--white) !important; -webkit-text-fill-color: var(--white) !important; }
+.pm-col {
+  display: block; font-size: 0.75rem; margin-top: 3px; padding: 2px 4px;
+  background: rgba(255,255,255,0.03); border-radius: 4px;
+  color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important;
+}
+
+/* ── Portfolio breakdown en indicators ── */
+.portfolio-breakdown {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.pb-item {
+  font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;
+  background: rgba(255,255,255,0.05);
+  color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important;
+}
+
 /* ── Shared button base ── */
 button {
   font-family: 'Nunito', sans-serif; font-size: 0.88rem; font-weight: 700;

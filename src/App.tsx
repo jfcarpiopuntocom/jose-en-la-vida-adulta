@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { GameState, PlayerState, GameEvent, Goals } from './types';
 import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
-  hasWon, canRetire, makeHeir, cpuTurn, HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
+  hasWon, canRetire, makeHeir, cpuTurn, portfolioSlices, collectiblesValue,
+  HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
 } from './engine';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
+import { jazz } from './music';
 
 const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾'];
 
@@ -300,11 +302,11 @@ function LidPanel({ id, title, onClose, children }: {
 
 // ── Indicators Panel Content ──
 function IndicatorsContent({ game }: { game: GameState }) {
+  // 3 métricas con meta + 1 libre (patrimonio sin techo)
   const bars = [
-    { key:'patrimonio', label:'Patrimonio', color:'var(--gold)' },
-    { key:'bienestar',  label:'Bienestar',  color:'var(--green)' },
-    { key:'conocimientos', label:'Saber', color:'var(--violet)' },
-    { key:'impacto',    label:'Impacto',    color:'var(--pink)' },
+    { key:'bienestar',     label:'Bienestar',     color:'var(--green)',  goal: game.goals.bienestar },
+    { key:'conocimientos', label:'Conocimientos', color:'var(--violet)', goal: game.goals.conocimientos },
+    { key:'impacto',       label:'Impacto',       color:'var(--pink)',   goal: game.goals.impacto },
   ] as const;
   return (
     <div>
@@ -312,15 +314,19 @@ function IndicatorsContent({ game }: { game: GameState }) {
         const m = metrics(p);
         const col = PLAYER_COLORS[p.colorIndex];
         const isActive = p.id === game.players[game.activePlayerIndex].id;
+        const portfolio = portfolioSlices(p);
+        const totalSec = p.liquidity + p.bank + collectiblesValue(p) + portfolio.growth;
+        const secPct = Math.min(100, (totalSec / game.goals.securityFloor) * 100);
+        const comPct = Math.min(100, (p.impact.comunitario / game.goals.comunitario) * 100);
         return (
           <div key={p.id} className="ind-section">
             <div className="ind-pname" style={{ color: col, WebkitTextFillColor: col }}>
-              {isActive ? '▶ ' : ''}{p.name}
+              {p.isAI ? '🤖 ' : isActive ? '▶ ' : ''}{p.name}
+              {p.isAI && <span style={{fontSize:'0.72rem',color:'var(--muted)',WebkitTextFillColor:'var(--muted)'}}> ({p.aiStrategy}·{['','F','N','D'][p.aiDifficulty??2]})</span>}
             </div>
             {bars.map(b => {
               const val = m[b.key as keyof typeof m] as number;
-              const goal = game.goals[b.key as keyof Goals];
-              const pct = Math.min(100, (val / goal) * 100);
+              const pct = Math.min(100, (val / b.goal) * 100);
               return (
                 <div key={b.key} className="ind-row">
                   <span className="ind-label">{b.label}</span>
@@ -328,11 +334,41 @@ function IndicatorsContent({ game }: { game: GameState }) {
                     <div className="ind-fill" style={{ width: pct+'%', '--bc': b.color } as any} />
                   </div>
                   <span className="ind-val">
-                    {Math.round(val)}/{goal}{val >= goal ? <span className="check-icon"> ✓</span> : ''}
+                    {Math.round(val)}/{b.goal}{val >= b.goal ? <span className="check-icon"> ✓</span> : ''}
                   </span>
                 </div>
               );
             })}
+            {/* Legado comunitario */}
+            <div className="ind-row">
+              <span className="ind-label">Legado</span>
+              <div className="ind-bar">
+                <div className="ind-fill" style={{ width: comPct+'%', '--bc': 'var(--teal)' } as any} />
+              </div>
+              <span className="ind-val">
+                {p.impact.comunitario}/{game.goals.comunitario}{p.impact.comunitario >= game.goals.comunitario ? <span className="check-icon"> ✓</span> : ''}
+              </span>
+            </div>
+            {/* Seguridad financiera — sin techo, solo piso */}
+            <div className="ind-row">
+              <span className="ind-label">Seguridad</span>
+              <div className="ind-bar">
+                <div className="ind-fill" style={{ width: secPct+'%', '--bc': 'var(--gold)' } as any} />
+              </div>
+              <span className="ind-val">
+                ${Math.round(totalSec)}{totalSec >= game.goals.securityFloor ? <span className="check-icon"> ✓</span> : ''}
+              </span>
+            </div>
+            {/* Portafolio Permanente — breakdown si hay coleccionables */}
+            {p.collectibles.length > 0 && (
+              <div className="portfolio-breakdown">
+                {p.collectibles.map((c, i) => (
+                  <span key={i} className="pb-item">
+                    {COL_ICONS[c.kind]} ${c.value}{c.value > c.boughtFor ? '▲' : c.value < c.boughtFor ? '▼' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
@@ -500,7 +536,12 @@ function TopBar({ openPanel, setOpenPanel, turn }: {
   setOpenPanel: (p: PanelId) => void;
   turn: number;
 }) {
+  const [musicOn, setMusicOn] = useState(false);
   function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
+  function toggleMusic() {
+    jazz.toggle();
+    setMusicOn(!jazz.muted);
+  }
   return (
     <div id="top-bar">
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
@@ -510,6 +551,10 @@ function TopBar({ openPanel, setOpenPanel, turn }: {
           onClick={() => toggle('indicators')} title="Indicadores">📊</button>
         <button className={'hud-btn'+(openPanel==='historia'?' on':'')}
           onClick={() => toggle('historia')} title="Historia">📜</button>
+        <button className={'hud-btn music-btn'+(musicOn?' on':'')}
+          onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
+          {musicOn ? '🎷' : '🔇'}
+        </button>
         <button className={'about-btn-hud'+(openPanel==='about'?' on':'')}
           onClick={() => toggle('about')} title="¿Qué es este juego?">?</button>
       </div>
@@ -517,16 +562,18 @@ function TopBar({ openPanel, setOpenPanel, turn }: {
   );
 }
 
+const COL_ICONS: Record<string, string> = { cuadro:'🖼️', vino:'🍷', joyeria:'💎', tarjeta:'⚾', bitcoin:'₿' };
+
 // ── PlayerCard for zoom modal ──
 function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
   const m = metrics(p);
   const col = PLAYER_COLORS[p.colorIndex];
   const loc = locById(p.currentLocation);
+  const portfolio = portfolioSlices(p);
   const bars = [
-    { key:'patrimonio', label:'Patrimonio', color:'var(--gold)', goal: game.goals.patrimonio },
-    { key:'bienestar',  label:'Bienestar',  color:'var(--green)', goal: game.goals.bienestar },
-    { key:'conocimientos', label:'Saber', color:'var(--violet)', goal: game.goals.conocimientos },
-    { key:'impacto',    label:'Impacto',    color:'var(--pink)', goal: game.goals.impacto },
+    { key:'bienestar',      label:'Bienestar',     color:'var(--green)',  goal: game.goals.bienestar },
+    { key:'conocimientos',  label:'Conocimientos', color:'var(--violet)', goal: game.goals.conocimientos },
+    { key:'impacto',        label:'Impacto',       color:'var(--pink)',   goal: game.goals.impacto },
   ] as const;
   return (
     <div className="pcard-zoom">
@@ -564,6 +611,19 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
           </div>
         );
       })}
+      <div className="portfolio-mini">
+        <span className="pm-label">Portafolio Permanente</span>
+        <span className="pm-row"><span>💵 Efectivo</span><b>${portfolio.cash}</b></span>
+        <span className="pm-row"><span>🏦 Banco</span><b>${portfolio.stable}</b></span>
+        <span className="pm-row"><span>🏭 Negocio</span><b>${portfolio.growth}</b></span>
+        <span className="pm-row"><span>🚗 Bienes</span><b>${portfolio.hard}</b></span>
+        {p.collectibles.length > 0 && (
+          <span className="pm-row"><span>🎨 Coleccionables</span><b>${portfolio.collectibles}</b></span>
+        )}
+        {p.collectibles.map((c, i) => (
+          <span key={i} className="pm-col">{COL_ICONS[c.kind]} {c.name} · ${c.value} {c.value > c.boughtFor ? '▲' : '▼'}</span>
+        ))}
+      </div>
       <div className="pcard-dims">
         impacto → prof {p.impact.profesional} · fam {p.impact.familiar} · com {p.impact.comunitario} · emp {p.impact.empresarial}
       </div>

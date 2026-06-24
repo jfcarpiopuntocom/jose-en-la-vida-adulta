@@ -1,6 +1,7 @@
 import {
   GameState, PlayerState, World, Goals, Effect, PlayerStats, GameEvent,
   FamilyMember, Personality, Business, Employee, GameAction, ImpactNet,
+  Collectible, CollectibleKind,
 } from './types';
 import { CAREER_LADDER } from './types';
 import {
@@ -9,7 +10,13 @@ import {
 } from './data';
 
 export const HOURS_PER_TURN = 112;
-export const DEFAULT_GOALS: Goals = { patrimonio: 8000, bienestar: 75, conocimientos: 60, impacto: 60 };
+export const DEFAULT_GOALS: Goals = {
+  securityFloor: 1800,  // piso de seguridad — alcanzable en cualquier ruta
+  bienestar: 68,
+  conocimientos: 52,
+  impacto: 52,
+  comunitario: 18,      // legado comunitario mínimo en Cuenca
+};
 export const PLAYER_COLORS = ['var(--p0)', 'var(--p1)', 'var(--p2)', 'var(--p3)'];
 const rnd = (n: number) => Math.floor(Math.random() * n);
 const pick = <T,>(a: T[]): T => a[rnd(a.length)];
@@ -57,6 +64,7 @@ export function newPlayer(
     impact: { profesional: 5, familiar: 10, comunitario: 5, empresarial: 0 },
     stats: { experience: 0, dependability: 50, leadership: 0, health: 80, stress: 20, happiness: 60, reputation: 30, resilience: 0, knowledge: 5 },
     retired: false,
+    collectibles: [],
     ...(aiOpts ?? {}),
   };
 }
@@ -92,10 +100,24 @@ export function applyEff(p: PlayerState, eff: Effect[]): void {
 }
 
 /* ---------- MÉTRICAS ---------- */
+export function collectiblesValue(p: PlayerState): number {
+  return Math.round(p.collectibles.reduce((s, c) => s + c.value, 0));
+}
+export function portfolioSlices(p: PlayerState) {
+  return {
+    cash:        Math.round(p.liquidity),
+    stable:      Math.round(p.bank),
+    growth:      Math.round(p.businesses.reduce((s, b) => s + b.capital, 0)),
+    hard:        Math.round(p.vehicles.reduce((s, v) => s + v.value, 0)),
+    collectibles:collectiblesValue(p),
+  };
+}
 export function patrimonio(p: PlayerState): number {
-  const biz = p.businesses.reduce((s, b) => s + b.capital, 0);
-  const veh = p.vehicles.reduce((s, v) => s + v.value, 0);
-  return Math.round(p.liquidity + p.bank + biz + veh);
+  const sl = portfolioSlices(p);
+  return sl.cash + sl.stable + sl.growth + sl.hard + sl.collectibles;
+}
+export function totalAssets(p: PlayerState): number {
+  return p.liquidity + p.bank + collectiblesValue(p) + p.businesses.reduce((s,b)=>s+b.capital,0);
 }
 export function bienestar(p: PlayerState): number {
   return Math.round((p.stats.health + p.stats.happiness + (100 - p.stats.stress)) / 3);
@@ -276,6 +298,45 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     }
   }
 
+  // ── Portafolio Permanente — coleccionables deflacionarios ──
+  // Inspirado en Harry Browne: diversificar en activos que preservan valor
+  function buyCol(kind: CollectibleKind, name: string, cost: number, hours: number): GameAction {
+    return {
+      id: 'buy_' + kind,
+      label: `Comprar ${name} (${hours}h · $${cost})`,
+      hours, desc: 'activo deflacionario · aprecia con el tiempo',
+      ok: p.timeLeft >= hours && p.liquidity >= cost,
+      run: () => {
+        applyEff(p, [['time', -hours], ['liq', -cost], ['impact', 'comunitario', kind==='cuadro'?2:0]]);
+        p.collectibles.push({ kind, name, value: cost, boughtFor: cost });
+        return `${p.name} adquirió: ${name} ($${cost})`;
+      }
+    };
+  }
+
+  if (loc === 'centro_historico') {
+    if (p.collectibles.filter(c => c.kind === 'cuadro').length < 3)
+      out.push(buyCol('cuadro', 'cuadro local', 180 + rnd(220), 2));
+    if (p.collectibles.filter(c => c.kind === 'joyeria').length < 4)
+      out.push(buyCol('joyeria', 'joyería artesanal', 120 + rnd(180), 1));
+    out.push({ id: 'comunity_act', label: 'Actividad cultural (3h)', hours: 3, desc: '+legado comunitario, +felicidad, gratis', ok: p.timeLeft >= 3,
+      run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 5], ['impact', 'comunitario', 4], ['impact', 'profesional', 1]]); return `${p.name} participó en actividad cultural en el Centro Histórico`; } });
+  }
+
+  if (loc === 'mall_rio') {
+    if (p.collectibles.filter(c => c.kind === 'vino').length < 5)
+      out.push(buyCol('vino', 'vino de guarda', 80 + rnd(100), 1));
+    if (p.collectibles.filter(c => c.kind === 'tarjeta').length < 3)
+      out.push(buyCol('tarjeta', 'tarjeta de béisbol', 60 + rnd(140), 1));
+    if (p.collectibles.filter(c => c.kind === 'bitcoin').length < 2 && p.liquidity >= 100)
+      out.push(buyCol('bitcoin', 'fracción BTC', 100, 1));
+  }
+
+  if (loc === 'rio_tomebamba') {
+    out.push({ id: 'meditar', label: 'Meditar junto al río (2h)', hours: 2, desc: '+salud, -estrés, +legado comunitario', ok: p.timeLeft >= 2,
+      run: () => { applyEff(p, [['time', -2], ['stat', 'health', 4], ['stat', 'stress', -8], ['stat', 'happiness', 4], ['impact', 'comunitario', 2]]); return `${p.name} meditó junto al Tomebamba (+salud, -estrés)`; } });
+  }
+
   // Empleos: trabajar / postular según escalera
   for (const j of jobsAt(loc)) {
     if (p.job && p.job.id === j.id) {
@@ -295,9 +356,32 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   return out.filter(a => a.ok);
 }
 
+/* ---------- APRECIACIÓN DE COLECCIONABLES (Portafolio Permanente) ---------- */
+// Perfiles de volatilidad inspirados en Harry Browne: activos reales como cobertura
+const COL_RATES: Record<string, () => number> = {
+  cuadro:   () => 0.02 + Math.random() * 0.04,            // +2–6% estable
+  vino:     () => 0.015 + Math.random() * 0.03,           // +1.5–4.5% muy estable
+  joyeria:  () => 0.01 + Math.random() * 0.025,           // +1–3.5% reserva de valor
+  tarjeta:  () => -0.08 + Math.random() * 0.30,           // -8% a +22% especulativo
+  bitcoin:  () => -0.18 + Math.random() * 0.50,           // -18% a +32% volátil
+};
+
+function tickCollectibles(p: PlayerState): string[] {
+  const logs: string[] = [];
+  for (const c of p.collectibles) {
+    const rate = (COL_RATES[c.kind] ?? (() => 0))();
+    const delta = Math.round(c.value * rate);
+    c.value = Math.max(1, c.value + delta);
+    if (Math.abs(rate) > 0.12)
+      logs.push(`${c.name}: ${rate >= 0 ? '+' : ''}${Math.round(rate*100)}% → $${c.value}`);
+  }
+  return logs;
+}
+
 /* ---------- CIERRE DE QUINCENA ---------- */
 export function closeBusinessAndEmployees(p: PlayerState): string[] {
   const logs: string[] = [];
+  logs.push(...tickCollectibles(p));
   for (const b of p.businesses) {
     p.liquidity -= b.costosFijos;
     for (const e of b.employees) {
@@ -314,10 +398,15 @@ export function closeBusinessAndEmployees(p: PlayerState): string[] {
   return logs;
 }
 
-/* ---------- VICTORIA ---------- */
+/* ---------- VICTORIA — vida plena, no meta económica ---------- */
 export function hasWon(p: PlayerState, g: Goals): boolean {
   const m = metrics(p);
-  return m.patrimonio >= g.patrimonio && m.bienestar >= g.bienestar && m.conocimientos >= g.conocimientos && m.impacto >= g.impacto;
+  // Vida equilibrada: bienestar + saber + impacto + legado comunitario + piso de seguridad
+  return m.bienestar >= g.bienestar
+    && m.conocimientos >= g.conocimientos
+    && m.impacto >= g.impacto
+    && p.impact.comunitario >= g.comunitario
+    && totalAssets(p) >= g.securityFloor;
 }
 
 /* ---------- CPU OPPONENT — JOSÉ ---------- */
