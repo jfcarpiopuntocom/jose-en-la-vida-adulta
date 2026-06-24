@@ -30,13 +30,25 @@ export interface SaveBlob {
   state: GameState;
 }
 export function saveLocal(state: GameState): void {
-  const blob: SaveBlob = { savedAt: Date.now(), state };
-  localStorage.setItem(LS_KEY, JSON.stringify(blob));
+  try {
+    const blob: SaveBlob = { savedAt: Date.now(), state };
+    localStorage.setItem(LS_KEY, JSON.stringify(blob));
+  } catch { /* localStorage full or unavailable — continue without saving */ }
 }
 export function loadLocal(): GameState | null {
   const raw = localStorage.getItem(LS_KEY);
   if (!raw) return null;
-  try { return (JSON.parse(raw) as SaveBlob).state; } catch { return null; }
+  try {
+    const g = (JSON.parse(raw) as SaveBlob).state;
+    // Migrate old saves: ensure each player has collectibles array (added v0.90+)
+    if (g?.players) {
+      for (const p of g.players) {
+        if (!Array.isArray(p.collectibles)) p.collectibles = [];
+      }
+      if (!g.goals?.emergencyMonths) g.goals = { ...g.goals, emergencyMonths: 6 };
+    }
+    return g;
+  } catch { return null; }
 }
 export function hasLocalSave(): boolean { return localStorage.getItem(LS_KEY) !== null; }
 export function clearLocal(): void { localStorage.removeItem(LS_KEY); }

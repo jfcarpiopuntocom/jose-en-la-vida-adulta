@@ -825,15 +825,51 @@ input[type=text], input[type=number] {
   .lid-panel { right: 6px; left: 6px; width: auto; top: auto; bottom: 90px; }
   .node-inspect { right: 6px; bottom: 140px; left: auto; }
 }
-@media (max-width: 900px) and (orientation: portrait) {
-  header, #hud, #map-world { display: none; }
-  .rotate-overlay {
-    display: flex; position: fixed; inset: 0; z-index: 300;
-    background: var(--bg);
-    flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px; text-align: center; padding: 30px; font-size: 18px; font-weight: 700;
-    color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
+/* ── Portrait mobile: stacked layout (board top, actions bottom) ── */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 500px) and (max-width: 420px) {
+  /* Hide rotate blocker — we handle portrait now */
+  .rotate-overlay { display: none !important; }
+
+  /* Board: top ~46% of screen, full width */
+  .board-container {
+    top: 46px; left: 0; right: 0; bottom: 52vh;
   }
-  .rotate-overlay .rotate-icon { font-size: 48px; }
-  .setup-screen { display: flex !important; }
+  .node-inspect { right: 0; bottom: 52vh; left: auto; }
+
+  /* Stats panel: slim horizontal strip between board and actions */
+  #stats-panel {
+    top: auto; bottom: 50vh; left: 0; right: 0; width: 100%;
+    border-radius: 0; border-left: none; border-right: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 5px 12px;
+    max-height: 2.6vh;        /* collapse to thin strip — tap 📊 for full stats */
+    overflow: hidden;
+    display: flex; flex-direction: row; gap: 10px; align-items: center;
+  }
+  /* Show only the first stat block in portrait */
+  #stats-panel > *:not(:first-child) { display: none; }
+  #stats-panel .sp-name { font-size: 0.78rem; }
+
+  /* Actions bar: bottom ~48% */
+  #actions-bar {
+    bottom: 0; left: 0; right: 0; top: auto;
+    height: 48vh; max-height: none;
+    overflow-y: auto; border-radius: 14px 14px 0 0;
+    border-bottom: none;
+    padding: 10px 10px 20px;
+  }
+  .actions-row { flex-wrap: wrap; gap: 6px; }
+  .act-btn { min-width: calc(50% - 4px); flex: 1 1 calc(50% - 4px); }
+
+  /* Panels: full-width overlays */
+  .lid-panel { left: 0; right: 0; width: auto; top: 46px; bottom: 0; border-radius: 0; }
+  .bar-motto { display: none; }
+  #top-bar { padding: 0 8px; }
+  .game-name { font-size: 0.70rem; }
+}
+
+/* Landscape on narrow phones (≤900px): keep right-sidebar layout */
+@media (max-width: 900px) and (orientation: landscape) {
+  .rotate-overlay { display: none; }
 }

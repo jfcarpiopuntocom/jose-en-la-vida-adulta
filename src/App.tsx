@@ -11,6 +11,9 @@ import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
 import { jazz } from './music';
 
+// Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
+const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
 const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾'];
 
 // Zone → node color type
@@ -766,7 +769,7 @@ export function App() {
   }
   function mutate(fn: (g: GameState) => void, persist = false) {
     if (!game) return;
-    const g: GameState = structuredClone(game);
+    const g: GameState = deepClone(game);
     fn(g);
     commit(g, persist);
   }
@@ -800,7 +803,7 @@ export function App() {
   }
 
   function endPlayerTurn(override?: GameState) {
-    const g: GameState = structuredClone(override || game!);
+    const g: GameState = deepClone(override || game!);
     g.players[g.activePlayerIndex].timeLeft = 0;
     if (g.activePlayerIndex < g.players.length - 1) {
       g.activePlayerIndex++; commit(g);
@@ -817,7 +820,7 @@ export function App() {
     const snap = game; // capture current state
     const delay = 900 + Math.random() * 700;
     const timer = setTimeout(() => {
-      const g: GameState = structuredClone(snap);
+      const g: GameState = deepClone(snap);
       const ai = g.players[g.activePlayerIndex];
       const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
       logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
@@ -869,7 +872,7 @@ export function App() {
   }
 
   function finishTurn(g0: GameState) {
-    const g: GameState = structuredClone(g0);
+    const g: GameState = deepClone(g0);
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
     g.turn++; g.activePlayerIndex = 0;
