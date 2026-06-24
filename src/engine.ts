@@ -176,7 +176,7 @@ export function newPlayer(
 }
 
 export function newGame(
-  players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[],
+  players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3; avatar?: number }[],
   goals: Goals = DEFAULT_GOALS,
   tier: 1|2|3|4 = 1
 ): GameState {
@@ -184,10 +184,14 @@ export function newGame(
   const lm = TIER_GOALS[tier]?.luckMult ?? 1;
   return {
     turn: 1, activePlayerIndex: 0, gameTier: tier,
-    players: players.map((p, i) => newPlayer(p.id, p.name, i,1,
-      p.isAI ? { isAI: true, aiStrategy: p.aiStrategy!, aiDifficulty: p.aiDifficulty! } : undefined,
-      p.isAI ? 1 : lm // la suerte de la dificultad afecta al humano; el CPU corre parejo
-    )),
+    players: players.map((p, i) => {
+      const ps = newPlayer(p.id, p.name, i,1,
+        p.isAI ? { isAI: true, aiStrategy: p.aiStrategy!, aiDifficulty: p.aiDifficulty! } : undefined,
+        p.isAI ? 1 : lm // la suerte de la dificultad afecta al humano; el CPU corre parejo
+      );
+      if (p.avatar !== undefined) ps.avatar = p.avatar;
+      return ps;
+    }),
     world: { economy: bad ? 'bad' : 'good', wageMult: bad ? 0.8 : 1, salesMult: bad ? 0.8 : 1, cpuMult: (TIER_GOALS[tier]?.cpuMult ?? 0.78), luckMult: lm },
     goals: { ...goals }, log: [], over: false, winnerId: null,
   };

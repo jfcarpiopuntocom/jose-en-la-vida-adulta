@@ -126,6 +126,7 @@ export interface PlayerState {
   name: string;
   realName?: string;   // nombre real para guardar la aventura (se pide al final)
   colorIndex: number;
+  avatar?: number;     // retrato elegido por el jugador (0-3 = player1..4.png)
   generation: number;  // 1 = José, 2+ = herederos (Modo Legado)
   timeLeft: number;
   liquidity: number;

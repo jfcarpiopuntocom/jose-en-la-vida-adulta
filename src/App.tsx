@@ -36,9 +36,10 @@ function Portrait({ p, size = 72 }: { p: PlayerState; size?: number }) {
   const [imgFailed, setImgFailed] = useState(false);
   const isJose = p.isAI && p.name.toLowerCase().startsWith('jos');
   // José tiene su retrato; los 4 jugadores usan player1..4.png (fallback a smiley si aún no están)
+  const slot = (p.avatar ?? p.colorIndex) + 1;
   const src = isJose
     ? '/jose-en-la-vida-adulta/avatars/jose.png'
-    : '/jose-en-la-vida-adulta/avatars/player' + (p.colorIndex + 1) + '.png';
+    : '/jose-en-la-vida-adulta/avatars/player' + slot + '.png';
   if (!imgFailed) {
     return (
       <img src={src}
@@ -246,10 +247,11 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const [n, setN] = useState(1);
   const [withJose, setWithJose] = useState(true);
   const [joseLine] = useState(joseQuip());
+  const [avatar, setAvatar] = useState(0);
 
   function start() {
     const tierGoals = TIER_GOALS[tier] as typeof TIER_GOALS[1];
-    const human = { id: 'p0', name: 'Tú' };
+    const human = { id: 'p0', name: 'Tú', avatar };
     const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] = [human];
     for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1) });
     if (withJose) players.push({ id: 'jose', name: 'José', isAI: true, aiStrategy: 'empresa', aiDifficulty: 2 });
@@ -281,6 +283,18 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
                 Jugar sin José <span className="jose-hero-warn">(no recomendado)</span>
               </label>
             </div>
+          </div>
+
+          {/* Selector de avatar */}
+          <div className="setup-label">Elige tu personaje</div>
+          <div className="avatar-pick">
+            {[0,1,2,3].map(i => (
+              <button key={i} type="button"
+                className={'avatar-opt' + (avatar === i ? ' avatar-sel' : '')}
+                onClick={() => setAvatar(i)}>
+                <img src={'/jose-en-la-vida-adulta/avatars/player' + (i+1) + '.png'} alt={'Personaje ' + (i+1)} />
+              </button>
+            ))}
           </div>
 
           {/* Tier selector */}
@@ -415,16 +429,16 @@ function StatsPanel({
         <div className="player-loc">{loc.icon} {loc.name}</div>
         <div className="econ-line">
           {game.world.economy === 'good'
-            ? <span className="econ-good">● buen año</span>
-            : <span className="econ-bad">● mal año</span>}
+            ? <span className="econ-good">● buen año económico del país</span>
+            : <span className="econ-bad">● mal año económico del país</span>}
         </div>
       </div>
       <div className="stat-divider" />
       <div className="resources">
         <div className="resource"><span className="res-icon">💰</span><span className="res-val">${p.liquidity}</span></div>
-        {(() => { const nw = p.liquidity + p.bank + p.businesses.reduce((s,b)=>s+b.capital,0) + collectiblesValue(p); return <div className="resource net-worth-row"><span className="res-icon" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA"}}>NW</span><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:700}}>${nw}</span></div>; })()}
+        {(() => { const nw = p.liquidity + p.bank + p.businesses.reduce((s,b)=>s+b.capital,0) + collectiblesValue(p); return <div className="resource net-worth-row"><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:800}}>Patrimonio neto: ${nw}</span></div>; })()}
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
-        <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} titulos</span></div>
+        <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos académicos</span></div>
         {p.job && <div className="resource"><span className="res-icon">W</span><span className="res-val" style={{fontSize:"0.78rem"}}>{p.job.title}</span></div>}
         {p.education.enrolledId && <div className="resource"><span className="res-icon">E</span><span className="res-val" style={{fontSize:"0.78rem"}}>Estudiando...</span></div>}
         <div className="resource"><span className="res-icon">Q</span><span className="res-val">Quincena {game.turn}</span></div>
