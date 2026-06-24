@@ -10,13 +10,25 @@ import {
 } from './data';
 
 export const HOURS_PER_TURN = 112;
-export const DEFAULT_GOALS: Goals = {
-  bienestar: 68,
-  conocimientos: 52,
-  impacto: 52,
-  comunitario: 18,
-  emergencyMonths: 6,   // fondo de 6 meses de gastos — universal en finanzas personales
+
+export interface TierMeta extends Goals {
+  label: string;
+  desc: string;
+  cpuMult: number; // multiplicador de ingresos del CPU (handicap)
+}
+
+export const TIER_GOALS: Record<number, TierMeta> = {
+  1: { label: 'Principiante', desc: 'Aprende los sistemas sin presión. Desbloquea Intermedio al ganar.',
+       bienestar:55, conocimientos:38, impacto:38, comunitario:10, emergencyMonths:3, passiveGoalPct:15, cpuMult:0.55 },
+  2: { label: 'Intermedio',   desc: 'El juego completo. Un desafío real. Desbloquea Avanzado al ganar.',
+       bienestar:68, conocimientos:52, impacto:52, comunitario:18, emergencyMonths:6, passiveGoalPct:35, cpuMult:0.78 },
+  3: { label: 'Avanzado',     desc: 'Para quienes ya dominan los sistemas. Desbloquea Leyenda al ganar.',
+       bienestar:80, conocimientos:65, impacto:65, comunitario:28, emergencyMonths:9, passiveGoalPct:60, cpuMult:0.95 },
+  4: { label: 'Leyenda',      desc: 'Sin contemplaciones. José juega sin handicap.',
+       bienestar:90, conocimientos:78, impacto:78, comunitario:40, emergencyMonths:12, passiveGoalPct:100, cpuMult:1.10 },
 };
+
+export const DEFAULT_GOALS: Goals = TIER_GOALS[1] as Goals;
 
 // ── Arquetipos de ingreso (concepto universal, no propiedad de nadie) ──
 // Asalariado: intercambia tiempo por sueldo fijo
@@ -135,15 +147,16 @@ export function newPlayer(
 
 export function newGame(
   players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[],
-  goals: Goals = DEFAULT_GOALS
+  goals: Goals = DEFAULT_GOALS,
+  tier: 1|2|3|4 = 1
 ): GameState {
   const bad = Math.random() < 0.5;
   return {
-    turn: 1, activePlayerIndex: 0,
+    turn: 1, activePlayerIndex: 0, gameTier: tier,
     players: players.map((p, i) => newPlayer(p.id, p.name, i,1,
       p.isAI ? { isAI: true, aiStrategy: p.aiStrategy!, aiDifficulty: p.aiDifficulty! } : undefined
     )),
-    world: { economy: bad ? 'bad' : 'good', wageMult: bad ? 0.8 : 1, salesMult: bad ? 0.8 : 1 },
+    world: { economy: bad ? 'bad' : 'good', wageMult: bad ? 0.8 : 1, salesMult: bad ? 0.8 : 1, cpuMult: (TIER_GOALS[tier]?.cpuMult ?? 0.78) },
     goals: { ...goals }, log: [], over: false, winnerId: null,
   };
 }
@@ -216,7 +229,8 @@ export function tryPromote(p: PlayerState): string | null {
   return null;
 }
 export function wageOf(p: PlayerState, job: import('./types').Job, world: World): number {
-  return Math.round(job.wage * (1 + p.careerLevel * 0.22) * world.wageMult);
+  const base = Math.round(job.wage * (1 + p.careerLevel * 0.22) * world.wageMult);
+  return p.isAI ? Math.round(base * world.cpuMult) : base;
 }
 
 /* ---------- EDUCACIÓN ---------- */
@@ -586,7 +600,7 @@ export function hasWon(p: PlayerState, g: Goals): boolean {
     && m.impacto >= g.impacto
     && p.impact.comunitario >= g.comunitario
     && emMonths >= g.emergencyMonths
-    && pi >= exp * 0.35;   // al menos 35% de gastos cubiertos por flujo pasivo
+    && pi >= exp * (g.passiveGoalPct / 100);   // al menos 35% de gastos cubiertos por flujo pasivo
 }
 
 /* ---------- CPU OPPONENT — JOSÉ ---------- */

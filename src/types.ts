@@ -9,6 +9,7 @@ export interface World {
   economy: EconomyState;
   wageMult: number;
   salesMult: number;
+  cpuMult: number; // handicap: CPU earns this fraction of calculated wages (1.0 = fair, <1 = easier for human)
 }
 
 // stop funcional del TABLERO (donde el jugador se mueve y actúa) — NO es un barrio
@@ -162,14 +163,15 @@ export interface Collectible {
 export type Cuadrante = 'asalariado' | 'independiente' | 'empresario' | 'inversionista';
 
 export interface Goals {
-  // Metas de vida — sin número económico fijo
   bienestar: number;
   conocimientos: number;
   impacto: number;
   comunitario: number;
-  // Fondo de emergencia: meses de gastos cubiertos en banco (universal: 3-6 meses)
   emergencyMonths: number;
+  passiveGoalPct: number; // % de gastos mensuales cubiertos por ingreso pasivo para ganar
 }
+
+export type GameTier = 1 | 2 | 3 | 4;
 
 export interface LogEntry {
   turn: number;
@@ -184,6 +186,7 @@ export interface GameState {
   players: PlayerState[];
   world: World;
   goals: Goals;
+  gameTier: GameTier;
   log: LogEntry[];
   over: boolean;
   winnerId: string | null;

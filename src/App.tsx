@@ -4,9 +4,10 @@ import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
   hasWon, canRetire, makeHeir, cpuTurn, portfolioSlices, collectiblesValue,
   expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
-  CUADRANTE_LABEL, CUADRANTE_ICON,
+  CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
 } from './engine';
+import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
 import { jazz } from './music';
@@ -14,7 +15,27 @@ import { jazz } from './music';
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
-const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾'];
+const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾']; // fallback
+function PawnAvatar({ p, size = 22, glow = false }: { p: PlayerState; size?: number; glow?: boolean }) {
+  const url = avatarUrl(p.name, p.colorIndex);
+  const col = PLAYER_COLORS[p.colorIndex];
+  return (
+    <img
+      src={url}
+      width={size} height={size}
+      style={{
+        borderRadius: '50%',
+        border: `2px solid ${col}`,
+        background: '#080c1a',
+        filter: glow ? `drop-shadow(0 0 5px ${col})` : 'none',
+        flexShrink: 0,
+        display: 'inline-block',
+        verticalAlign: 'middle',
+      }}
+      alt={p.name}
+    />
+  );
+}
 
 // Zone → node color type
 const ZONE_T: Record<string, string> = {
@@ -109,22 +130,48 @@ const DIFFICULTY_DESC: Record<number, string> = {
   3: 'José optimiza cada hora — sin contemplaciones',
 };
 
+// ── Avatar helper (DiceBear — MIT license, free commercial use) ──
+const DICEBEAR_STYLES = ['adventurer', 'personas', 'micah', 'lorelei'];
+function avatarUrl(seed: string, idx: number): string {
+  const style = DICEBEAR_STYLES[idx % DICEBEAR_STYLES.length];
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
+}
+
+const TIER_LOCK_KEY = 'jelva_max_tier';
+function getMaxTier(): GameTier {
+  const v = parseInt(localStorage.getItem(TIER_LOCK_KEY) || '1', 10);
+  return (Math.min(4, Math.max(1, v)) as GameTier);
+}
+
 // ── Setup screen ──
 function Setup({ onStart }: { onStart: (g: GameState) => void }) {
+  const maxTier = getMaxTier();
+  const [tier, setTier] = useState<GameTier>(1);
   const [n, setN] = useState(1);
+  const [names, setNames] = useState<string[]>(['', '', '', '']);
   const [withJose, setWithJose] = useState(false);
   const [joseSide, setJoseSide] = useState<'empleado'|'empresa'>('empresa');
   const [joseDiff, setJoseDiff] = useState<1|2|3>(2);
 
+  function setName(i: number, v: string) {
+    setNames(ns => ns.map((n, j) => j === i ? v : n));
+  }
+
   function start() {
+    const tierGoals = TIER_GOALS[tier] as typeof TIER_GOALS[1];
     const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] =
-      Array.from({ length: n }, (_, i) => ({ id: 'p'+i, name: 'Jugador '+(i+1) }));
+      Array.from({ length: n }, (_, i) => ({ id: 'p'+i, name: names[i].trim() || `Jugador ${i+1}` }));
     if (withJose) players.push({
       id: 'jose', name: 'José',
       isAI: true, aiStrategy: joseSide, aiDifficulty: joseDiff,
     });
-    onStart(newGame(players, DEFAULT_GOALS));
+    const { label: _l, desc: _d, cpuMult: _c, ...goals } = tierGoals;
+    onStart(newGame(players, goals, tier));
   }
+
+  const tierOrder: GameTier[] = [1, 2, 3, 4];
+  const tierIcons = ['◆', '◆◆', '◆◆◆', '◆◆◆◆'];
+  const tierColors = ['#28ECAA', '#E8A020', '#fb7185', '#c084fc'];
 
   return (
     <>
@@ -133,20 +180,63 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
       <div className="setup-screen">
         <div className="setup-card">
           <div className="setup-title">JOSÉ EN LA VIDA ADULTA</div>
-          <div className="setup-sub">el juego de la vida · ambientado en Cuenca, Ecuador</div>
-          <p className="setup-p">
-            Gestiona tu tiempo, tu familia, tu carrera y tu negocio.
-            Empiezas como "Jugador 1" — tu nombre real se pide solo al ganar.
-          </p>
+          <div className="setup-sub">simulador de vida adulta · Cuenca, Ecuador</div>
 
-          <div className="setup-label">¿Cuántos jugadores humanos? (1–4)</div>
-          <div className="setup-row" style={{ marginBottom: 18 }}>
+          {/* Tier selector */}
+          <div className="setup-label">Nivel de dificultad</div>
+          <div className="tier-grid">
+            {tierOrder.map((t, i) => {
+              const tm = TIER_GOALS[t];
+              const locked = t > maxTier;
+              const active = tier === t;
+              return (
+                <button
+                  key={t}
+                  className={'tier-btn' + (active ? ' tier-active' : '') + (locked ? ' tier-locked' : '')}
+                  style={{ '--tc': tierColors[i] } as any}
+                  onClick={() => !locked && setTier(t)}
+                  disabled={locked}
+                >
+                  <span className="tier-icon">{tierIcons[i]}</span>
+                  <span className="tier-name">{tm.label}</span>
+                  {locked
+                    ? <span className="tier-lock">Gana {TIER_GOALS[t-1]?.label} para desbloquear</span>
+                    : <span className="tier-desc">{tm.desc.split('.')[0]}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Player count + names */}
+          <div className="setup-label" style={{ marginTop: 16 }}>¿Cuántos jugadores? (1–4)</div>
+          <div className="setup-row" style={{ marginBottom: 14 }}>
             {[1,2,3,4].map(i => (
               <button key={i} className={n===i?'setup-sel':'setup-opt'} onClick={() => setN(i)}>{i}</button>
             ))}
           </div>
 
-          {/* José (CPU) section */}
+          {/* Name inputs with DiceBear avatars */}
+          <div className="player-name-list">
+            {Array.from({ length: n }, (_, i) => (
+              <div key={i} className="player-name-row">
+                <img
+                  className="setup-avatar"
+                  src={avatarUrl(names[i] || `Jugador${i+1}`, i)}
+                  alt={`avatar jugador ${i+1}`}
+                />
+                <input
+                  className="name-input"
+                  type="text"
+                  maxLength={18}
+                  placeholder={`Jugador ${i+1}`}
+                  value={names[i]}
+                  onChange={e => setName(i, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* José CPU section */}
           <div className="jose-section">
             <label className="jose-toggle-label">
               <input type="checkbox" checked={withJose} onChange={e => setWithJose(e.target.checked)}
@@ -155,21 +245,21 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             </label>
             {withJose && (
               <div className="jose-config">
-                <div className="setup-label" style={{ marginTop: 12 }}>Ruta de José:</div>
+                <div className="setup-label" style={{ marginTop: 10 }}>Estrategia de José:</div>
                 <div className="setup-row">
                   <button className={joseSide==='empleado'?'setup-sel':'setup-opt'} onClick={() => setJoseSide('empleado')}>
-                    💼 Empleado
+                    Empleado
                   </button>
                   <button className={joseSide==='empresa'?'setup-sel':'setup-opt'} onClick={() => setJoseSide('empresa')}>
-                    🏭 Empresa
+                    Empresa
                   </button>
                 </div>
                 <div className="side-desc">
                   {joseSide === 'empleado'
-                    ? 'José buscará empleo, subirá la escalera y priorizará educación y estabilidad.'
-                    : 'José ahorrará, abrirá un negocio, contratará y escalará a empresa.'}
+                    ? 'José busca empleo, sube la escalera y prioriza educación.'
+                    : 'José ahorra, abre negocio, contrata y escala a empresa.'}
                 </div>
-                <div className="setup-label" style={{ marginTop: 12 }}>Dificultad:</div>
+                <div className="setup-label" style={{ marginTop: 10 }}>Habilidad de José:</div>
                 <div className="setup-row">
                   {([1,2,3] as const).map(d => (
                     <button key={d} className={joseDiff===d?'setup-sel':'setup-opt'} onClick={() => setJoseDiff(d)}>
@@ -182,8 +272,8 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             )}
           </div>
 
-          <button className="primary" style={{ width:'100%', marginTop: 18 }} onClick={start}>
-            {withJose ? `Jugar contra José (${DIFFICULTY_LABEL[joseDiff]} · ${joseSide === 'empleado' ? '💼 Empleado' : '🏭 Empresa'})` : 'Empezar a jugar'}
+          <button className="primary" style={{ width:'100%', marginTop: 16 }} onClick={start}>
+            Empezar — {TIER_GOALS[tier].label}
           </button>
           {hasLocalSave() && (
             <button style={{ width:'100%', marginTop: 8 }} onClick={() => { const g = loadLocal(); if (g) onStart(g); }}>
@@ -601,10 +691,7 @@ function Board({ game, onMove, onInspect, inspecting }: {
                 {pawns.length > 0 && (
                   <div className="node-pawns">
                     {pawns.map(p => (
-                      <span key={p.id}
-                        style={{ filter: p.id===active.id ? `drop-shadow(0 0 4px ${PLAYER_COLORS[p.colorIndex]})` : 'none' }}>
-                        {PAWN_ICONS[p.colorIndex]}
-                      </span>
+                      <PawnAvatar key={p.id} p={p} size={20} glow={p.id === active.id} />
                     ))}
                   </div>
                 )}
@@ -790,6 +877,14 @@ function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
 function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }) {
   const winner = game.players.find(p => p.id === game.winnerId) || game.players[0];
   const col = PLAYER_COLORS[winner.colorIndex];
+  const wonTier = game.gameTier ?? 1;
+  const nextTier = Math.min(4, wonTier + 1) as GameTier;
+  const prevMax = getMaxTier();
+  // Unlock next tier
+  if (wonTier >= prevMax && nextTier > prevMax) {
+    localStorage.setItem(TIER_LOCK_KEY, String(nextTier));
+  }
+  const unlockedNew = nextTier > prevMax;
   const [realName, setRealName] = useState('');
   const [saved, setSaved] = useState(false);
   const hist = game.log.filter(l => l.importance >= 2).slice(-10);
@@ -811,7 +906,17 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
           <div className="victory-title" style={{ color: col, WebkitTextFillColor: col }}>
             {winner.name} — quincena {game.turn}
           </div>
-          <p className="victory-sub">Patrimonio, bienestar, conocimientos e impacto — las cuatro a la vez. Eso es una vida construida.</p>
+          <p className="victory-sub">Bienestar, carrera, patrimonio y legado — todo a la vez. Eso es una vida construida.</p>
+          {unlockedNew && nextTier <= 4 && (
+            <div className="tier-unlock-badge">
+              Nivel desbloqueado: {TIER_GOALS[nextTier].label}
+            </div>
+          )}
+          {wonTier === 4 && (
+            <div className="tier-unlock-badge tier-legend">
+              Leyenda completada. Has conquistado el juego.
+            </div>
+          )}
           <div style={{ marginBottom: 16 }}>
             {hist.map((l, i) => <div key={i} className="log-entry">Q{l.turn} · {l.text}</div>)}
           </div>

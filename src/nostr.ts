@@ -46,6 +46,9 @@ export function loadLocal(): GameState | null {
         if (!Array.isArray(p.collectibles)) p.collectibles = [];
       }
       if (!g.goals?.emergencyMonths) g.goals = { ...g.goals, emergencyMonths: 6 };
+      if (!g.goals?.passiveGoalPct) g.goals = { ...g.goals, passiveGoalPct: 35 };
+      if (!g.gameTier) g.gameTier = 2;
+      if (!g.world?.cpuMult) g.world = { ...g.world, cpuMult: 0.78 };
     }
     return g;
   } catch { return null; }

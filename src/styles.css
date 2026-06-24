@@ -982,3 +982,83 @@ input[type=text], input[type=number] {
   line-height: 1.5;
 }
 
+
+/* ── Tier selector (Setup) ── */
+.tier-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.tier-btn {
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 10px 12px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); cursor: pointer; text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 72px;
+}
+.tier-btn:not(:disabled):hover { background: rgba(255,255,255,0.07); }
+.tier-btn.tier-active {
+  border-color: var(--tc, #28ECAA);
+  background: rgba(40,236,170,0.06);
+  box-shadow: 0 0 12px rgba(40,236,170,0.15);
+}
+.tier-btn.tier-locked { opacity: 0.38; cursor: not-allowed; }
+.tier-icon {
+  font-size: 0.72rem; letter-spacing: 2px;
+  color: var(--tc, #28ECAA) !important; -webkit-text-fill-color: var(--tc, #28ECAA) !important;
+  margin-bottom: 3px;
+}
+.tier-name {
+  font-size: 0.9rem; font-weight: 700;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  margin-bottom: 3px;
+}
+.tier-desc {
+  font-size: 0.78rem; line-height: 1.35;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+.tier-lock {
+  font-size: 0.72rem; font-style: italic;
+  color: #999999 !important; -webkit-text-fill-color: #999999 !important;
+}
+
+/* ── Player name inputs with avatars (Setup) ── */
+.player-name-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.player-name-row { display: flex; align-items: center; gap: 10px; }
+.setup-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.18);
+  background: #0d1022; flex-shrink: 0;
+}
+.name-input {
+  flex: 1; padding: 8px 12px; border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  font-size: 0.93rem; font-family: inherit;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  outline: none;
+}
+.name-input:focus { border-color: rgba(232,160,32,0.6); }
+.name-input::placeholder { color: #777; -webkit-text-fill-color: #777; }
+
+/* ── Tier unlock badge (Victory screen) ── */
+.tier-unlock-badge {
+  margin: 14px auto 0;
+  display: inline-block;
+  padding: 10px 20px; border-radius: 8px;
+  background: rgba(40,236,170,0.1);
+  border: 1.5px solid #28ECAA;
+  font-size: 1rem; font-weight: 700; letter-spacing: 0.5px;
+  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
+  animation: tierPop 0.5s ease-out;
+}
+.tier-unlock-badge.tier-legend {
+  background: rgba(192,132,252,0.1);
+  border-color: #c084fc;
+  color: #c084fc !important; -webkit-text-fill-color: #c084fc !important;
+}
+@keyframes tierPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
