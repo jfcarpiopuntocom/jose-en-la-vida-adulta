@@ -392,7 +392,6 @@ function StatsPanel({
           <div className="turn-name" style={{ color: col, WebkitTextFillColor: col }}>{p.name}</div>
         </div>
       </div>
-      <TimeRing hours={p.timeLeft} />
       <div className="player-block">
         <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
           {p.name}
@@ -1227,10 +1226,15 @@ function App() {
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
       <div className="game-layout">
         <div className="game-main">
-          <Board game={game}
-            onInspect={id => { setInspecting(id); setOpenPanel(null); }}
-            inspecting={inspecting}
-          />
+          <div className="board-section">
+            <Board game={game}
+              onInspect={id => { setInspecting(id); setOpenPanel(null); }}
+              inspecting={inspecting}
+            />
+          </div>
+          <div className="time-section">
+            <TimeRing hours={game.activePlayerIndex >= 0 ? game.players[game.activePlayerIndex].timeLeft : HOURS_PER_TURN} />
+          </div>
           <ActionsBar game={game} onAction={doAction} />
         </div>
         <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
