@@ -230,6 +230,46 @@ export function tryPromote(p: PlayerState): string | null {
   }
   return null;
 }
+
+// ── Historia de origen procedural ──
+export function generateBackstory(p: import('./types').PlayerState): string {
+  const barrio = p.birthBarrio.replace(/_/g, ' ');
+  const crimeLevel = p.birthCrime;
+  const famNames = p.family.map(f => f.name);
+  const fam = famNames.length === 0 ? 'solo' :
+    famNames.length === 1 ? famNames[0] :
+    famNames.slice(0, -1).join(', ') + ' y ' + famNames[famNames.length - 1];
+
+  const origin =
+    crimeLevel >= 40
+      ? 'Creciste en ' + barrio + ', uno de los barrios más bravos de Cuenca. No fue fácil, pero aprendiste a leer el ambiente antes que el mercado.'
+      : crimeLevel >= 25
+      ? 'Tu barrio, ' + barrio + ', era tranquilo pero no próspero. Los fines de semana olían a pan de casa y a deudas calladas.'
+      : 'Creciste en ' + barrio + ', donde los domingos sonaban las campanas de la catedral y la mayoría de la gente pagaba sus cuentas a tiempo.';
+
+  const famLine = fam === 'solo'
+    ? 'No tienes familia cercana. Lo que construyas, lo construirás desde cero y para ti.'
+    : p.family.length >= 3
+    ? 'En casa erais ' + p.family.length + ': ' + fam + '. Había amor, pero el espacio y el dinero siempre estuvieron justos.'
+    : 'Tu familia inmediata: ' + fam + '. Pequeña y con sus propios problemas, pero presente.';
+
+  const parts: string[] = [origin, famLine];
+  const know = (p.stats as any).knowledge ?? 0;
+  const dep = p.stats.dependability ?? 50;
+  if (know >= 60) parts.push('Desde joven tuviste hambre de aprender. Los libros eran más baratos que las deudas.');
+  else if (know <= 25) parts.push('No fuiste el mejor alumno. Lo tuyo no era el salón de clases, sino la calle y el ensayo.');
+  if (dep >= 70) parts.push('Eres de los que llegan a tiempo y cumplen lo que prometen. Eso vale más de lo que crees en esta ciudad.');
+
+  const liquidityLine = p.liquidity < 300
+    ? 'Empiezas con $' + p.liquidity + ' en el bolsillo. Poco, pero es tuyo.'
+    : p.liquidity < 700
+    ? 'Tienes $' + p.liquidity + ' ahorrados. No es fortuna, pero es un punto de partida honesto.'
+    : 'Guardaste $' + p.liquidity + '. Más que la mayoría cuando empieza. Úsalo bien.';
+
+  parts.push(liquidityLine);
+  parts.push('La vida adulta en Cuenca no espera. Cada quincena cuenta.');
+  return parts.join(' ');
+}
 export function wageOf(p: PlayerState, job: import('./types').Job, world: World): number {
   const base = Math.round(job.wage * (1 + p.careerLevel * 0.22) * world.wageMult);
   const stressPenalty = p.stats.stress > 80 ? 1 - (p.stats.stress - 80) * 0.008 : 1; // up to 16% penalty at max stress

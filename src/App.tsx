@@ -5,7 +5,7 @@ import {
   hasWon, canRetire, makeHeir, cpuTurn, portfolioSlices, collectiblesValue,
   expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
   CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
-  HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle,
+  HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle, generateBackstory,
 } from './engine';
 import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
@@ -92,7 +92,7 @@ function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     let W = canvas.width, H = canvas.height, raf = 0;
-    const C = [[255,195,55],[94,234,212],[167,139,250],[251,113,133],[255,255,240],[56,189,248],[251,146,60]];
+    const C = [[200,160,64],[30,90,153],[160,25,44],[196,88,40],[240,232,214],[32,128,144],[107,78,154]];
     const P: {x:number;y:number;vx:number;vy:number;s:number;r:number;g:number;b:number;life:number;ml:number}[] = [];
     const N = 45;
     function resize() { W = canvas!.width = innerWidth; H = canvas!.height = innerHeight; }
@@ -169,34 +169,52 @@ function getMaxTier(): GameTier {
 }
 
 // ── Setup screen ──
+// ── Backstory Modal ──
+function BackstoryModal({ player, onClose }: { player: PlayerState; onClose: () => void }) {
+  const story = generateBackstory(player);
+  const col = PLAYER_COLORS[player.colorIndex];
+  return (
+    <div className="backstory-overlay" onClick={onClose}>
+      <div className="backstory-card" onClick={e => e.stopPropagation()}>
+        <div className="backstory-avatar">
+          <PawnAvatar p={player} size={56} glow />
+        </div>
+        <div className="backstory-title" style={{ color: col, WebkitTextFillColor: col }}>
+          Tu historia
+        </div>
+        <p className="backstory-text">{story}</p>
+        <div className="backstory-stats">
+          <div className="bstat"><span className="bstat-label">Dinero inicial</span><span className="bstat-val">${player.liquidity}</span></div>
+          <div className="bstat"><span className="bstat-label">Barrio</span><span className="bstat-val">{player.birthBarrio.replace(/_/g, ' ')}</span></div>
+          <div className="bstat"><span className="bstat-label">Familia</span><span className="bstat-val">{player.family.length} personas</span></div>
+        </div>
+        <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={onClose}>
+          Empezar a jugar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const maxTier = getMaxTier();
   const [tier, setTier] = useState<GameTier>(maxTier);
   const [n, setN] = useState(1);
-  const [names, setNames] = useState<string[]>(['', '', '', '']);
   const [withJose, setWithJose] = useState(false);
-  const [joseSide, setJoseSide] = useState<'empleado'|'empresa'>('empresa');
-  const [joseDiff, setJoseDiff] = useState<1|2|3>(2);
-
-  function setName(i: number, v: string) {
-    setNames(ns => ns.map((n, j) => j === i ? v : n));
-  }
 
   function start() {
     const tierGoals = TIER_GOALS[tier] as typeof TIER_GOALS[1];
-    const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] =
-      Array.from({ length: n }, (_, i) => ({ id: 'p'+i, name: names[i].trim() || `Jugador ${i+1}` }));
-    if (withJose) players.push({
-      id: 'jose', name: 'José',
-      isAI: true, aiStrategy: joseSide, aiDifficulty: joseDiff,
-    });
+    const human = { id: 'p0', name: 'Tú' };
+    const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] = [human];
+    for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1) });
+    if (withJose) players.push({ id: 'jose', name: 'José', isAI: true, aiStrategy: 'empresa', aiDifficulty: 2 });
     const { label: _l, desc: _d, cpuMult: _c, ...goals } = tierGoals;
     onStart(newGame(players, goals, tier));
   }
 
   const tierOrder: GameTier[] = [1, 2, 3, 4];
   const tierIcons = ['◆', '◆◆', '◆◆◆', '◆◆◆◆'];
-  const tierColors = ['#28ECAA', '#E8A020', '#fb7185', '#c084fc'];
+  const tierColors = ['#3A7850', '#C8A040', '#A0192C', '#6B4E9A'];
 
   return (
     <>
@@ -232,70 +250,20 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             })}
           </div>
 
-          {/* Player count + names */}
-          <div className="setup-label" style={{ marginTop: 16 }}>¿Cuántos jugadores? (1–4)</div>
+          {/* Jugadores */}
+          <div className="setup-label" style={{ marginTop: 16 }}>¿Cuántos jugadores?</div>
           <div className="setup-row" style={{ marginBottom: 14 }}>
             {[1,2,3,4].map(i => (
               <button key={i} className={n===i?'setup-sel':'setup-opt'} onClick={() => setN(i)}>{i}</button>
             ))}
           </div>
 
-          {/* Name inputs with DiceBear avatars */}
-          <div className="player-name-list">
-            {Array.from({ length: n }, (_, i) => (
-              <div key={i} className="player-name-row">
-                <img
-                  className="setup-avatar"
-                  src={avatarUrl(names[i] || `Jugador${i+1}`, i)}
-                  alt={`avatar jugador ${i+1}`}
-                />
-                <input
-                  className="name-input"
-                  type="text"
-                  maxLength={18}
-                  placeholder={`Jugador ${i+1}`}
-                  value={names[i]}
-                  onChange={e => setName(i, e.target.value)}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* José CPU section */}
-          <div className="jose-section">
-            <label className="jose-toggle-label">
-              <input type="checkbox" checked={withJose} onChange={e => setWithJose(e.target.checked)}
-                style={{ marginRight: 8 }} />
-              Jugar contra <b>José</b> (CPU)
-            </label>
-            {withJose && (
-              <div className="jose-config">
-                <div className="setup-label" style={{ marginTop: 10 }}>Estrategia de José:</div>
-                <div className="setup-row">
-                  <button className={joseSide==='empleado'?'setup-sel':'setup-opt'} onClick={() => setJoseSide('empleado')}>
-                    Empleado
-                  </button>
-                  <button className={joseSide==='empresa'?'setup-sel':'setup-opt'} onClick={() => setJoseSide('empresa')}>
-                    Empresa
-                  </button>
-                </div>
-                <div className="side-desc">
-                  {joseSide === 'empleado'
-                    ? 'José busca empleo, sube la escalera y prioriza educación.'
-                    : 'José ahorra, abre negocio, contrata y escala a empresa.'}
-                </div>
-                <div className="setup-label" style={{ marginTop: 10 }}>Habilidad de José:</div>
-                <div className="setup-row">
-                  {([1,2,3] as const).map(d => (
-                    <button key={d} className={joseDiff===d?'setup-sel':'setup-opt'} onClick={() => setJoseDiff(d)}>
-                      {DIFFICULTY_LABEL[d]}
-                    </button>
-                  ))}
-                </div>
-                <div className="side-desc">{DIFFICULTY_DESC[joseDiff]}</div>
-              </div>
-            )}
-          </div>
+          {/* José CPU */}
+          <label className="jose-toggle-label">
+            <input type="checkbox" checked={withJose} onChange={e => setWithJose(e.target.checked)}
+              style={{ marginRight: 8 }} />
+            Jugar contra <b>José</b> (CPU)
+          </label>
 
           <div style={{ display:'flex', gap:8, marginTop: 16 }}>
             <button className="primary" style={{ flex:1 }} onClick={start}>
@@ -1053,6 +1021,7 @@ function TurnHint({ turn }: { turn: number }) {
 function App() {
   const [phase, setPhase] = useState<Phase>('setup');
   const [game, setGame] = useState<GameState | null>(null);
+  const [showBackstory, setShowBackstory] = useState(false);
   const [queue, setQueue] = useState<Pending[]>([]);
   const [qi, setQi] = useState(0);
   const [flash, setFlash] = useState<string | null>(null);
@@ -1096,7 +1065,7 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.activePlayerIndex, game?.turn, phase, queue.length]);
 
-  if (phase === 'setup') return <Setup onStart={g => { setGame(g); setPhase('play'); saveLocal(g); }} />;
+  if (phase === 'setup') return <Setup onStart={g => { setGame(g); setShowBackstory(true); setPhase('play'); saveLocal(g); }} />;
   if (!game) return null;
   if (phase === 'victory') return <Victory game={game} onRestart={() => { clearLocal(); location.reload(); }} />;
 
@@ -1226,7 +1195,10 @@ function App() {
       <TurnHint turn={game.turn} />
 
       <div id="hud">
-        <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
+        {showBackstory && game && (
+        <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
+      )}
+      <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
         <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
         <ActionsBar game={game} onAction={doAction} />
 
