@@ -832,6 +832,21 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
   );
 }
 
+// Gradiente por zona — color de tablero sin fotos externas
+const ZONE_GRAD: Record<string, string> = {
+  hogar:        'linear-gradient(135deg,#7c3a1a,#4a2010)',
+  universitaria:'linear-gradient(135deg,#1a3a6a,#0f2244)',
+  financiera:   'linear-gradient(135deg,#6a4f00,#3a2c00)',
+  transporte:   'linear-gradient(135deg,#1e3a4a,#0e1e28)',
+  industrial:   'linear-gradient(135deg,#2e2e2e,#141414)',
+  salud:        'linear-gradient(135deg,#6a1a22,#3a0c12)',
+  comercial:    'linear-gradient(135deg,#1a5a2a,#0c3016)',
+  centro:       'linear-gradient(135deg,#4a2a6a,#26143a)',
+  rio:          'linear-gradient(135deg,#0e4a5a,#062832)',
+  politico:     'linear-gradient(135deg,#1a2a5a,#0a1430)',
+  deporte:      'linear-gradient(135deg,#1a4a1a,#0a2a0a)',
+};
+
 // ── Board ──
 function Board({ game, onInspect, inspecting }: {
   game: GameState;
@@ -859,8 +874,7 @@ function Board({ game, onInspect, inspecting }: {
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
         onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
       >
-        <div className="tile-art">
-          <img src={`https://picsum.photos/seed/${loc.id}/80/60`} alt="" loading="lazy" draggable={false} />
+        <div className="tile-art" style={{ background: ZONE_GRAD[loc.zone] ?? 'rgba(255,255,255,0.06)' }}>
           <span className="tile-art-emoji">{loc.icon}</span>
         </div>
         <div className="tile-label">{loc.name.split('(')[0].trim()}</div>

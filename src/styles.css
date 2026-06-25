@@ -759,7 +759,8 @@ input[type=text], input[type=number] {
     align-items: center; justify-content: center;
     gap: 2px; overflow: hidden;
   }
-  .tile-icon { font-size: 1.6rem; line-height: 1; }
+  .tile-art { width: 38px !important; height: 38px !important; }
+  .tile-art-emoji { font-size: 1.35rem !important; }
   .tile-label {
     font-size: 0.66rem; line-height: 1.05; max-width: 100%;
     font-weight: 800; letter-spacing: 0.2px;
@@ -1347,22 +1348,16 @@ input[type=text], input[type=number] {
   transform: translateY(-2px);
   box-shadow: 0 6px 14px rgba(200,160,64,0.25);
 }
-/* Foto placeholder por tile — se reemplazará con imagen real de Cuenca */
+/* Tile art: zona con color + emoji grande. Sin fotos externas. */
 .tile-art {
-  position: relative; width: 100%; height: 44px;
-  border-radius: 8px; overflow: hidden; flex-shrink: 0;
-  background: rgba(255,255,255,0.04);
+  width: 52px; height: 52px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 6px rgba(0,0,0,0.4);
 }
-.tile-art img {
-  width: 100%; height: 100%; object-fit: cover;
-  opacity: 0.62; display: block;
-  transition: opacity .2s;
-}
-.tile:hover .tile-art img { opacity: 0.82; }
 .tile-art-emoji {
-  position: absolute; bottom: 2px; right: 4px;
-  font-size: 0.92rem; line-height: 1;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+  font-size: 1.7rem; line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
 }
 .tile-here {
   background: rgba(200,160,64,0.14) !important;
@@ -2004,8 +1999,8 @@ input[type=text], input[type=number] {
     align-items: center; justify-content: center;
     gap: 2px; overflow: hidden;
   }
-  .tile-art { height: 34px !important; }
-  .tile-art-emoji { font-size: 0.8rem !important; }
+  .tile-art { width: 36px !important; height: 36px !important; border-radius: 8px !important; }
+  .tile-art-emoji { font-size: 1.3rem !important; }
   .tile-label {
     font-size: 0.66rem !important; line-height: 1.05 !important;
     max-width: 100% !important; font-weight: 800;
