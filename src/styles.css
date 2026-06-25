@@ -1301,12 +1301,20 @@ input[type=text], input[type=number] {
   align-items: center; justify-content: center;
   padding: 10px; gap: 4px;
   position: relative; margin: 6px;
-  /* Caminito: el sendero que recorren los jugadores alrededor del tablero */
   border: 3px dashed rgba(200,160,64,0.45);
   border-radius: 18px;
+  overflow: hidden;
   background:
     repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(200,160,64,0.03) 9px, rgba(200,160,64,0.03) 18px);
 }
+.board-center::after {
+  content: ""; position: absolute; inset: 0;
+  background: url('/jose-en-la-vida-adulta/cuenca-bg.jpg') center / cover no-repeat;
+  opacity: 0.12;
+  pointer-events: none; z-index: 0;
+  border-radius: 15px;
+}
+.board-center > * { position: relative; z-index: 1; }
 .bc-city {
   font-family: 'Cinzel', serif;
   font-size: 1.3rem; font-weight: 800; letter-spacing: .15em;
