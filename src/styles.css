@@ -1227,7 +1227,7 @@ input[type=text], input[type=number] {
 }
 
 
-/* ── Clock Face ── */
+/* ── Clock Face (reloj de manecillas) ── */
 .clock-face {
   width: 64px; height: 64px; margin: 0 auto 6px;
   position: relative;
@@ -1235,6 +1235,19 @@ input[type=text], input[type=number] {
 .clock-svg {
   width: 100%; height: 100%;
   filter: drop-shadow(0 0 6px rgba(200,160,64,0.15));
+}
+.clock-days {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding-bottom: 4px; pointer-events: none;
+}
+.clock-num {
+  font-size: 1.6rem; font-weight: 900; line-height: 1;
+  font-family: 'Nunito', sans-serif;
+}
+.clock-unit {
+  font-size: 0.55rem; font-weight: 800; letter-spacing: .1em;
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
 }
 
 /* ── Compact action cards ── */
@@ -1497,18 +1510,14 @@ input[type=text], input[type=number] {
   box-shadow: 0 12px 40px rgba(0,0,0,0.6);
 }
 .insp-title {
-  font-size: 0.9rem; font-weight: 800; margin-bottom: 8px;
+  font-size: 0.9rem; font-weight: 800; margin-bottom: 4px;
   color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
 }
-.insp-actions {
-  display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;
+.insp-hint {
+  font-size: 0.82rem; line-height: 1.3; margin-bottom: 8px;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+  font-style: italic;
 }
-.insp-action {
-  padding: 5px 8px; border-radius: 6px; text-align: left;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  cursor: pointer; transition: background .15s;
-}
-.insp-action:hover { background: rgba(200,160,64,0.1); }
 .insp-move {
   width: 100%; padding: 6px; border-radius: 6px; font-weight: 700;
   background: rgba(200,160,64,0.15); border: 1px solid var(--gold);
@@ -1590,13 +1599,15 @@ input[type=text], input[type=number] {
   background: linear-gradient(135deg, rgba(20,25,40,0.7), rgba(11,18,37,0.8));
   border-top: 1px solid rgba(196,158,72,0.2);
 }
-.clock-face {
+.time-section .clock-face {
   width: 108px; height: 108px;
   position: relative;
 }
-.clock-face .clock-svg {
+.time-section .clock-face .clock-svg {
   filter: drop-shadow(0 0 8px rgba(232,160,32,0.55));
 }
+.time-section .clock-num { font-size: 2.2rem; }
+.time-section .clock-unit { font-size: 0.7rem; }
 .clock-urgent .clock-svg {
   filter: drop-shadow(0 0 10px rgba(224,48,58,0.7));
   animation: clockPulse 0.9s ease-in-out infinite;

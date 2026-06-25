@@ -460,43 +460,51 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   );
 }
 
-// ── SVG Time Ring ──
+// ── SVG Clock with hands — shows days remaining ──
 function TimeRing({ hours }: { hours: number }) {
   const pct = clamp(hours / HOURS_PER_TURN, 0, 1);
-  const angle = pct * 360;
-  const rad = (a: number) => (a - 90) * Math.PI / 180;
-  const x2 = 18 + 14 * Math.cos(rad(angle));
-  const y2 = 18 + 14 * Math.sin(rad(angle));
-  const largeArc = angle > 180 ? 1 : 0;
-  const arcPath = angle > 0
-    ? 'M18 4 A14 14 0 ' + largeArc + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1)
-    : '';
-  const hoursLeft = Math.round(hours);
-  // El tiempo es oro: dorado normalmente, rojo cuando aprieta la urgencia
+  const days = fh(hours / 8); // 8h útiles por día
   const urgent = pct <= 0.35;
-  const arcCol = urgent ? '#E0303A' : '#F5C24A';
+  const handCol = urgent ? '#E0303A' : '#F5C24A';
   const numCol = urgent ? '#E0303A' : '#E8A020';
+  // Manecilla de hora: gira según % de tiempo restante (360° = quincena completa)
+  const hourAngle = pct * 360;
+  // Manecilla de minuto: gira 6× más rápido (efecto visual)
+  const minAngle = (pct * 360 * 6) % 360;
+  const hRad = (hourAngle - 90) * Math.PI / 180;
+  const mRad = (minAngle - 90) * Math.PI / 180;
+  const cx = 50, cy = 50;
   return (
     <div className={'clock-face' + (urgent ? ' clock-urgent' : '')}>
-      <svg viewBox="0 0 36 36" className="clock-svg">
-        {/* Aro base (sólido, oro oscuro) */}
-        <circle cx="18" cy="18" r="14" fill="none" stroke="#3A2A14" strokeWidth="3"/>
-        {/* Marcas de hora (oro sólido) */}
-        {[0,30,60,90,120,150,180,210,240,270,300,330].map(a => {
-          const r1 = 15, r2 = 16.6;
-          const ax = (a - 90) * Math.PI / 180;
-          return <line key={a} x1={18+r1*Math.cos(ax)} y1={18+r1*Math.sin(ax)}
-            x2={18+r2*Math.cos(ax)} y2={18+r2*Math.sin(ax)}
-            stroke="#7A5A1E" strokeWidth="1"/>;
+      <svg viewBox="0 0 100 100" className="clock-svg">
+        {/* Caja del reloj */}
+        <circle cx={cx} cy={cy} r="46" fill="#1A1408" stroke="#5A4218" strokeWidth="3"/>
+        <circle cx={cx} cy={cy} r="43" fill="none" stroke="#3A2A14" strokeWidth="1.5"/>
+        {/* 12 marcas horarias */}
+        {Array.from({length:12},(_,i) => {
+          const a = (i * 30 - 90) * Math.PI / 180;
+          const major = i % 3 === 0;
+          const r1 = major ? 35 : 37, r2 = 41;
+          return <line key={i}
+            x1={cx+r1*Math.cos(a)} y1={cy+r1*Math.sin(a)}
+            x2={cx+r2*Math.cos(a)} y2={cy+r2*Math.sin(a)}
+            stroke={major ? '#C8A040' : '#5A4218'} strokeWidth={major ? 2.5 : 1.2}
+            strokeLinecap="round"/>;
         })}
-        {/* Arco de tiempo restante */}
-        {angle > 0 && <path d={arcPath} fill="none" stroke={arcCol} strokeWidth="3.4" strokeLinecap="round"/>}
-        {/* Número grande de horas */}
-        <text x="18" y="19.5" textAnchor="middle" fontSize="12" fontWeight="900"
-          fill={numCol} style={{ fontFamily: 'Nunito, sans-serif' }}>{hoursLeft}</text>
-        <text x="18" y="25" textAnchor="middle" fontSize="4" fontWeight="800"
-          fill="#E8A020" style={{ fontFamily: 'Nunito, sans-serif' }}>HORAS</text>
+        {/* Manecilla de hora (corta, gruesa) */}
+        <line x1={cx} y1={cy} x2={cx+22*Math.cos(hRad)} y2={cy+22*Math.sin(hRad)}
+          stroke={handCol} strokeWidth="3.5" strokeLinecap="round"/>
+        {/* Manecilla de minuto (larga, delgada) */}
+        <line x1={cx} y1={cy} x2={cx+32*Math.cos(mRad)} y2={cy+32*Math.sin(mRad)}
+          stroke={handCol} strokeWidth="2" strokeLinecap="round"/>
+        {/* Centro */}
+        <circle cx={cx} cy={cy} r="3" fill={handCol}/>
+        <circle cx={cx} cy={cy} r="1.5" fill="#1A1408"/>
       </svg>
+      <div className="clock-days">
+        <span className="clock-num" style={{color:numCol,WebkitTextFillColor:numCol}}>{days}</span>
+        <span className="clock-unit">DÍAS</span>
+      </div>
     </div>
   );
 }
@@ -630,7 +638,7 @@ function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number)
                   onClick={() => onAction(i)}>
                   <span className="act-name"><span className="act-icon">{actionIcon(a.id)}</span>{a.label}</span>
                   <span className="act-desc">{a.desc}</span>
-                  <span className="act-cost">−{fh(a.hours)}h · te quedan {fh(after)}h</span>
+                  <span className="act-cost">−{fh(a.hours)}h · quedan {fh(after / 8)}d</span>
                 </button>
               );
             })}
@@ -811,26 +819,14 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
   const cost = loc.tc[p.transport];
   const isHere = locId === p.currentLocation;
   const canMove = !isHere && p.timeLeft >= cost;
-  // actions available AT this location (simulate)
-  const mockP = { ...p, currentLocation: locId };
-  const acts = actionsFor(mockP as typeof p, game.world);
 
   return (
     <div className="node-inspect">
       <button className="insp-close-btn" onClick={onClose}>✕</button>
       <div className="insp-title">{loc.icon} {loc.name}</div>
-      {acts.length > 0 && (
-        <div className="insp-actions">
-          {acts.slice(0,3).map((a, i) => (
-            <button key={a.id} className="insp-action" onClick={() => { if (isHere) onAction(i); else { onMove(); } }}>
-              <span className="act-name">{a.label}</span>
-              <span className="act-desc">{a.desc}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {!isHere && <div className="insp-hint">Ve para descubrir qué puedes hacer aquí.</div>}
       <button className="insp-move" disabled={isHere || !canMove} onClick={onMove}>
-        {isHere ? 'Estás aquí' : canMove ? `Ir aquí · ${cost}h` : `Sin tiempo suficiente (${cost}h)`}
+        {isHere ? 'Estás aquí' : canMove ? `Ir · ${fh(cost)}h` : `Necesitas ${fh(cost)}h`}
       </button>
     </div>
   );
