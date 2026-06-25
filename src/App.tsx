@@ -269,10 +269,12 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
       <AtmosphereBg />
       <div id="map-world" />
       <div className="setup-screen">
-        <div className="setup-card">
+        <div className="setup-card setup-card-wide">
           <div className="setup-title">JOSÉ EN LA VIDA ADULTA</div>
           <div className="setup-sub">el juego de la vida plena · Cuenca, Ecuador</div>
 
+          <div className="setup-grid">
+          <div className="setup-col">
           {/* José: el héroe-sherpa, primera decisión */}
           <div className="jose-hero">
             <img className="jose-hero-img" src="/jose-en-la-vida-adulta/avatars/jose.png" alt="José" />
@@ -297,7 +299,9 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
               </button>
             ))}
           </div>
+          </div>{/* /setup-col izquierda */}
 
+          <div className="setup-col">
           {/* Tier selector */}
           <div className="setup-label">Nivel de dificultad</div>
           <div className="tier-grid">
@@ -347,6 +351,8 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
               Continuar partida guardada
             </button>
           )}
+          </div>{/* /setup-col derecha */}
+          </div>{/* /setup-grid */}
         </div>
       </div>
     </>

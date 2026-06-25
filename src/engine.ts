@@ -260,7 +260,7 @@ export function tryPromote(p: PlayerState): string | null {
     p.careerLevel++;
     p.stats.experience -= need;
     applyEff(p, [['impact', 'profesional', 4], ['stat', 'leadership', 2]]);
-    return `${p.name} ascendió a ${careerTitle(p.careerLevel)}${eduBoost ? ' (su educación ayudó)' : ''}`;
+    return `Ascendiste a ${careerTitle(p.careerLevel)}${eduBoost ? ' (tu educación ayudó)' : ''}`;
   }
   return null;
 }
@@ -398,9 +398,9 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
 
   if (loc === 'casa') {
     out.push({ id: 'rest', label: 'Descansar (8h)', hours: 8, desc: '+salud, -estrés', ok: p.timeLeft >= 8,
-      run: () => { applyEff(p, [['time', -8], ['stat', 'health', 6], ['stat', 'stress', -10], ['stat', 'happiness', 3]]); return `${p.name} descansó en casa`; } });
+      run: () => { applyEff(p, [['time', -8], ['stat', 'health', 6], ['stat', 'stress', -10], ['stat', 'happiness', 3]]); return `Descansaste en casa`; } });
     out.push({ id: 'social', label: 'Socializar (4h)', hours: 4, desc: '+felicidad, +impacto comunitario, -$15', ok: p.timeLeft >= 4 && p.liquidity >= 15,
-      run: () => { applyEff(p, [['time', -4], ['liq', -15], ['stat', 'happiness', 7], ['impact', 'comunitario', 3]]); return `${p.name} salió con amigos`; } });
+      run: () => { applyEff(p, [['time', -4], ['liq', -15], ['stat', 'happiness', 7], ['impact', 'comunitario', 3]]); return `Saliste con amigos`; } });
        out.push({ id: 'family', label: 'Visitar familia (3h)', hours: 3, desc: 'Fortalece lazos (+relacion, +felicidad)', ok: p.timeLeft >= 3 && p.family.length > 0,
       run: () => {
         const m = pick(p.family);
@@ -420,11 +420,11 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   if (loc === 'casa') {
     if (p.housing === 'family') {
       out.push({ id: 'rent_apartment', label: 'Alquilar apartamento ($300 dep.)', hours: 4, desc: 'Independencia: +$110/quincena en gastos, +felicidad', ok: p.timeLeft >= 4 && p.liquidity >= 300,
-        run: () => { p.housing = 'rent_cheap'; applyEff(p, [['time', -4], ['liq', -300], ['stat', 'happiness', 8], ['stat', 'stress', -5]]); return `${p.name} te independizaste: alquilo un apartamento`; } });
+        run: () => { p.housing = 'rent_cheap'; applyEff(p, [['time', -4], ['liq', -300], ['stat', 'happiness', 8], ['stat', 'stress', -5]]); return `Te independizaste: alquilaste un apartamento`; } });
     }
     if (p.housing === 'rent_cheap' && p.bank >= 5000) {
       out.push({ id: 'buy_apartment', label: 'Comprar apartamento (banco: -$5000)', hours: 4, desc: 'Patrimonio real. Gastos bajan a $20/quincena', ok: p.timeLeft >= 4 && p.bank >= 5000,
-        run: () => { p.housing = 'own_apartment'; p.bank -= 5000; applyEff(p, [['time', -4], ['stat', 'happiness', 12], ['impact', 'profesional', 5]]); return `${p.name} compro un apartamento (patrimonio: +5000)`; } });
+        run: () => { p.housing = 'own_apartment'; p.bank -= 5000; applyEff(p, [['time', -4], ['stat', 'happiness', 12], ['impact', 'profesional', 5]]); return `Compraste un apartamento (patrimonio: +5000)`; } });
     }
   }
 
@@ -433,7 +433,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     for (const d of availableDegrees(p)) {
       if (p.education.enrolledId) break; // un grado a la vez
       out.push({ id: 'enroll_' + d.id, label: 'Matricularse: ' + d.name, hours: 1, desc: `${d.hours}h totales · $${d.cost} · +${d.knowledge} conoc.`, ok: p.timeLeft >= 1 && p.liquidity >= d.cost,
-        run: () => { applyEff(p, [['time', -1], ['liq', -d.cost]]); p.education.enrolledId = d.id; p.education.hoursInvested = 0; return `${p.name} se matriculó en ${d.name}`; } });
+        run: () => { applyEff(p, [['time', -1], ['liq', -d.cost]]); p.education.enrolledId = d.id; p.education.hoursInvested = 0; return `Te matriculaste en ${d.name}`; } });
     }
     // avanzar el grado en curso
     if (p.education.enrolledId) {
@@ -446,9 +446,9 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           if (p.education.hoursInvested >= d.hours) {
             p.education.completed.push(d.id); p.education.enrolledId = null; p.education.hoursInvested = 0;
             applyEff(p, [['stat', 'knowledge', d.knowledge], ['stat', 'happiness', 5], ['impact', 'profesional', 2]]);
-            return `${p.name} se graduó: ${d.name} (+${d.knowledge} conocimiento)`;
+            return `Te graduaste: ${d.name} (+${d.knowledge} conocimiento)`;
           }
-          return `${p.name} estudió ${block}h de ${d.name}`;
+          return `Estudiaste ${block}h de ${d.name}`;
         } });
     }
   }
@@ -456,10 +456,10 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
   if (loc === 'zona_financiera') {
     if (p.liquidity >= 100)
       out.push({ id: 'save100', label: 'Ahorrar $100 en banco (1h)', hours: 1, desc: 'mueve liquidez a patrimonio', ok: p.timeLeft >= 1 && p.liquidity >= 100,
-        run: () => { applyEff(p, [['time', -1], ['liq', -100], ['bank', 100]]); return `${p.name} ahorró $100 en el banco`; } });
+        run: () => { applyEff(p, [['time', -1], ['liq', -100], ['bank', 100]]); return `Ahorraste $100 en el banco`; } });
     if (p.liquidity >= 500)
       out.push({ id: 'save500', label: 'Ahorrar $500 en banco (1h)', hours: 1, desc: 'depósito grande', ok: p.timeLeft >= 1 && p.liquidity >= 500,
-        run: () => { applyEff(p, [['time', -1], ['liq', -500], ['bank', 500]]); return `${p.name} depositó $500 en el banco`; } });
+        run: () => { applyEff(p, [['time', -1], ['liq', -500], ['bank', 500]]); return `Depositaste $500 en el banco`; } });
     if (p.liquidity >= 200)
       out.push({ id: 'invest_bolsa', label: 'Invertir en bolsa (2h · $200)', hours: 2, desc: 'especulativo: puede ganar o perder', ok: p.timeLeft >= 2 && p.liquidity >= 200,
         run: () => {
@@ -479,7 +479,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
         run: () => {
           (p as any).fondoMutuo = ((p as any).fondoMutuo || 0) + 500;
           applyEff(p, [['time', -1], ['liq', -500], ['stat', 'knowledge', 1]]);
-          return `${p.name} aporto $500 al fondo mutuo (total: $${(p as any).fondoMutuo})`;
+          return `Aportaste $500 al fondo mutuo (total: $${(p as any).fondoMutuo})`;
         } });
     if (p.liquidity >= 2000)
       out.push({ id: 'fondo_2000', label: 'Fondo mutuo +$2000 (1h)', hours: 1,
@@ -488,7 +488,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
         run: () => {
           (p as any).fondoMutuo = ((p as any).fondoMutuo || 0) + 2000;
           applyEff(p, [['time', -1], ['liq', -2000], ['stat', 'knowledge', 2]]);
-          return `${p.name} aporto $2000 al fondo mutuo (total: $${(p as any).fondoMutuo})`;
+          return `Aportaste $2000 al fondo mutuo (total: $${(p as any).fondoMutuo})`;
         } });
   }
 
@@ -497,7 +497,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       out.push({ id: 'startbiz', label: 'Abrir negocio ($500, 12h)', hours: 12, desc: 'comercio con ventas pasivas', ok: p.timeLeft >= 12 && p.liquidity >= 500,
         run: () => { applyEff(p, [['time', -12], ['liq', -500], ['stat', 'experience', 3], ['impact', 'empresarial', 4]]);
           p.businesses.push({ id: 'biz_' + p.id, type: 'comercio', capital: 500, ticket: 12, clientes: 8, costosFijos: 40, employees: [] });
-          return `${p.name} abrió un negocio en la Feria Libre`; } });
+          return `Abriste un negocio en la Feria Libre`; } });
     } else {
       const b = p.businesses[0];
       out.push({ id: 'operate', label: 'Operar negocio (8h)', hours: 8, desc: 'atender clientes', ok: p.timeLeft >= 8,
@@ -506,11 +506,11 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           const cl = Math.round(b.clientes * world.salesMult * (1 + empBoost * 0.5));
           const util = cl * b.ticket - b.costosFijos;
           applyEff(p, [['time', -8], ['liq', util], ['stat', 'stress', 5], ['stat', 'experience', 2], ['impact', 'empresarial', 2]]);
-          return `${p.name} operó: ${cl} clientes, utilidad $${util}`;
+          return `Operaste tu negocio: ${cl} clientes, utilidad $${util}`;
         } });
       out.push({ id: 'hire', label: 'Contratar empleado (2h)', hours: 2, desc: 'persistente: más producción, más costo y riesgo', ok: p.timeLeft >= 2 && b.employees.length < 3,
         run: () => { applyEff(p, [['time', -2]]); const e = generateEmployee(); b.employees.push(e);
-          return `${p.name} contrató a ${e.name} (competencia ${e.competence})`; } });
+          return `Contrataste a ${e.name} (competencia ${e.competence})`; } });
     }
   }
 
@@ -520,12 +520,12 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     return {
       id: 'buy_' + kind,
       label: `Comprar ${name} (${hours}h · $${cost})`,
-      hours, desc: 'activo deflacionario · aprecia con el tiempo',
+      hours, desc: 'activo deflacionario · se aprecia con el tiempo',
       ok: p.timeLeft >= hours && p.liquidity >= cost,
       run: () => {
         applyEff(p, [['time', -hours], ['liq', -cost], ['impact', 'comunitario', kind==='cuadro'?2:0]]);
         p.collectibles.push({ kind, name, value: cost, boughtFor: cost });
-        return `${p.name} adquirió: ${name} ($${cost})`;
+        return `Adquiriste: ${name} ($${cost})`;
       }
     };
   }
@@ -536,7 +536,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     if (p.collectibles.filter(c => c.kind === 'joyeria').length < 4)
       out.push(buyCol('joyeria', 'joyería artesanal', 120 + rnd(180), 1));
     out.push({ id: 'comunity_act', label: 'Actividad cultural (3h)', hours: 3, desc: '+legado comunitario, +felicidad, gratis', ok: p.timeLeft >= 3,
-      run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 5], ['impact', 'comunitario', 4], ['impact', 'profesional', 1]]); return `${p.name} participó en actividad cultural en el Centro Histórico`; } });
+      run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 5], ['impact', 'comunitario', 4], ['impact', 'profesional', 1]]); return `Participaste en una actividad cultural en el Centro Histórico`; } });
   }
 
   if (loc === 'mall_rio') {
@@ -549,21 +549,21 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     // Transport upgrades
     if (p.transport === 'walk' || p.transport === 'bus') {
       out.push({ id: 'buy_bicycle', label: 'Comprar bicicleta ($150)', hours: 2, desc: 'Mas rapido que caminar, gratis a futuro', ok: p.timeLeft >= 2 && p.liquidity >= 150,
-        run: () => { p.transport = 'bicycle'; applyEff(p, [['time', -2], ['liq', -150], ['stat', 'health', 3]]); return `${p.name} compro una bicicleta`; } });
+        run: () => { p.transport = 'bicycle'; applyEff(p, [['time', -2], ['liq', -150], ['stat', 'health', 3]]); return `Compraste una bicicleta`; } });
     }
     if (p.transport !== 'motorcycle' && p.transport !== 'car') {
       out.push({ id: 'buy_moto', label: 'Comprar moto ($800)', hours: 2, desc: 'Veloz y economica. Ahorra tiempo en viajes', ok: p.timeLeft >= 2 && p.liquidity >= 800,
-        run: () => { p.transport = 'motorcycle'; applyEff(p, [['time', -2], ['liq', -800], ['stat', 'happiness', 5]]); return `${p.name} compro una motocicleta`; } });
+        run: () => { p.transport = 'motorcycle'; applyEff(p, [['time', -2], ['liq', -800], ['stat', 'happiness', 5]]); return `Compraste una motocicleta`; } });
     }
     if (p.transport !== 'car' && p.bank >= 3000) {
       out.push({ id: 'buy_car', label: 'Comprar carro (banco: -$3000)', hours: 3, desc: 'El mas rapido. +$30/quincena en gastos', ok: p.timeLeft >= 3 && p.bank >= 3000,
-        run: () => { p.transport = 'car'; p.bank -= 3000; applyEff(p, [['time', -3], ['stat', 'happiness', 8], ['impact', 'profesional', 3]]); return `${p.name} compro un carro`; } });
+        run: () => { p.transport = 'car'; p.bank -= 3000; applyEff(p, [['time', -3], ['stat', 'happiness', 8], ['impact', 'profesional', 3]]); return `Compraste un carro`; } });
     }
   }
 
   if (loc === 'rio_tomebamba') {
     out.push({ id: 'meditar', label: 'Meditar junto al río (2h)', hours: 2, desc: '+salud, -estrés, +legado comunitario', ok: p.timeLeft >= 2,
-      run: () => { applyEff(p, [['time', -2], ['stat', 'health', 4], ['stat', 'stress', -8], ['stat', 'happiness', 4], ['impact', 'comunitario', 2]]); return `${p.name} meditó junto al Tomebamba (+salud, -estrés)`; } });
+      run: () => { applyEff(p, [['time', -2], ['stat', 'health', 4], ['stat', 'stress', -8], ['stat', 'happiness', 4], ['impact', 'comunitario', 2]]); return `Meditaste junto al Tomebamba (+salud, -estrés)`; } });
     // Salir a la naturaleza: vuelves con otro tono y eso mejora los lazos en casa
     out.push({ id: 'naturaleza', label: 'Caminata por la naturaleza (4h)', hours: 4, desc: '+bienestar fuerte; vuelves de mejor ánimo y mejoran tus relaciones', ok: p.timeLeft >= 4,
       run: () => {
@@ -575,7 +575,7 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           applyEff(p, [['impact', 'familiar', 3]]);
           extra = ' Volviste con otro tono y en casa se notó (+relaciones)';
         }
-        return `${p.name} caminó por las orillas del Tomebamba (+bienestar).` + extra;
+        return `Caminaste por las orillas del Tomebamba (+bienestar).` + extra;
       } });
   }
 
@@ -584,10 +584,10 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       out.push({ id: 'buscar_empleo', label: 'Buscar empleo en agencia (2h)', hours: 2, desc: 'aplica a mejor vacante según tu nivel', ok: p.timeLeft >= 2,
         run: () => {
           const candidates = JOBS.filter(j => p.careerLevel >= j.minLevel && p.stats.dependability >= j.minDep);
-          if (candidates.length === 0) { applyEff(p, [['time', -2]]); return `${p.name} buscó empleo: aún no cumple requisitos`; }
+          if (candidates.length === 0) { applyEff(p, [['time', -2]]); return `Buscaste empleo: aún no cumples los requisitos`; }
           const best = candidates.sort((a, b) => b.wage - a.wage)[0];
           p.job = best; applyEff(p, [['time', -2], ['stat', 'happiness', 3], ['impact', 'profesional', 2]]);
-          return `${p.name} fuiste contratado: ${best.title} (+$${best.wage}/turno)`;
+          return `Te contrataron como ${best.title} en ${locById(best.locationId).name.split('(')[0].trim()} (+$${best.wage}/turno)`;
         }
       });
     }
@@ -595,15 +595,15 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
       out.push({ id: 'cambiar_trabajo', label: 'Buscar trabajo mejor (2h)', hours: 2, desc: 'busca vacante de mayor salario', ok: p.timeLeft >= 2,
         run: () => {
           const better = JOBS.filter(j => j.wage > (p.job?.wage ?? 0) && p.careerLevel >= j.minLevel && p.stats.dependability >= j.minDep);
-          if (better.length === 0) { applyEff(p, [['time', -2]]); return `${p.name} buscó trabajo mejor: ninguna oferta supera la actual`; }
+          if (better.length === 0) { applyEff(p, [['time', -2]]); return `Buscaste un trabajo mejor: ninguna oferta supera la actual`; }
           const best = better.sort((a, b) => b.wage - a.wage)[0];
           p.job = best; applyEff(p, [['time', -2], ['impact', 'profesional', 1]]);
-          return `${p.name} cambió de trabajo: ahora es ${best.title} (+$${best.wage}/turno)`;
+          return `Cambiaste de trabajo: ahora eres ${best.title} (+$${best.wage}/turno)`;
         }
       });
     }
     out.push({ id: 'secap', label: 'Curso SECAP (4h · gratis)', hours: 4, desc: '+confiabilidad, +experiencia', ok: p.timeLeft >= 4,
-      run: () => { applyEff(p, [['time', -4], ['stat', 'dependability', 5], ['stat', 'experience', 3], ['stat', 'knowledge', 2]]); return `${p.name} completó un curso en el SECAP (+confiabilidad)`; }
+      run: () => { applyEff(p, [['time', -4], ['stat', 'dependability', 5], ['stat', 'experience', 3], ['stat', 'knowledge', 2]]); return `Completaste un curso en el SECAP (+confiabilidad)`; }
     });
   }
 
@@ -613,47 +613,47 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
         run: () => {
           applyEff(p, [['time', -12], ['liq', -800], ['stat', 'experience', 4], ['impact', 'empresarial', 5]]);
           p.businesses.push({ id: 'mfg_' + p.id, type: 'manufactura', capital: 800, ticket: 22, clientes: 7, costosFijos: 65, employees: [] });
-          return `${p.name} abrió una manufactura en la Z. Industrial`;
+          return `Abriste una manufactura en la Zona Industrial`;
         }
       });
     }
     if (!p.job)
       out.push({ id: 'jornadaextra', label: 'Jornada contratista (6h)', hours: 6, desc: '+$38 sin empleo formal', ok: p.timeLeft >= 6,
-        run: () => { applyEff(p, [['time', -6], ['liq', 38], ['stat', 'experience', 3], ['stat', 'stress', 6]]); return `${p.name} hizo jornada contratista en la Z. Industrial (+$38)`; }
+        run: () => { applyEff(p, [['time', -6], ['liq', 38], ['stat', 'experience', 3], ['stat', 'stress', 6]]); return `Hiciste una jornada de contratista en la Zona Industrial (+$38)`; }
       });
   }
 
   if (loc === 'hospital') {
     out.push({ id: 'consulta', label: 'Consulta médica (2h · $30)', hours: 2, desc: '+salud, -estrés', ok: p.timeLeft >= 2 && p.liquidity >= 30,
-      run: () => { applyEff(p, [['time', -2], ['liq', -30], ['stat', 'health', 8], ['stat', 'stress', -6]]); return `${p.name} fue a consulta médica (+salud, -estrés)`; }
+      run: () => { applyEff(p, [['time', -2], ['liq', -30], ['stat', 'health', 8], ['stat', 'stress', -6]]); return `Fuiste a consulta médica (+salud, -estrés)`; }
     });
     if (p.stats.health < 60)
       out.push({ id: 'recuperacion', label: 'Recuperación completa (8h · $80)', hours: 8, desc: 'solo cuando salud < 60: recuperación total', ok: p.timeLeft >= 8 && p.liquidity >= 80,
-        run: () => { applyEff(p, [['time', -8], ['liq', -80], ['stat', 'health', 25], ['stat', 'stress', -15]]); return `${p.name} se recuperó en la clínica Kennedy`; }
+        run: () => { applyEff(p, [['time', -8], ['liq', -80], ['stat', 'health', 25], ['stat', 'stress', -15]]); return `Te recuperaste en la clínica Kennedy`; }
       });
     out.push({ id: 'check_prev', label: 'Chequeo preventivo (1h · $15)', hours: 1, desc: '+salud ligera, +conocimiento', ok: p.timeLeft >= 1 && p.liquidity >= 15,
-      run: () => { applyEff(p, [['time', -1], ['liq', -15], ['stat', 'health', 3], ['stat', 'knowledge', 1]]); return `${p.name} hizo chequeo preventivo en la clínica`; }
+      run: () => { applyEff(p, [['time', -1], ['liq', -15], ['stat', 'health', 3], ['stat', 'knowledge', 1]]); return `Te hiciste un chequeo preventivo en la clínica`; }
     });
   }
 
   if (loc === 'parque_calderon' || loc === 'parque_paraiso') {
     out.push({ id: 'parque_descanso', label: 'Descansar en el parque (3h)', hours: 3, desc: '+felicidad, -estrés, gratis', ok: p.timeLeft >= 3,
-      run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 6], ['stat', 'stress', -7], ['stat', 'health', 2]]); return `${p.name} descansó en el Parque Calderón`; }
+      run: () => { applyEff(p, [['time', -3], ['stat', 'happiness', 6], ['stat', 'stress', -7], ['stat', 'health', 2]]); return `Descansaste en el Parque Calderón`; }
     });
     if (p.family.length > 0)
       out.push({ id: 'picnic_fam', label: 'Picnic familiar (3h · $10)', hours: 3, desc: '+felicidad, +legado familiar, +salud', ok: p.timeLeft >= 3 && p.liquidity >= 10,
-        run: () => { applyEff(p, [['time', -3], ['liq', -10], ['stat', 'happiness', 8], ['stat', 'health', 3], ['impact', 'familiar', 4], ['impact', 'comunitario', 1]]); return `${p.name} hizo picnic con la familia en el parque`; }
+        run: () => { applyEff(p, [['time', -3], ['liq', -10], ['stat', 'happiness', 8], ['stat', 'health', 3], ['impact', 'familiar', 4], ['impact', 'comunitario', 1]]); return `Hiciste un picnic con la familia en el parque`; }
       });
     out.push({ id: 'networking_parque', label: 'Red de contactos (2h)', hours: 2, desc: '+confiabilidad, +impacto profesional', ok: p.timeLeft >= 2,
-      run: () => { applyEff(p, [['time', -2], ['stat', 'dependability', 3], ['impact', 'profesional', 3], ['stat', 'happiness', 2]]); return `${p.name} expandió su red en el Parque Calderón`; }
+      run: () => { applyEff(p, [['time', -2], ['stat', 'dependability', 3], ['impact', 'profesional', 3], ['stat', 'happiness', 2]]); return `Expandiste tu red de contactos en el Parque Calderón`; }
     });
     // Voluntariado: buenas acciones para la comunidad
     out.push({ id: 'voluntariado', label: 'Voluntariado comunitario (4h)', hours: 4, desc: '+legado, +liderazgo, +felicidad. Buenas acciones que perduran', ok: p.timeLeft >= 4,
-      run: () => { applyEff(p, [['time', -4], ['stat', 'leadership', 4], ['stat', 'happiness', 6], ['stat', 'reputation', 3], ['impact', 'comunitario', 6]]); return `${p.name} hizo voluntariado por su comunidad (+legado, +liderazgo)`; }
+      run: () => { applyEff(p, [['time', -4], ['stat', 'leadership', 4], ['stat', 'happiness', 6], ['stat', 'reputation', 3], ['impact', 'comunitario', 6]]); return `Hiciste voluntariado por tu comunidad (+legado, +liderazgo)`; }
     });
     // Dirigente Scout: liderazgo formativo de alto impacto comunitario
     out.push({ id: 'scouts', label: 'Dirigente en Scouts del Ecuador (5h)', hours: 5, desc: 'Formar jóvenes: +liderazgo fuerte, +legado, +reputación', ok: p.timeLeft >= 5,
-      run: () => { applyEff(p, [['time', -5], ['stat', 'leadership', 7], ['stat', 'knowledge', 2], ['stat', 'reputation', 5], ['stat', 'happiness', 5], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `${p.name} sirvió como dirigente en los Scouts del Ecuador (+liderazgo, +legado)`; }
+      run: () => { applyEff(p, [['time', -5], ['stat', 'leadership', 7], ['stat', 'knowledge', 2], ['stat', 'reputation', 5], ['stat', 'happiness', 5], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `Serviste como dirigente en los Scouts del Ecuador (+liderazgo, +legado)`; }
     });
     // Salir a la naturaleza también disponible en los parques
     out.push({ id: 'naturaleza', label: 'Día en la naturaleza (4h)', hours: 4, desc: '+bienestar fuerte; vuelves de mejor ánimo y mejoran tus relaciones', ok: p.timeLeft >= 4,
@@ -665,46 +665,46 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           applyEff(p, [['impact', 'familiar', 3]]);
           extra = ' Volviste con otro tono y en casa se notó (+relaciones)';
         }
-        return `${p.name} pasó el día en la naturaleza (+bienestar).` + extra;
+        return `Pasaste el día en la naturaleza (+bienestar).` + extra;
       } });
   }
 
   if (loc === 'municipio') {
     out.push({ id: 'proyecto_com', label: 'Proyecto comunitario (4h)', hours: 4, desc: '+legado comunitario, +conocimiento', ok: p.timeLeft >= 4,
-      run: () => { applyEff(p, [['time', -4], ['stat', 'knowledge', 3], ['stat', 'happiness', 4], ['impact', 'comunitario', 6]]); return `${p.name} participó en proyecto comunitario en el Municipio`; }
+      run: () => { applyEff(p, [['time', -4], ['stat', 'knowledge', 3], ['stat', 'happiness', 4], ['impact', 'comunitario', 6]]); return `Participaste en un proyecto comunitario en el Municipio`; }
     });
     if (p.businesses.length > 0)
       out.push({ id: 'licencia_neg', label: 'Licencia de negocio (3h · $40)', hours: 3, desc: '+confiabilidad, +impacto empresarial', ok: p.timeLeft >= 3 && p.liquidity >= 40,
-        run: () => { applyEff(p, [['time', -3], ['liq', -40], ['stat', 'dependability', 4], ['impact', 'empresarial', 5]]); return `${p.name} tramitó licencia de negocio en el Municipio`; }
+        run: () => { applyEff(p, [['time', -3], ['liq', -40], ['stat', 'dependability', 4], ['impact', 'empresarial', 5]]); return `Tramitaste la licencia de tu negocio en el Municipio`; }
       });
     if (p.impact.comunitario >= 10)
       out.push({ id: 'cargo_publico', label: 'Cargo público voluntario (6h)', hours: 6, desc: 'legado alto: +reputación, +impacto', ok: p.timeLeft >= 6,
-        run: () => { applyEff(p, [['time', -6], ['stat', 'dependability', 6], ['stat', 'knowledge', 2], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `${p.name} asumió un cargo público voluntario`; }
+        run: () => { applyEff(p, [['time', -6], ['stat', 'dependability', 6], ['stat', 'knowledge', 2], ['impact', 'comunitario', 8], ['impact', 'profesional', 2]]); return `Asumiste un cargo público voluntario`; }
       });
     // ── Filantropía de legado: clubes de servicio (gana acceso con reputación comunitaria) ──
     if (p.impact.comunitario >= 20) {
       out.push({ id: 'club_leones', label: 'Club de Leones: jornada médica ($300, 4h)', hours: 4, desc: 'Apoya hospitales y familias necesitadas. +legado fuerte, +reputación', ok: p.timeLeft >= 4 && p.liquidity >= 300,
-        run: () => { applyEff(p, [['time', -4], ['liq', -300], ['stat', 'reputation', 6], ['stat', 'happiness', 6], ['impact', 'comunitario', 12]]); return `${p.name} financió una jornada médica con el Club de Leones`; }
+        run: () => { applyEff(p, [['time', -4], ['liq', -300], ['stat', 'reputation', 6], ['stat', 'happiness', 6], ['impact', 'comunitario', 12]]); return `Financiaste una jornada médica con el Club de Leones`; }
       });
       out.push({ id: 'kiwanis', label: 'Kiwanis: causa por la niñez ($250, 4h)', hours: 4, desc: 'Ayuda a hospitales infantiles. +legado, +reputación', ok: p.timeLeft >= 4 && p.liquidity >= 250,
-        run: () => { applyEff(p, [['time', -4], ['liq', -250], ['stat', 'reputation', 5], ['stat', 'happiness', 6], ['impact', 'comunitario', 10]]); return `${p.name} apoyó a la niñez con Kiwanis`; }
+        run: () => { applyEff(p, [['time', -4], ['liq', -250], ['stat', 'reputation', 5], ['stat', 'happiness', 6], ['impact', 'comunitario', 10]]); return `Apoyaste a la niñez con Kiwanis`; }
       });
       out.push({ id: 'rotario_operacion', label: 'Rotarios: donar una operación ($800, 5h)', hours: 5, desc: 'Como donante, pagas la cirugía de una familia necesitada. +legado máximo', ok: p.timeLeft >= 5 && p.liquidity >= 800,
-        run: () => { applyEff(p, [['time', -5], ['liq', -800], ['stat', 'reputation', 9], ['stat', 'happiness', 10], ['impact', 'comunitario', 18], ['impact', 'profesional', 2]]); return `${p.name} donó una operación a través del Club Rotario (+legado máximo)`; }
+        run: () => { applyEff(p, [['time', -5], ['liq', -800], ['stat', 'reputation', 9], ['stat', 'happiness', 10], ['impact', 'comunitario', 18], ['impact', 'profesional', 2]]); return `Donaste una operación a través del Club Rotario (+legado máximo)`; }
       });
     }
   }
 
   if (loc === 'estadio') {
     out.push({ id: 'entrenar', label: 'Entrenar físico (4h)', hours: 4, desc: '+salud grande, -estrés, gratis', ok: p.timeLeft >= 4,
-      run: () => { applyEff(p, [['time', -4], ['stat', 'health', 10], ['stat', 'stress', -8], ['stat', 'happiness', 3]]); return `${p.name} entrenó en el Estadio Alejandro (+salud)`; }
+      run: () => { applyEff(p, [['time', -4], ['stat', 'health', 10], ['stat', 'stress', -8], ['stat', 'happiness', 3]]); return `Entrenaste en el Estadio Alejandro (+salud)`; }
     });
     out.push({ id: 'partido_inf', label: 'Partido informal (3h · $5)', hours: 3, desc: '+salud, +felicidad, +legado comunitario', ok: p.timeLeft >= 3 && p.liquidity >= 5,
-      run: () => { applyEff(p, [['time', -3], ['liq', -5], ['stat', 'health', 6], ['stat', 'happiness', 7], ['impact', 'comunitario', 3]]); return `${p.name} jugó un partido informal en el Estadio`; }
+      run: () => { applyEff(p, [['time', -3], ['liq', -5], ['stat', 'health', 6], ['stat', 'happiness', 7], ['impact', 'comunitario', 3]]); return `Jugaste un partido informal en el Estadio`; }
     });
     if (p.businesses.length > 0)
       out.push({ id: 'red_palco', label: 'Red empresarial en palco (2h · $20)', hours: 2, desc: '+confiabilidad, +impacto empresarial', ok: p.timeLeft >= 2 && p.liquidity >= 20,
-        run: () => { applyEff(p, [['time', -2], ['liq', -20], ['stat', 'dependability', 4], ['impact', 'empresarial', 4], ['impact', 'profesional', 2]]); return `${p.name} hizo networking empresarial en el palco del Estadio`; }
+        run: () => { applyEff(p, [['time', -2], ['liq', -20], ['stat', 'dependability', 4], ['impact', 'empresarial', 4], ['impact', 'profesional', 2]]); return `Hiciste contactos empresariales en el palco del Estadio`; }
       });
   }
 
@@ -715,13 +715,13 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
         run: () => { const wage = wageOf(p, j, world);
           applyEff(p, [['time', -j.hours], ['liq', wage], ['stat', 'stress', j.stress], ['stat', 'experience', j.exp], ['stat', 'dependability', 1], ['impact', 'profesional', 1]]);
           const promo = tryPromote(p);
-          return `${p.name} trabajó ${j.hours}h en ${j.title} (+$${wage})` + (promo ? ' · ' + promo : ''); } });
+          return `Trabajaste como ${j.title} en ${locById(j.locationId).name.split('(')[0].trim()} (+$${wage})` + (promo ? ' · ' + promo : ''); } });
     } else if (p.job === null) {
       const eligible = p.careerLevel >= j.minLevel;
       out.push({ id: 'apply_' + j.id, label: 'Postular: ' + j.title, hours: 2, desc: eligible ? `requiere confiab. ${j.minDep}` : `requiere nivel ${careerTitle(j.minLevel)}`, ok: p.timeLeft >= 2 && eligible,
         run: () => { applyEff(p, [['time', -2]]);
-          if (p.stats.dependability >= j.minDep) { p.job = j; const loc = locById(j.locationId); return `Fuiste contratado como ${j.title} en ${loc.name.split('(')[0].trim()}`; }
-          return `${p.name} postuló a ${j.title}: no quedaste (sube confiabilidad)`; } });
+          if (p.stats.dependability >= j.minDep) { p.job = j; const loc = locById(j.locationId); return `Te contrataron como ${j.title} en ${loc.name.split('(')[0].trim()}`; }
+          return `Postulaste a ${j.title}: no quedaste (sube tu confiabilidad)`; } });
     }
   }
   // Health crisis: if health < 20, mark all work-related actions as unavailable
@@ -885,7 +885,8 @@ export function cpuTurn(
     if (!act) break;
 
     const log = act.run();
-    logs.push(log);
+    // Las acciones se narran en 2da persona (tú); para la IA atribuimos con el nombre
+    logs.push(`${p.name}: ${log}`);
   }
 
   p.timeLeft = 0;
