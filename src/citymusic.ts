@@ -12,6 +12,7 @@ function ensure(): HTMLAudioElement {
     el = new Audio(URL);
     el.loop = true;
     el.volume = 0.42;
+    el.playbackRate = 1.15;
     el.preload = 'auto';
   }
   return el;

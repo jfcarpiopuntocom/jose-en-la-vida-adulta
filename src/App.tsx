@@ -753,47 +753,41 @@ function HistoriaContent({ game }: { game: GameState }) {
 function AboutContent() {
   return (
     <div className="about-box-inner">
-      <p className="about-welcome">Bienvenido a <b>José En La Vida Adulta</b>, el juego de la vida plena, ambientado en Cuenca, Ecuador.</p>
-
-      <p>Cada quincena tienes 112 horas. Decides dónde invertirlas: trabajo, familia, educación, negocios, descanso. No hay camino correcto. Hay decisiones.</p>
+      <p className="about-welcome"><b>José En La Vida Adulta</b> — el juego de la vida plena, ambientado en Cuenca, Ecuador.</p>
 
       <div className="about-section">
-        <div className="about-section-title">El recurso más escaso</div>
-        <p>No es el dinero. No es el talento. Es el tiempo. Todo cuesta horas. Todo compite por las mismas 112 horas de tu quincena.</p>
+        <div className="about-section-title">El tablero</div>
+        <p>15 stops forman un anillo alrededor de Cuenca: la Universidad, el Banco, la Terminal, la Feria Libre, el Rio Tomebamba y más. Te mueves de un stop al siguiente. Cada movimiento cuesta horas, y las horas no regresan.</p>
       </div>
 
       <div className="about-section">
-        <div className="about-section-title">Dos rutas, un mismo respeto</div>
-        <p>Empleado o empresario. Ninguna ruta es superior. El empleado comprometido sostiene la empresa; el empresario crea el espacio donde otros pueden crecer. Ambos se necesitan.</p>
+        <div className="about-section-title">Las quincenas</div>
+        <p>Cada turno es una quincena: <b>112 horas</b>. Trabajas, estudias, descansas, inviertes. Al cerrar la quincena cobras (o pierdes), tu negocio opera solo, y el banco te abona intereses. Después viene el fin de semana.</p>
       </div>
 
       <div className="about-section">
-        <div className="about-section-title">De negocio a empresa</div>
-        <p>Un negocio que depende del fundador para cada decisión no es una empresa, es un autoempleo de alta complejidad. El salto ocurre cuando existen procedimientos documentados. Sin eso, la dependencia es total y nada escala.</p>
+        <div className="about-section-title">Los fines de semana y el azar</div>
+        <p>Al cerrar cada quincena, cae un evento de fin de semana. Puede ser bueno, malo, o depende de ti. El azar existe — como en la vida. Pero el azar solo decide dentro del margen que tú le dejas: a más salud, menos riesgo; a más reputación, más puertas. La preparación reduce la lotería.</p>
       </div>
 
       <div className="about-section">
-        <div className="about-section-title">Portafolio Permanente</div>
-        <p>Inspirado en Harry Browne: diversificar en activos que preservan valor. Cuadros, vinos, joyería, tarjetas de béisbol, bitcoin. La riqueza no es una cifra, es una estructura.</p>
+        <div className="about-section-title">Decisiones, no dados</div>
+        <p>En algunos eventos el juego te pregunta. Prestar plata al primo. Aceptar el encargo de un cliente. No hay respuesta correcta: hay consecuencias. Piénsalo dos segundos y elige.</p>
       </div>
 
       <div className="about-section">
-        <div className="about-section-title">Los 4 arquetipos de ingreso</div>
-        <p><b>👔 Asalariado</b> — intercambia tiempo por sueldo. Estabilidad real, no debilidad.<br />
-        <b>🛠️ Profesión Liberal</b> — cobra por conocimiento o servicio. Autonomía con límite de horas.<br />
-        <b>🏭 Empresario</b> — posee un sistema que opera sin su presencia constante. Escala con empleados y procedimientos.<br />
-        <b>📈 Inversionista</b> — el capital genera más que los gastos básicos. El tiempo se libera.</p>
-        <p style={{marginTop:6}}>El objetivo no es saltar de cuadrante a cuadrante: es construir bien en el tuyo y diversificar cuando tenga sentido.</p>
+        <div className="about-section-title">El transporte importa</div>
+        <p>A pie cuesta horas. El bus menos. Un carro te libera el tiempo para hacer más cosas por quincena. El transporte que eliges cambia cuánto puedes hacer, y eso cambia todo.</p>
       </div>
 
       <div className="about-section">
-        <div className="about-section-title">Para ganar</div>
-        <p>Bienestar + conocimientos + impacto comunitario + fondo de emergencia de 6 meses + al menos 35% de tus gastos cubiertos por flujo pasivo. Todo a la vez. El camino es tuyo.</p>
+        <div className="about-section-title">El dinero no es la meta</div>
+        <p>La victoria requiere seis cosas a la vez: bienestar físico y mental, conocimientos, impacto, legado comunitario, un fondo de emergencia de 6 meses, y al menos 35% de tus gastos cubiertos por ingresos que no dependen de tu presencia. Todo a la vez. No hay atajo.</p>
       </div>
 
       <div className="about-section">
         <div className="about-section-title">Legado</div>
-        <p>Puedes pasar el testigo a un heredero. Lo que construiste — reputación, capital, principios — viaja con él. El linaje es el horizonte largo del juego.</p>
+        <p>Cuando terminas tu vida de juego, puedes pasar el testigo a un heredero. Lo que construiste viaja con él: capital, reputación, principios. El linaje es el horizonte largo.</p>
       </div>
 
       <div className="about-tribute">
@@ -865,7 +859,10 @@ function Board({ game, onInspect, inspecting }: {
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
         onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
       >
-        <div className="tile-icon">{loc.icon}</div>
+        <div className="tile-art">
+          <img src={`https://picsum.photos/seed/${loc.id}/80/60`} alt="" loading="lazy" draggable={false} />
+          <span className="tile-art-emoji">{loc.icon}</span>
+        </div>
         <div className="tile-label">{loc.name.split('(')[0].trim()}</div>
         {pawns.length > 0 && (
           <div className="tile-pawns">
@@ -890,6 +887,18 @@ function Board({ game, onInspect, inspecting }: {
         <div className="board-center">
           <div className="bc-city">CUENCA</div>
           <div className="bc-turn">Quincena {game.turn}</div>
+          <div className="bc-suerte">
+            <svg className="bc-dice" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.12)" stroke="rgba(200,160,64,0.55)" strokeWidth="1.5"/>
+              {/* dots for face 5 */}
+              <circle cx="10" cy="10" r="3" fill="#C8A040"/>
+              <circle cx="26" cy="10" r="3" fill="#C8A040"/>
+              <circle cx="18" cy="18" r="3" fill="#C8A040"/>
+              <circle cx="10" cy="26" r="3" fill="#C8A040"/>
+              <circle cx="26" cy="26" r="3" fill="#C8A040"/>
+            </svg>
+            <span className="bc-suerte-label">Suerte</span>
+          </div>
         </div>
         <div className="board-edge board-right">
           {right.map(l => <Tile key={l.id} loc={l} />)}
@@ -1048,23 +1057,7 @@ function OnboardModal({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
-        <div style={{ margin:'10px 0 6px', fontSize:'0.82rem', fontWeight:700, color:'#CCCCCC', WebkitTextFillColor:'#CCCCCC' }}>
-          Cuatro rutas al exito:
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:10 }}>
-          {[
-            { label:'Asalariado', desc:'Empleo + carrera', col:'#28ECAA' },
-            { label:'Independiente', desc:'Profesion liberal', col:'#E8A020' },
-            { label:'Empresario', desc:'Negocio propio', col:'#fb7185' },
-            { label:'Inversionista', desc:'Ingresos pasivos', col:'#c084fc' },
-          ].map(r => (
-            <div key={r.label} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid ' + r.col + '66', background: r.col + '18' }}>
-              <div style={{ fontSize:'0.78rem', fontWeight:700, color:r.col, WebkitTextFillColor:r.col }}>{r.label}</div>
-              <div style={{ fontSize:'0.72rem', color:'#CCCCCC', WebkitTextFillColor:'#CCCCCC' }}>{r.desc}</div>
-            </div>
-          ))}
-        </div>
-        <div className="onboard-win">Para ganar: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez.</div>
+        <div className="onboard-win">Meta: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez. El camino lo decides tú.</div>
         <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={dismiss}>
           Entendido — empezar
         </button>
