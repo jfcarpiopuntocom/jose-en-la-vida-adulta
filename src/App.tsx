@@ -6,7 +6,7 @@ import {
   expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
   CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle, generateBackstory,
-  joseQuip,
+  joseQuip, COLLECTIBLE_LORE,
 } from './engine';
 import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
@@ -461,6 +461,12 @@ function StatsPanel({
       <button className="turn-banner turn-banner-btn" onClick={onShowProgress} title="Ver cómo me va">
         <Portrait p={p} size={72} />
         <div className="turn-banner-text">Tu Turno</div>
+        {(p.streak ?? 0) >= 2 && (
+          <div className="streak-badge">🔥 Racha {p.streak}</div>
+        )}
+        {p.weeklyFocus && (
+          <div className="focus-chip">Foco: {p.weeklyFocus}</div>
+        )}
         <div className="turn-banner-hint">toca para ver cómo te va ▾</div>
       </button>
       <div className="player-block">
@@ -544,14 +550,19 @@ function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number)
         ? <div className="actions-empty">Sin acciones aquí — muévete o termina tu quincena.</div>
         : (
           <div className="actions-row">
-            {acts.map((a, i) => (
-              <button key={a.id} className="action-card"
-                style={{ '--ac': 'var(--'+ACT_COLORS[i%ACT_COLORS.length]+')' } as any}
-                onClick={() => onAction(i)}>
-                <span className="act-name"><span className="act-icon">{actionIcon(a.id)}</span>{a.label}</span>
-                <span className="act-desc">{a.desc}</span>
-              </button>
-            ))}
+            {acts.map((a, i) => {
+              // #4 Costo de oportunidad explícito: cuánto te queda si eliges esta
+              const after = Math.max(0, p.timeLeft - a.hours);
+              return (
+                <button key={a.id} className="action-card"
+                  style={{ '--ac': 'var(--'+ACT_COLORS[i%ACT_COLORS.length]+')' } as any}
+                  onClick={() => onAction(i)}>
+                  <span className="act-name"><span className="act-icon">{actionIcon(a.id)}</span>{a.label}</span>
+                  <span className="act-desc">{a.desc}</span>
+                  <span className="act-cost">−{a.hours}h · te quedan {after}h</span>
+                </button>
+              );
+            })}
           </div>
         )}
     </div>
@@ -914,7 +925,10 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
           <span className="pm-row"><span>🎨 Coleccionables</span><b>${portfolio.collectibles}</b></span>
         )}
         {p.collectibles.map((c, i) => (
-          <span key={i} className="pm-col">{COL_ICONS[c.kind]} {c.name} · ${c.value} {c.value > c.boughtFor ? '▲' : '▼'}</span>
+          <span key={i} className="pm-col" title={COLLECTIBLE_LORE[c.kind]}>
+            {COL_ICONS[c.kind]} {c.name} · ${c.value} {c.value > c.boughtFor ? '▲' : '▼'}
+            <span className="pm-col-lore">{COLLECTIBLE_LORE[c.kind]}</span>
+          </span>
         ))}
       </div>
       <div className="pcard-dims">
@@ -936,8 +950,13 @@ function OnboardModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-bg">
       <div className="modal onboard-modal">
-        <div className="onboard-title">Bienvenido a la vida adulta</div>
-        <div className="onboard-sub">Tienes 112 horas esta quincena. Aquí hay 3 cosas para hacer ahora:</div>
+        <div className="onboard-jose">
+          <img className="onboard-jose-img" src="/jose-en-la-vida-adulta/avatars/jose.png" alt="José" />
+          <div>
+            <div className="onboard-title">Tu primera quincena</div>
+            <div className="onboard-sub">Soy José. Tienes <b>112 horas</b>: cada cosa cuesta tiempo y nada vuelve. Empieza por estas tres. No es la única ruta — es una buena.</div>
+          </div>
+        </div>
         <div className="onboard-goals">
           {goals.map((g, i) => (
             <div key={i} className="onboard-goal">
@@ -976,9 +995,10 @@ function OnboardModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Event Modal ──
-function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
+function EventModal({ pend, onChoose, onNext }: { pend: Pending; onChoose: (idx: number) => void; onNext: () => void }) {
   const { p, ev, silvered } = pend;
   const col = PLAYER_COLORS[p.colorIndex];
+  const hasChoices = !!ev.choices && ev.choices.length > 0;
   return (
     <div className="modal-bg">
       <div className="modal">
@@ -991,7 +1011,18 @@ function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
         </h3>
         <div className="body">{ev.body}</div>
         {silvered && ev.sl && <div className="silver">↪ {ev.sl}</div>}
-        <button className="primary" onClick={onNext}>Continuar</button>
+        {hasChoices ? (
+          <div className="event-choices">
+            {ev.choices!.map((c, i) => (
+              <button key={i} className="event-choice" onClick={() => onChoose(i)}>
+                <span className="event-choice-label">{c.label}</span>
+                <span className="event-choice-desc">{c.desc}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button className="primary" onClick={onNext}>Continuar</button>
+        )}
       </div>
     </div>
   );
@@ -1117,6 +1148,7 @@ function App() {
   );
   const [showProgress, setShowProgress] = useState(false);
   const [celebrate, setCelebrate] = useState(false); // #3 microcelebración juicy
+  const [showFocusPick, setShowFocusPick] = useState(false); // #7 meta autoimpuesta
 
   // Tema oficial: suena siempre (arranca al primer gesto en iOS/mobile)
   useEffect(() => { cityMusic.arm(); }, []);
@@ -1224,13 +1256,21 @@ function App() {
     for (const p of g.players) {
       const ev = rollEvent(p, g.turn, p.isAI ? 1 : (g.world.luckMult ?? 1));
       if (ev) {
-        applyEff(p, ev.eff);
         let silvered = false;
-        if (ev.neg && ev.silver.length) { applyEff(p, ev.silver); silvered = true; }
+        const hasChoices = !!ev.choices && ev.choices.length > 0;
+        // #5 Evento bifurcado: si hay opciones, el efecto se aplica al elegir.
+        // La IA decide la primera opción por defecto (la más activa).
+        if (hasChoices) {
+          if (p.isAI) { applyEff(p, ev.choices![0].eff); }
+        } else {
+          applyEff(p, ev.eff);
+          if (ev.neg && ev.silver.length) { applyEff(p, ev.silver); silvered = true; }
+        }
         if (ev.firesJob) p.job = null;
         if (ev.setEcon) { g.world.economy = ev.setEcon; g.world.wageMult = ev.setEcon==='good'?1:0.8; g.world.salesMult = ev.setEcon==='good'?1:0.8; }
         g.log.push({ turn: g.turn, text: `${p.name}: ${ev.title}`, kind: ev.neg?'neg':'pos', importance: ev.imp });
-        pend.push({ p, ev, silvered });
+        // Solo mostrar modal a los humanos (la IA decide sola)
+        if (!p.isAI) pend.push({ p, ev, silvered });
       }
     }
     for (const p of g.players) {
@@ -1300,6 +1340,37 @@ function App() {
         : `José: voy un paso adelante (tú ${hp}% · yo ${jp}%). Tú marcas tu ritmo.`;
       g.log.push({ turn: g.turn, text: msg, kind: 'jose', importance: 2 });
     }
+    // #1 Racha de quincenas equilibradas + #7 meta autoimpuesta
+    for (const p of g.players) {
+      const curWin = winProgress(p, g.goals);
+      const prev = p.prevWin ?? curWin;
+      if (curWin >= prev) p.streak = (p.streak ?? 0) + 1;
+      else p.streak = 0;
+      p.prevWin = curWin;
+      if (!p.isAI && p.streak && p.streak > 0 && p.streak % 3 === 0) {
+        g.log.push({ turn: g.turn, text: `Racha de ${p.streak} quincenas en avance constante (+temple).`, kind: 'pos', importance: 2 });
+        p.stats.resilience = Math.min(100, p.stats.resilience + 3);
+      }
+      // #7 Evalúa la meta declarada
+      if (!p.isAI && p.weeklyFocus && typeof p.weeklyFocusBase === 'number') {
+        const m = metrics(p);
+        const now = p.weeklyFocus === 'salud' ? m.bienestar
+          : p.weeklyFocus === 'plata' ? (p.liquidity + p.bank)
+          : p.weeklyFocus === 'familia' ? p.impact.familiar
+          : m.conocimientos;
+        const delta = now - p.weeklyFocusBase;
+        const goalDelta = p.weeklyFocus === 'plata' ? 80 : 8;
+        if (delta >= goalDelta) {
+          g.log.push({ turn: g.turn, text: `Meta cumplida: te enfocaste en ${p.weeklyFocus} y se notó (+ánimo, +temple).`, kind: 'pos', importance: 2 });
+          p.stats.happiness = Math.min(100, p.stats.happiness + 5);
+          p.stats.resilience = Math.min(100, p.stats.resilience + 3);
+        }
+        p.weeklyFocus = null;
+        p.weeklyFocusBase = undefined;
+      }
+    }
+    // Tras cerrar la quincena, pregunta al humano por su próxima meta
+    if (g.players.some(p => !p.isAI && !p.weeklyFocus)) setTimeout(() => setShowFocusPick(true), 1200);
     // Victoria (ya con pasivos aplicados)
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
@@ -1380,7 +1451,18 @@ function App() {
 
       {/* Event modals */}
       {queue.length > 0 && qi < queue.length && (
-        <EventModal pend={queue[qi]} onNext={advanceQueue} />
+        <EventModal
+          pend={queue[qi]}
+          onChoose={(idx) => {
+            // #5 aplica la elección al jugador y avanza
+            mutate(g => {
+              const pp = g.players.find(x => x.id === queue[qi].p.id);
+              if (pp && queue[qi].ev.choices) applyEff(pp, queue[qi].ev.choices![idx].eff);
+            });
+            advanceQueue();
+          }}
+          onNext={advanceQueue}
+        />
       )}
       {/* Anuncio transitorio sobre la mitad del tablero — se desvanece solo */}
       {flash && (
@@ -1395,7 +1477,55 @@ function App() {
       {showProgress && (
         <ProgressModal game={game} onClose={() => setShowProgress(false)} />
       )}
+
+      {/* #7 Meta autoimpuesta de la quincena */}
+      {showFocusPick && (
+        <FocusPickModal
+          onPick={(f) => {
+            mutate(g => {
+              const p = g.players.find(x => !x.isAI);
+              if (!p) return;
+              p.weeklyFocus = f;
+              const m = metrics(p);
+              p.weeklyFocusBase = f === 'salud' ? m.bienestar
+                : f === 'plata' ? (p.liquidity + p.bank)
+                : f === 'familia' ? p.impact.familiar
+                : m.conocimientos;
+            });
+            setShowFocusPick(false);
+          }}
+          onSkip={() => setShowFocusPick(false)}
+        />
+      )}
     </>
+  );
+}
+
+// ── #7 Meta autoimpuesta de la quincena ──
+function FocusPickModal({ onPick, onSkip }: { onPick: (f: 'salud'|'plata'|'familia'|'aprender') => void; onSkip: () => void }) {
+  const opts: { id: 'salud'|'plata'|'familia'|'aprender'; label: string; desc: string; emoji: string }[] = [
+    { id:'salud',    emoji:'💪', label:'Cuidarme', desc:'Esta quincena pongo el bienestar primero.' },
+    { id:'plata',    emoji:'💰', label:'Ganar terreno', desc:'Ahorrar, trabajar o invertir. Quiero ver el saldo subir.' },
+    { id:'familia',  emoji:'🤝', label:'Estar con los míos', desc:'Más tiempo con la gente que importa.' },
+    { id:'aprender', emoji:'📚', label:'Aprender algo', desc:'Estudiar, leer, un curso. Pico de conocimiento.' },
+  ];
+  return (
+    <div className="modal-bg" onClick={onSkip}>
+      <div className="modal focus-modal" onClick={e => e.stopPropagation()}>
+        <div className="focus-title">¿En qué te enfocas esta quincena?</div>
+        <div className="focus-sub">Una meta clara hace el doble. Si la cumples, tu temple y tu ánimo lo agradecen.</div>
+        <div className="focus-opts">
+          {opts.map(o => (
+            <button key={o.id} className="focus-opt" onClick={() => onPick(o.id)}>
+              <span className="focus-emoji">{o.emoji}</span>
+              <span className="focus-opt-label">{o.label}</span>
+              <span className="focus-opt-desc">{o.desc}</span>
+            </button>
+          ))}
+        </div>
+        <button className="focus-skip" onClick={onSkip}>Sin meta esta vez</button>
+      </div>
+    </div>
   );
 }
 

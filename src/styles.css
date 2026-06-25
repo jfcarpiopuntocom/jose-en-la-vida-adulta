@@ -1480,6 +1480,93 @@ input[type=text], input[type=number] {
   .board-toast { animation: none; }
 }
 
+/* #4 costo de oportunidad explícito en cada acción */
+.act-cost {
+  display: block; margin-top: 4px; font-size: 0.78rem; font-weight: 700;
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
+}
+
+/* #1 racha + #7 meta de foco: micro-chips en el banner del turno */
+.streak-badge {
+  display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
+  font-size: 0.82rem; font-weight: 800; letter-spacing: 0.3px;
+  background: rgba(232,96,64,0.18); border: 1px solid #E86040;
+  color: #E86040 !important; -webkit-text-fill-color: #E86040 !important;
+}
+.focus-chip {
+  display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
+  font-size: 0.82rem; font-weight: 800;
+  background: rgba(40,236,170,0.14); border: 1px solid #28ECAA;
+  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
+}
+
+/* #7 modal de meta autoimpuesta */
+.focus-modal { max-width: 480px; text-align: center; }
+.focus-title {
+  font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 800; margin-bottom: 4px;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.focus-sub {
+  font-size: 0.95rem; line-height: 1.4; margin-bottom: 14px;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+.focus-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.focus-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 12px; border-radius: 10px;
+  border: 1.5px solid rgba(245,194,74,0.4); background: rgba(245,194,74,0.06);
+  cursor: pointer; text-align: left; transition: transform .12s, border-color .12s;
+}
+.focus-opt:hover { transform: translateY(-2px); border-color: #F5C24A; }
+.focus-emoji { font-size: 1.5rem; }
+.focus-opt-label {
+  font-size: 1rem; font-weight: 800;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.focus-opt-desc {
+  font-size: 0.86rem; line-height: 1.35;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+.focus-skip {
+  margin-top: 12px; background: transparent; border: 1px solid #555; padding: 6px 14px;
+  border-radius: 8px; font-size: 0.88rem; cursor: pointer;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+
+/* #5 elecciones en eventos bifurcados */
+.event-choices { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.event-choice {
+  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px;
+  border: 1.5px solid rgba(245,194,74,0.45); background: rgba(245,194,74,0.07);
+  cursor: pointer; text-align: left; transition: transform .12s, border-color .12s;
+}
+.event-choice:hover { transform: translateY(-1px); border-color: #F5C24A; }
+.event-choice-label {
+  font-size: 0.98rem; font-weight: 800;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.event-choice-desc {
+  font-size: 0.85rem; line-height: 1.35;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+
+/* #9 coleccionables con micro-historia */
+.pm-col-lore {
+  display: block; font-size: 0.78rem; line-height: 1.35; margin-top: 2px;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
+
+/* #15 onboarding: José abre la primera quincena como sherpa */
+.onboard-jose {
+  display: flex; gap: 12px; align-items: center; margin-bottom: 12px; text-align: left;
+}
+.onboard-jose-img {
+  width: 56px; height: 56px; flex-shrink: 0;
+  border-radius: 50%; object-fit: cover;
+  border: 3px solid #F5C24A; background: #f4e5c8;
+  box-shadow: 0 0 14px rgba(245,194,74,0.4);
+}
+
 /* #11 urgencia visual: pocas horas restantes resaltan las acciones */
 .actions-urgent { box-shadow: inset 0 0 0 2px #E0303A; border-radius: 10px; }
 .actions-urgent .action-card { animation: urgentPulse 1.3s ease-in-out infinite; }

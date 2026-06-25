@@ -128,6 +128,10 @@ export interface PlayerState {
   colorIndex: number;
   avatar?: number;     // retrato elegido por el jugador (0-3 = player1..4.png)
   fell?: boolean;      // cayó (salud crítica o quiebra); al recuperarse gana temple — narrativa de levantarse
+  streak?: number;     // #1 racha de quincenas equilibradas (6 áreas todas en avance)
+  weeklyFocus?: 'salud' | 'plata' | 'familia' | 'aprender' | null; // #7 meta autoimpuesta
+  weeklyFocusBase?: number; // valor base del área para medir avance al cierre
+  prevWin?: number;    // progreso hacia la victoria al cierre del turno anterior (para racha)
   generation: number;  // 1 = José, 2+ = herederos (Modo Legado)
   timeLeft: number;
   liquidity: number;
@@ -218,6 +222,7 @@ export interface GameEvent {
   sl: string;
   firesJob?: boolean;
   setEcon?: EconomyState;
+  choices?: { label: string; desc: string; eff: Effect[] }[]; // #5 evento bifurcado
 }
 
 export interface GameAction {

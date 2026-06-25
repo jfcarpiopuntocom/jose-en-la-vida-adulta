@@ -115,6 +115,15 @@ export const JOSE_QUIPS: string[] = [
   'Voy dos pasos adelante, pero no para que me sigas: para mostrarte que se puede.',
 ];
 export function joseQuip(): string { return JOSE_QUIPS[Math.floor(Math.random() * JOSE_QUIPS.length)]; }
+
+// #9 Coleccionables con historia: micro-lore cuencano para que se sientan reales
+export const COLLECTIBLE_LORE: Record<string, string> = {
+  cuadro: 'Pintura de un taller del Centro Histórico — esos cuadros se cuelgan en sala y se cuentan a las visitas.',
+  vino: 'Botella de guarda; en Cuenca pocas familias saben de cavas, así que el que tiene una, presume bien.',
+  joyeria: 'Pieza de plata de Chordeleg; el oficio viene de generaciones y la pieza no se devalúa.',
+  tarjeta: 'Tarjeta de béisbol — colección de nicho, valor que sube cuando el jugador entra al Salón de la Fama.',
+  bitcoin: 'Fracción de Bitcoin; volátil, pero el que aguantó la curva nunca se arrepintió.',
+};
 const rnd = (n: number) => Math.floor(Math.random() * n);
 const pick = <T,>(a: T[]): T => a[rnd(a.length)];
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -500,13 +509,16 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
           return `Abriste un negocio en la Feria Libre`; } });
     } else {
       const b = p.businesses[0];
-      out.push({ id: 'operate', label: 'Operar negocio (8h)', hours: 8, desc: 'atender clientes', ok: p.timeLeft >= 8,
+      out.push({ id: 'operate', label: 'Operar negocio (8h)', hours: 8, desc: 'atender clientes · el día varía', ok: p.timeLeft >= 8,
         run: () => {
           const empBoost = b.employees.reduce((s, e) => s + e.competence / 100, 0);
-          const cl = Math.round(b.clientes * world.salesMult * (1 + empBoost * 0.5));
+          // #12 Recompensa variable: el comercio depende del flujo de gente y del clima de Cuenca
+          const variance = 0.65 + Math.random() * 0.7; // 65%–135%
+          const cl = Math.round(b.clientes * world.salesMult * (1 + empBoost * 0.5) * variance);
           const util = cl * b.ticket - b.costosFijos;
           applyEff(p, [['time', -8], ['liq', util], ['stat', 'stress', 5], ['stat', 'experience', 2], ['impact', 'empresarial', 2]]);
-          return `Operaste tu negocio: ${cl} clientes, utilidad $${util}`;
+          const flavor = variance >= 1.15 ? '¡día buenazo!' : variance >= 0.95 ? 'día normal' : variance >= 0.8 ? 'día flojo' : 'día muy tranquilo';
+          return `Operaste tu negocio (${flavor}): ${cl} clientes, utilidad $${util}`;
         } });
       out.push({ id: 'hire', label: 'Contratar empleado (2h)', hours: 2, desc: 'persistente: más producción, más costo y riesgo', ok: p.timeLeft >= 2 && b.employees.length < 3,
         run: () => { applyEff(p, [['time', -2]]); const e = generateEmployee(); b.employees.push(e);
