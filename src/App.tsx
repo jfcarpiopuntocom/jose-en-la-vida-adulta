@@ -876,6 +876,33 @@ function PawnOverlay({ game }: { game: GameState }) {
   );
 }
 
+// SVG icons para tiles (reemplazan emojis)
+const TILE_SVG: Record<string, string> = {
+  '🏠': 'M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3z',                    // casa
+  '🎓': 'M12 3L1 9l11 6 9-5v7h2V9L12 3zM5 13.2v4L12 21l7-3.8v-4L12 17l-7-3.8z', // gorro
+  '🏦': 'M2 20h20v2H2v-2zm1-2h2v-6H3v6zm4 0h2v-6H7v6zm4 0h2v-6h-2v6zm4 0h2v-6h-2v6zm4 0h2v-6h-2v6zM2 10l10-7 10 7H2z', // banco
+  '🚌': 'M4 16V6c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v10l-1 2H5l-1-2zM7 14a1 1 0 100-2 1 1 0 000 2zm10 0a1 1 0 100-2 1 1 0 000 2zM6 6h12v4H6V6zm0 14h3v2H6v-2zm9 0h3v2h-3v-2z', // bus
+  '🏭': 'M22 22H2V10l6-4v4l6-4v4l6-4v12zM6 18h3v-3H6v3zm5 0h3v-3h-3v3zm5 0h3v-3h-3v3z', // fabrica
+  '🏥': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 8h-3v3h-2v-3H8v-2h3V6h2v3h3v2z', // hospital
+  '🛒': 'M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14.8l.1-.2L8.1 13h7.5c.7 0 1.4-.4 1.7-1l3.9-7-1.7-1-3.9 7H8.5L4.3 2H1v2h2l3.6 7.6L5.2 14c-.1.3-.2.6-.2 1 0 1.1.9 2 2 2h12v-2H7.4c-.1 0-.2-.1-.2-.2z', // carrito
+  '⛪': 'M12 2L8 7v2H4v12h16V9h-4V7l-4-5zM12 18c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zm0-8a1 1 0 110-2 1 1 0 010 2z', // iglesia
+  '🌳': 'M12 2C8 2 5 5 5 8.5c0 2 1 3.8 2.5 5L12 22l4.5-8.5C18 12.3 19 10.5 19 8.5 19 5 16 2 12 2z', // arbol
+  '🌉': 'M2 18h20v2H2v-2zM4 14c0-3 2.7-5 5-5s5 2 5 5H4zm6-7V4h4v3h-4zm5 7c0-3 2.7-5 5-5v5h-5z', // puente
+  '🏛️': 'M2 20h20v2H2v-2zm2-2V10h2v8H4zm5 0V10h2v8H9zm5 0V10h2v8h-2zm5 0V10h2v8h-2zM1 8l11-6 11 6H1z', // municipio
+  '🛍️': 'M18 6h-2c0-2.2-1.8-4-4-4S8 3.8 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2z', // shopping
+  '⚽': 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm1-13.5l3 2.2-1.2 3.7H9.2L8 8.7l3-2.2h2z', // estadio
+};
+
+function TileIcon({ icon }: { icon: string }) {
+  const path = TILE_SVG[icon];
+  if (!path) return <span className="tile-art-emoji">{icon}</span>;
+  return (
+    <svg viewBox="0 0 24 24" className="tile-svg-icon" fill="currentColor">
+      <path d={path} />
+    </svg>
+  );
+}
+
 // Gradiente por zona — color de tablero sin fotos externas
 const ZONE_GRAD: Record<string, string> = {
   hogar:        'linear-gradient(135deg,#7c3a1a,#4a2010)',
@@ -892,10 +919,11 @@ const ZONE_GRAD: Record<string, string> = {
 };
 
 // ── Board ──
-function Board({ game, onInspect, inspecting }: {
+function Board({ game, onInspect, inspecting, onAction }: {
   game: GameState;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
+  onAction: (i: number) => void;
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
@@ -911,7 +939,8 @@ function Board({ game, onInspect, inspecting }: {
     const cost = loc.tc[active.transport];
     const reachable = !here && active.timeLeft >= cost;
     const sel = inspecting === loc.id;
-    const pawns = game.players.filter(p => p.currentLocation === loc.id);
+    const showActions = here && sel;
+    const acts = showActions ? actionsFor(active, game.world) : [];
 
     return (
       <div
@@ -920,11 +949,20 @@ function Board({ game, onInspect, inspecting }: {
         onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
       >
         <div className="tile-art" style={{ background: ZONE_GRAD[loc.zone] ?? 'rgba(255,255,255,0.06)' }}>
-          <span className="tile-art-emoji">{loc.icon}</span>
+          <TileIcon icon={loc.icon} />
         </div>
         <div className="tile-label">{loc.name.split('(')[0].trim()}</div>
-        {here && <div className="tile-you">● AQUÍ</div>}
+        {here && !sel && <div className="tile-you">● AQUÍ</div>}
         {!here && reachable && <div className="tile-cost">{fh(cost)}h</div>}
+        {showActions && acts.length > 0 && (
+          <div className="tile-actions-pop" onClick={e => e.stopPropagation()}>
+            {acts.map((a, i) => (
+              <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)} title={a.desc}>
+                {a.label} <span className="tac-cost">{fh(a.hours)}h</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -941,25 +979,7 @@ function Board({ game, onInspect, inspecting }: {
         <div className="board-center">
           <div className="bc-city">CUENCA</div>
           <div className="bc-turn">Quincena {game.turn}</div>
-          <div className="bc-suerte">
-            {/* Dado 1: cara 3 */}
-            <svg className="bc-dice" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.14)" stroke="rgba(200,160,64,0.6)" strokeWidth="1.5"/>
-              <circle cx="10" cy="10" r="3.2" fill="#C8A040"/>
-              <circle cx="18" cy="18" r="3.2" fill="#C8A040"/>
-              <circle cx="26" cy="26" r="3.2" fill="#C8A040"/>
-            </svg>
-            {/* Dado 2: cara 5 */}
-            <svg className="bc-dice bc-dice-2" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.10)" stroke="rgba(200,160,64,0.5)" strokeWidth="1.5"/>
-              <circle cx="10" cy="10" r="3.2" fill="#C8A040"/>
-              <circle cx="26" cy="10" r="3.2" fill="#C8A040"/>
-              <circle cx="18" cy="18" r="3.2" fill="#C8A040"/>
-              <circle cx="10" cy="26" r="3.2" fill="#C8A040"/>
-              <circle cx="26" cy="26" r="3.2" fill="#C8A040"/>
-            </svg>
-            <span className="bc-suerte-label">Suerte</span>
-          </div>
+          {/* Dados aparecen solo en EventModal, no como decoración */}
         </div>
         <div className="board-edge board-right">
           {right.map(l => <Tile key={l.id} loc={l} />)}
@@ -1135,6 +1155,10 @@ function EventModal({ pend, onChoose, onNext }: { pend: Pending; onChoose: (idx:
   return (
     <div className="modal-bg" onClick={!hasChoices ? onNext : undefined}>
       <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="ev-dice-row">
+          <svg className="ev-dice" viewBox="0 0 36 36"><rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.14)" stroke="rgba(200,160,64,0.6)" strokeWidth="1.5"/><circle cx="10" cy="10" r="3.2" fill="#C8A040"/><circle cx="18" cy="18" r="3.2" fill="#C8A040"/><circle cx="26" cy="26" r="3.2" fill="#C8A040"/></svg>
+          <svg className="ev-dice ev-dice-2" viewBox="0 0 36 36"><rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.10)" stroke="rgba(200,160,64,0.5)" strokeWidth="1.5"/><circle cx="10" cy="10" r="3.2" fill="#C8A040"/><circle cx="26" cy="10" r="3.2" fill="#C8A040"/><circle cx="18" cy="18" r="3.2" fill="#C8A040"/><circle cx="10" cy="26" r="3.2" fill="#C8A040"/><circle cx="26" cy="26" r="3.2" fill="#C8A040"/></svg>
+        </div>
         <div className="ev-tag">¿Qué pasó en mi fin de semana?</div>
         <h3>
           <span style={{ color: ev.neg ? 'var(--rose)' : 'var(--green)', WebkitTextFillColor: ev.neg ? 'var(--rose)' : 'var(--green)' }}>
@@ -1548,12 +1572,15 @@ function App() {
           <Board game={game}
             onInspect={id => { setInspecting(id); setOpenPanel(null); }}
             inspecting={inspecting}
+            onAction={doAction}
           />
           <div className="footer-bar">
             <div className="time-section">
               <TimeRing hours={game.activePlayerIndex >= 0 ? game.players[game.activePlayerIndex].timeLeft : HOURS_PER_TURN} />
             </div>
-            <ActionsBar game={game} onAction={doAction} />
+            <div className="footer-loc">
+              {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {loc.name}</>; })()}
+            </div>
             <button className="btn-end-footer" onClick={() => endPlayerTurn()}>
               Siguiente quincena ▶
             </button>
