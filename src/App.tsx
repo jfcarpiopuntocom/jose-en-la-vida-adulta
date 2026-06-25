@@ -1554,7 +1554,8 @@ function App() {
   function runEvents(g: GameState) {
     const pend: Pending[] = [];
     for (const p of g.players) {
-      const ev = rollEvent(p, g.turn, p.isAI ? 1 : (g.world.luckMult ?? 1));
+      // El humano SIEMPRE ve su recap de fin de semana; la IA puede tener quincenas tranquilas.
+      const ev = rollEvent(p, g.turn, p.isAI ? 1 : (g.world.luckMult ?? 1), !p.isAI);
       if (ev) {
         let silvered = false;
         const hasChoices = !!ev.choices && ev.choices.length > 0;

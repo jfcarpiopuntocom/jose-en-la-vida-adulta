@@ -381,13 +381,14 @@ function weightOf(ev: GameEvent, p: PlayerState, turn: number): number {
   }
   return w;
 }
-// 25% de las quincenas no pasa nada: el jugador es el timón.
-export function rollEvent(p: PlayerState, turn: number, luckMult = 1): GameEvent | null {
+// Por defecto el humano SIEMPRE tiene su recap de fin de semana (como en Jones).
+// force=true salta el "no pasó nada"; la IA sí puede tener quincenas tranquilas.
+export function rollEvent(p: PlayerState, turn: number, luckMult = 1, force = false): GameEvent | null {
   const cands = EVENTS.filter(e => e.cond.every((c: any[]) => evalCond(c, p, turn)));
   if (cands.length === 0) return null;
   // Más suerte = más quincenas tranquilas; cuesta arriba = los imprevistos no perdonan
   const skip = clamp(0.25 * luckMult, 0.12, 0.42);
-  if (Math.random() < skip) return null;
+  if (!force && Math.random() < skip) return null;
   const ws = cands.map(e => weightOf(e, p, turn));
   const total = ws.reduce((s, w) => s + w, 0);
   let r = Math.random() * total, pickEv = cands[cands.length - 1];
