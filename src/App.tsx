@@ -13,139 +13,8 @@ import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
 import { cityMusic } from './citymusic';
 
-// ── Música: gestor propio — directo al HTMLAudioElement, funciona en iOS ──
-// Reemplaza cityMusic.toggle() que no funciona (el objeto puede no haber armado el audio).
-// Usamos un elemento de audio global al módulo: creado la primera vez que se necesita,
-// jamás antes (evita errores de autoplay antes del primer gesto del usuario).
-const TRACK_SRC = '/jose-en-la-vida-adulta/track.mp3';
-let _aud: HTMLAudioElement | null = null;
-let _wanted = false;
-function _getAud() {
-  if (!_aud && typeof window !== 'undefined') {
-    _aud = new Audio(TRACK_SRC);
-    _aud.loop = true;
-    _aud.volume = 0.3;
-  }
-  return _aud;
-}
-// Llamado desde gesto de usuario: siempre funciona en iOS
-function _musicToggle(): boolean {
-  _wanted = !_wanted;
-  const a = _getAud();
-  if (!a) return _wanted;
-  if (_wanted) a.play().catch(() => {}); else a.pause();
-  return _wanted;
-}
-function _musicIsOn() { return _wanted; }
-
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
-
-// ── CSS mobile inyectado al <head>: arregla mobile sin tocar el .css existente ──
-function MobileStyles() {
-  useEffect(() => {
-    const el = document.createElement('style');
-    el.id = 'jelva-mob';
-    el.textContent = `
-      /* Animación para los toasts breezy */
-      @keyframes fadeInUp {
-        from { opacity:0; transform:translateX(-50%) translateY(8px); }
-        to   { opacity:1; transform:translateX(-50%) translateY(0); }
-      }
-      /* ── MOBILE LANDSCAPE (ancho < 800 px) ── */
-      @media (max-width: 799px) {
-        /* Top bar */
-        .topbar-headline { display:none !important; }
-        #top-bar { padding:0 8px !important; gap:4px !important; height:36px !important; }
-        .game-name { font-size:0.58rem !important; letter-spacing:0.03em !important; }
-        .hud-btn, .about-btn-hud { width:28px !important; height:28px !important; font-size:0.82rem !important; }
-        /* Board container */
-        .game-layout { overflow:hidden; }
-        .game-main   { min-height:0; overflow:hidden; }
-        /* Tiles */
-        .tile { min-width:0 !important; }
-        .tile-art  { height:30px !important; }
-        .tile-label{ font-size:0.44rem !important; line-height:1.1 !important; padding:0 1px !important; }
-        .tile-you  { font-size:0.38rem !important; padding:1px 2px !important; }
-        .tile-cost { font-size:0.38rem !important; }
-        .tile-svg-icon { width:14px !important; height:14px !important; }
-        .tile-art-emoji{ font-size:0.82rem !important; }
-        /* Board edges: tighter gap */
-        .board-edge { gap:2px !important; }
-        /* Board center */
-        .bc-head { padding:3px !important; gap:3px !important; }
-        .bc-turn { font-size:0.6rem !important; }
-        .clock-face { width:38px !important; height:38px !important; }
-        .clock-days { bottom:2px !important; }
-        .clock-num  { font-size:0.7rem !important; }
-        .clock-unit { font-size:0.36rem !important; }
-        /* Clerk panel */
-        .clerk-panel  { padding:6px 8px !important; gap:5px !important; }
-        .clerk-header { gap:6px !important; margin-bottom:3px !important; }
-        .clerk-name   { font-size:0.78rem !important; }
-        .clerk-role   { font-size:0.6rem !important; }
-        .clerk-quip   { font-size:0.68rem !important; margin:3px 0 !important; }
-        .tile-act-chip{ padding:5px 7px !important; gap:2px !important; }
-        .tac-name     { font-size:0.72rem !important; }
-        .tac-desc     { font-size:0.6rem !important; }
-        .tac-cost     { font-size:0.62rem !important; }
-        /* Footer */
-        .footer-bar { padding:3px 6px !important; gap:4px !important; min-height:40px !important; height:auto !important; }
-        .footer-loc { font-size:0.6rem !important; max-width:64px !important; overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
-        .btn-end-footer { padding:5px 9px !important; font-size:0.7rem !important; }
-        .btn-jose-speed { padding:4px 7px !important; font-size:0.66rem !important; }
-        /* Actions bar */
-        #actions-bar   { padding:5px 7px !important; }
-        .actions-label { font-size:0.62rem !important; margin-bottom:3px !important; }
-        .action-chip   { padding:4px 7px !important; gap:2px !important; min-width:0 !important; }
-        .chip-label    { font-size:0.65rem !important; }
-        .chip-cost     { font-size:0.58rem !important; }
-        .chip-icon     { font-size:0.8rem !important; }
-        /* Stats panel: bottom-sheet flotante cuando está abierto */
-        #stats-panel {
-          position:fixed !important;
-          bottom:44px !important; left:0 !important; right:0 !important;
-          top:auto !important; width:100% !important; max-width:100% !important;
-          max-height:56vh !important; overflow-y:auto !important;
-          border-radius:14px 14px 0 0 !important;
-          border-top:2px solid rgba(200,160,64,0.5) !important;
-          box-shadow:0 -6px 28px rgba(0,0,0,0.65) !important;
-          z-index:80 !important;
-        }
-        .turn-banner { padding:7px 10px !important; }
-        .turn-banner-text { font-size:0.85rem !important; }
-        .player-block { padding:4px 8px !important; }
-        .resources { gap:5px !important; padding:3px 0 !important; }
-        .res-icon { font-size:0.78rem !important; }
-        .res-val  { font-size:0.72rem !important; }
-        .win-pct-bar  { margin:3px 0 !important; }
-        .ind-inline   { gap:3px !important; padding:0 4px !important; }
-        .ind-row-mini { gap:2px !important; }
-        .ind-lbl-mini { font-size:0.58rem !important; width:58px !important; }
-        .ind-bar-mini { height:3px !important; }
-        .ind-val-mini { font-size:0.58rem !important; }
-        .stat-divider { margin:3px 0 !important; }
-        /* Progress modal */
-        .progress-modal { max-height:80vh !important; overflow-y:auto !important; }
-        /* Setup screen */
-        .setup-card-wide { padding:12px !important; }
-        .setup-grid { gap:10px !important; }
-        .setup-title { font-size:1rem !important; }
-        .tier-grid { grid-template-columns:1fr 1fr !important; gap:5px !important; }
-        .tier-btn  { padding:6px 4px !important; }
-        .tier-name { font-size:0.72rem !important; }
-        .tier-desc { font-size:0.58rem !important; }
-        .jose-hero-img { width:44px !important; height:44px !important; }
-        .avatar-pick { gap:6px !important; }
-        .avatar-opt  { width:44px !important; height:44px !important; }
-        .avatar-opt img { width:36px !important; height:36px !important; }
-      }
-    `;
-    document.head.appendChild(el);
-    return () => { document.getElementById('jelva-mob')?.remove(); };
-  }, []);
-  return null;
-}
 
 // Redondear horas a 1 decimal máximo, sin basura flotante como 41.59999999994
 function fh(n: number): number { return Math.round(n * 10) / 10; }
@@ -415,18 +284,8 @@ function AtmosphereBg() {
   );
 }
 
-// ── Rotating overlay for portrait mobile — JS-driven so it's always reliable ──
+// ── Rotating overlay for portrait mobile ──
 function RotateOverlay() {
-  const [portrait, setPortrait] = useState(() =>
-    typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false
-  );
-  useEffect(() => {
-    const upd = () => setPortrait(window.innerHeight > window.innerWidth);
-    window.addEventListener('resize', upd);
-    window.addEventListener('orientationchange', upd);
-    return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
-  }, []);
-  if (!portrait) return null;
   return (
     <div className="rotate-overlay">
       <div className="rotate-icon">⤵️📱⤴️</div>
@@ -451,23 +310,37 @@ function narrateHeadline(p: PlayerState, game: GameState): string {
   const m = metrics(p);
   const g = game.goals;
   const pi = passiveIncome(p), exp = expensesPerTurn(p);
-  const areas: { r: number; name: string }[] = [
-    { r: m.bienestar / g.bienestar, name: 'su bienestar' },
-    { r: m.conocimientos / g.conocimientos, name: 'sus conocimientos' },
-    { r: m.impacto / g.impacto, name: 'su impacto' },
-    { r: p.impact.comunitario / g.comunitario, name: 'su legado en la comunidad' },
-    { r: emergencyFundMonths(p) / g.emergencyMonths, name: 'su fondo de emergencia' },
-    { r: Math.min(1, pi / Math.max(exp, 1)), name: 'sus ingresos pasivos' },
+  const isHuman = !p.isAI;
+  const areas: { r: number; su: string; tu: string }[] = [
+    { r: m.bienestar / g.bienestar,                         su: 'su bienestar',          tu: 'tu bienestar' },
+    { r: m.conocimientos / g.conocimientos,                 su: 'sus conocimientos',     tu: 'tus conocimientos' },
+    { r: m.impacto / g.impacto,                             su: 'su impacto',            tu: 'tu impacto' },
+    { r: p.impact.comunitario / Math.max(g.comunitario, 1), su: 'su legado comunitario', tu: 'tu legado comunitario' },
+    { r: emergencyFundMonths(p) / g.emergencyMonths,        su: 'su fondo de emergencia',tu: 'tu fondo de emergencia' },
+    { r: Math.min(1, pi / Math.max(exp, 1)),                su: 'sus ingresos pasivos',  tu: 'tus ingresos pasivos' },
   ];
   const win = areas.reduce((s, a) => s + Math.min(1, a.r), 0) / areas.length;
-  const weak = areas.slice().sort((a, b) => a.r - b.r)[0].name;
+  // Prefiere áreas con progreso > 0 para identificar el punto débil real (el legado empieza en 0 por diseño)
+  const touched = areas.filter(a => a.r > 0);
+  const pool = touched.length >= 2 ? touched : areas;
+  const weakest = pool.slice().sort((a, b) => a.r - b.r)[0];
+  const weak = isHuman ? weakest.tu : weakest.su;
   let phase: string;
-  if (game.turn <= 2) phase = `apenas empieza a hacerse una vida y aún le falta reforzar ${weak}`;
-  else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
-  else if (win < 0.5) phase = `va construyendo bases sólidas, pero aún le falta ${weak}`;
-  else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
-  else if (win < 1) phase = `está a un suspiro de lograrlo todo, solo le falta ${weak}`;
-  else phase = `ya construyó la vida plena que tanto buscaba`;
+  if (isHuman) {
+    if (game.turn <= 2)  phase = `empiezas a hacerte una vida`;
+    else if (win < 0.25) phase = `buscas estabilizarte sin descuidar ${weak}`;
+    else if (win < 0.5)  phase = `vas construyendo bases sólidas, pero te falta ${weak}`;
+    else if (win < 0.75) phase = `avanzas firme hacia una vida plena, atento a ${weak}`;
+    else if (win < 1)    phase = `estás a un suspiro de lograrlo todo, te falta ${weak}`;
+    else                 phase = `ya construiste la vida plena que tanto buscabas`;
+  } else {
+    if (game.turn <= 2)  phase = `empieza a hacerse una vida`;
+    else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
+    else if (win < 0.5)  phase = `va construyendo bases sólidas, pero le falta ${weak}`;
+    else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
+    else if (win < 1)    phase = `está a un suspiro de lograrlo todo, le falta ${weak}`;
+    else                 phase = `ya construyó la vida plena que tanto buscaba`;
+  }
   return `Nivel ${dif} · ${p.name} ${phase}`;
 }
 const DIFFICULTY_DESC: Record<number, string> = {
@@ -977,15 +850,9 @@ function AboutContent() {
         <p>Cuando terminas tu vida de juego, puedes pasar el testigo a un heredero. Lo que construiste viaja con él: capital, reputación, principios. El linaje es el horizonte largo.</p>
       </div>
 
-      <div className="about-section">
-        <div className="about-section-title">👀 Observa a José jugar</div>
-        <p>José es tu referencia, no tu rival. En su turno lo observas pasivamente: lo ves saltar de casillero en casillero igual que Jones en <i>Jones in the Fast Lane</i>. Cada casillero se ilumina 1 segundo mientras elige su acción. Usa <b>🐢 lento</b> abajo para aprender de su ruta, o <b>🐇 rápido</b> para saltarlo. El chiste del juego es compararte con él.</p>
-      </div>
-
       <div className="about-tribute">
         Tributo libre a <i>Jones in the Fast Lane</i> (Sierra On-Line, 1990).
       </div>
-
     </div>
   );
 }
@@ -1015,15 +882,9 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
 // ── Pawn Overlay: avatares flotando encima de los casilleros, animados con CSS ──
 // position:fixed para evitar clipping de cualquier overflow en el árbol del DOM.
 // getBoundingClientRect() da coordenadas de viewport → left/top directos.
-// josePlay: cuando José está jugando, su avatar sigue el paso actual (no su ubicación real).
-function PawnOverlay({ game, josePlay }: {
-  game: GameState;
-  josePlay: { steps: any[]; idx: number; name: string } | null;
-}) {
+function PawnOverlay({ game }: { game: GameState }) {
   const active = game.players[game.activePlayerIndex];
-  // Casillero actual de José durante su reproducción
-  const joseLocOverride = josePlay?.steps[josePlay.idx]?.locId ?? null;
-  const locKey = game.players.map(p => p.currentLocation).join(',') + '|' + (joseLocOverride ?? '');
+  const locKey = game.players.map(p => p.currentLocation).join(',');
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
 
   useLayoutEffect(() => {
@@ -1035,10 +896,7 @@ function PawnOverlay({ game, josePlay }: {
 
     const next: Record<string, { x: number; y: number }> = {};
     for (const p of game.players) {
-      // Durante el playback de José, mover su avatar al casillero del paso actual
-      const isJose = p.isAI && p.name.toLowerCase().startsWith('jos');
-      const tileLoc = (isJose && joseLocOverride) ? joseLocOverride : p.currentLocation;
-      const tile = document.querySelector<HTMLElement>(`[data-loc="${tileLoc}"]`);
+      const tile = document.querySelector<HTMLElement>(`[data-loc="${p.currentLocation}"]`);
       if (tile) {
         const r = tile.getBoundingClientRect();
         const tx = r.left + r.width / 2;
@@ -1063,14 +921,12 @@ function PawnOverlay({ game, josePlay }: {
         const pp = pos[p.id];
         if (!pp) return null;
         const offset = (i - (count - 1) / 2) * 26;
-        const isJose = p.isAI && p.name.toLowerCase().startsWith('jos');
-        const glowing = p.id === active.id || (isJose && !!joseLocOverride);
         return (
           <div key={p.id} className="pawn-float" style={{
             left: pp.x + offset,
             top: pp.y,
             zIndex: p.id === active.id ? 22 : 20,
-            filter: glowing
+            filter: p.id === active.id
               ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
               : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
           }}>
@@ -1193,7 +1049,7 @@ const ZONE_GRAD: Record<string, string> = {
 };
 
 // ── Board ──
-function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose, joseTile }: {
+function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose, lastActionIdx, clerkFeedback }: {
   game: GameState;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
@@ -1201,7 +1057,8 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
   fading: boolean;
   onReopen: () => void;
   onClose: () => void;
-  joseTile: string | null;  // casillero actual de José durante su playback
+  lastActionIdx: number | null;
+  clerkFeedback: string | null;
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
@@ -1226,14 +1083,11 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
     const sel = inspecting === loc.id;
     const showActions = here && sel;
     const acts = showActions ? actionsFor(active, game.world) : [];
-    // Highlight de 1 segundo durante el playback de José: ilumina el casillero donde está
-    const joseHL = joseTile === loc.id;
 
     return (
       <div
         data-loc={loc.id}
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
-        style={joseHL ? { boxShadow: '0 0 0 3px #F5C24A, 0 0 18px #F5C24Aaa', zIndex: 30, transition: 'box-shadow 0.15s' } : {}}
         onClick={() => {
           if (here) { sel ? onClose() : onReopen(); }
           else onInspect(inspecting === loc.id ? null : loc.id);
@@ -1266,19 +1120,63 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
           </div>
           {showingClerk ? (
             <div className={'clerk-panel' + (fading ? ' clerk-fading' : '')}
-              onClick={e => e.stopPropagation()}
-              onMouseEnter={onReopen}>
+              onClick={e => e.stopPropagation()}>
               <div className="clerk-header">
                 <ClerkPortrait locId={active.currentLocation} size={44} />
                 <div className="clerk-info">
                   <div className="clerk-name">{CLERKS[active.currentLocation]?.name}</div>
                   <div className="clerk-role">{CLERKS[active.currentLocation]?.role}</div>
                 </div>
+                <button className="clerk-close-btn" onClick={onClose}
+                  style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer',
+                    color:'rgba(240,232,210,0.45)', fontSize:'1rem', padding:'2px 6px', lineHeight:1 }}>✕</button>
               </div>
               <div className="clerk-quip">{clerkMsg}</div>
+
+              {/* Feedback inline: resultado de la última acción — aparece donde ya tienes los ojos */}
+              {clerkFeedback && (
+                <div style={{
+                  background: 'rgba(40,236,170,0.10)',
+                  border: '1px solid rgba(40,236,170,0.28)',
+                  borderRadius: 6, padding: '5px 10px',
+                  fontSize: '0.80rem', color: '#28ECAA', fontWeight: 600,
+                  margin: '4px 0 6px', letterSpacing: '0.01em',
+                }}>
+                  ✓ {clerkFeedback}
+                </div>
+              )}
+
               <div className="clerk-actions">
+                {/* Botón de repetición rápida — el primero que ves, siempre disponible */}
+                {lastActionIdx !== null && clerkActs[lastActionIdx] && (
+                  <button
+                    key="repeat-quick"
+                    className="tile-act-chip"
+                    onClick={() => onAction(lastActionIdx!)}
+                    style={{
+                      gridColumn: '1 / -1',
+                      borderColor: '#E8A020',
+                      background: 'linear-gradient(135deg,rgba(232,160,32,0.16),rgba(232,160,32,0.05))',
+                      order: -1,
+                    }}>
+                    <span className="tac-name" style={{ color: '#E8A020' }}>
+                      ↻ {clerkActs[lastActionIdx].label}
+                    </span>
+                    <span className="tac-desc" style={{ color: 'rgba(232,160,32,0.7)' }}>repetir</span>
+                    <span className="tac-cost" style={{ color: '#E8A020', fontWeight: 700 }}>
+                      {fh(clerkActs[lastActionIdx].hours)}h
+                    </span>
+                  </button>
+                )}
                 {clerkActs.map((a, i) => (
-                  <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)}>
+                  <button key={a.id}
+                    className={'tile-act-chip' + (i === lastActionIdx ? ' tile-act-last' : '')}
+                    onClick={() => onAction(i)}
+                    title={a.desc}
+                    style={i === lastActionIdx ? {
+                      borderColor: 'rgba(232,160,32,0.45)',
+                      background: 'rgba(232,160,32,0.06)',
+                    } : undefined}>
                     <span className="tac-name">{a.label}</span>
                     <span className="tac-desc">{a.desc}</span>
                     <span className="tac-cost">{fh(a.hours)}h</span>
@@ -1309,11 +1207,11 @@ function TopBar({ openPanel, setOpenPanel, game, player }: {
   game: GameState;
   player: PlayerState;
 }) {
-  const [musicOn, setMusicOn] = useState(_musicIsOn());
+  const [musicOn, setMusicOn] = useState(cityMusic.wanted);
   function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
   function toggleMusic() {
-    // Llamado desde gesto de usuario → funciona en iOS sin restricción de autoplay
-    setMusicOn(_musicToggle());
+    cityMusic.toggle();
+    setMusicOn(cityMusic.wanted);
   }
   const headline = narrateHeadline(player, game);
   return (
@@ -1448,14 +1346,6 @@ function OnboardModal({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <div className="onboard-win">Meta: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez. El camino lo decides tú.</div>
-        <div style={{
-          marginTop: 14, padding: '10px 14px',
-          background: 'rgba(200,160,64,0.12)', borderRadius: 10,
-          border: '1px solid rgba(200,160,64,0.3)',
-          fontSize: '0.82rem', color: '#E8D8A0', lineHeight: 1.5,
-        }}>
-          👀 <b>En el turno de José</b> lo observas jugar casillero a casillero — igual que Jones. Elige <b>🐢 lento</b> para seguir sus jugadas o <b>🐇 rápido</b> para saltarlas. ¡Ese es el chiste del juego!
-        </div>
         <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={dismiss}>
           Entendido — empezar
         </button>
@@ -1619,9 +1509,10 @@ function App() {
   const [actionsFading, setActionsFading] = useState(false);
   const actionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
-  // Confirmación breezy de acción (no bloquea, no cierra el panel: puedes repetir con clicks)
-  const [actionToast, setActionToast] = useState<string | null>(null);
-  const actionToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Feedback inline en el clerk panel (reemplaza el toast flotante — aparece donde clickeaste)
+  const [lastActionIdx, setLastActionIdx] = useState<number | null>(null);
+  const [clerkFeedback, setClerkFeedback] = useState<string | null>(null);
+  const clerkFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Reproducción visible del turno de José (pasos): como en Jones, lo observamos jugar
   const [josePlay, setJosePlay] = useState<{ steps: import('./engine').CpuStep[]; idx: number; name: string } | null>(null);
   const joseFinal = useRef<GameState | null>(null);
@@ -1634,19 +1525,8 @@ function App() {
   const [celebrate, setCelebrate] = useState(false); // #3 microcelebración juicy
   const [showFocusPick, setShowFocusPick] = useState(false); // #7 meta autoimpuesta
 
-  // Detección de mobile: layout compacto en pantallas < 640px de ancho
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
-  const [statsOpen, setStatsOpen] = useState(false);
-  useEffect(() => {
-    const upd = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', upd);
-    return () => window.removeEventListener('resize', upd);
-  }, []);
-
-  // Música: no se auto-arranca — el usuario la activa con el botón 🎷 (único gesto seguro en iOS)
-  // cityMusic.arm() se mantiene para compatibilidad si el módulo lo necesita, pero no controla el audio
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { try { cityMusic.arm(); } catch(_) {} }, []);
+  // Tema oficial: suena siempre (arranca al primer gesto en iOS/mobile)
+  useEffect(() => { cityMusic.arm(); }, []);
 
   // El anuncio sobre el tablero se desvanece solo en un tiempo prudencial
   useEffect(() => {
@@ -1713,25 +1593,13 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [josePlay, slowJose]);
 
-  // Muestra un toast breezy con la acción que José eligió en cada paso de su playback
-  useEffect(() => {
-    if (!josePlay) return;
-    const step = josePlay.steps[josePlay.idx];
-    if (!step) return;
-    const msg = step.log || step.action || null;
-    if (!msg) return;
-    setActionToast('🤖 ' + josePlay.name + ': ' + msg);
-    if (actionToastTimer.current) clearTimeout(actionToastTimer.current);
-    // El toast dura casi todo el intervalo del paso para que se pueda leer
-    actionToastTimer.current = setTimeout(() => setActionToast(null), slowJose ? 1300 : 250);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [josePlay?.idx]);
-
-  // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas ~20s, luego fade.
+  // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas, sin fade.
   useEffect(() => {
     if (phase !== 'play' || !game) return;
     const p = game.players[game.activePlayerIndex];
     if (!p || p.isAI || queue.length > 0) return;
+    setLastActionIdx(null);
+    setClerkFeedback(null);
     openActionsHere();
     return clearActionsTimer;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1760,13 +1628,14 @@ function App() {
         setFlash(result);
         setCelebrate(true);
       } else {
-        // Acción normal: confirmación breezy que NO interrumpe ni cierra el panel
-        setActionToast(result);
-        if (actionToastTimer.current) clearTimeout(actionToastTimer.current);
-        actionToastTimer.current = setTimeout(() => setActionToast(null), 1600);
+        // Feedback inline en el clerk panel — no interrumpe, aparece donde ya tienes los ojos
+        setClerkFeedback(result);
+        if (clerkFeedbackTimer.current) clearTimeout(clerkFeedbackTimer.current);
+        clerkFeedbackTimer.current = setTimeout(() => setClerkFeedback(null), 2400);
       }
     }
-    // Mantén el panel abierto para repetir acciones con clicks (como en Jones) y reinicia el fade
+    setLastActionIdx(idx);
+    // Panel siempre abierto para repetir sin fricción (estilo Jones)
     openActionsHere();
   }
 
@@ -1780,11 +1649,7 @@ function App() {
     setActionsFading(false);
     setInspecting(loc);
     clearActionsTimer();
-    // 20s visibles (estándar de lectura), luego fade y se colapsa
-    actionsTimer.current = setTimeout(() => {
-      setActionsFading(true);
-      actionsTimer.current = setTimeout(() => { setInspecting(null); setActionsFading(false); }, 700);
-    }, 20000);
+    // Sin auto-fade: en tu ubicación actual las acciones quedan siempre visibles (estilo Jones)
   }
   function closeActionsHere() {
     clearActionsTimer();
@@ -1980,8 +1845,8 @@ function App() {
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} game={game} player={game.players[game.activePlayerIndex]} />
-      <PawnOverlay game={game} josePlay={josePlay} />
-      <div className="game-layout" style={isMobile ? { display: 'flex', flexDirection: 'column' } : {}}>
+      <PawnOverlay game={game} />
+      <div className="game-layout">
         <div className="game-main">
           <Board game={game}
             onInspect={id => { setInspecting(id); setOpenPanel(null); }}
@@ -1990,18 +1855,13 @@ function App() {
             fading={actionsFading}
             onReopen={openActionsHere}
             onClose={closeActionsHere}
-            joseTile={josePlay ? (josePlay.steps[josePlay.idx]?.locId ?? null) : null}
+            lastActionIdx={lastActionIdx}
+            clerkFeedback={clerkFeedback}
           />
           <div className="footer-bar">
             <div className="footer-loc">
               {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {locName(loc, p)}</>; })()}
             </div>
-            {isMobile && (
-              <button className="btn-mobile-stats" onClick={() => setStatsOpen(s => !s)}
-                style={{ padding: '0 10px', fontSize: '0.8rem' }}>
-                {statsOpen ? '✕ Stats' : '📊 Stats'}
-              </button>
-            )}
             <button className="btn-jose-speed" onClick={() => setSlowJose(s => !s)}
               title={slowJose ? 'José juega lento: ves su jugada y aprendes' : 'José juega rápido: salta su turno'}>
               {slowJose ? '🐢 José lento' : '🐇 José rápido'}
@@ -2011,9 +1871,7 @@ function App() {
             </button>
           </div>
         </div>
-        {(!isMobile || statsOpen) && (
-          <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)} />
-        )}
+        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)} />
       </div>
       {inspecting && inspecting !== game.players[game.activePlayerIndex].currentLocation && (
         <NodeInspect locId={inspecting} game={game}
@@ -2046,32 +1904,6 @@ function App() {
         </div>
       )}
 
-      {/* Banner de playback de José: no bloquea, se puede cambiar velocidad mientras miras */}
-      {josePlay && (
-        <div style={{
-          position: 'fixed', top: 46, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(20,14,4,0.9)', backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(200,160,64,0.5)',
-          borderRadius: 20, padding: '5px 14px',
-          display: 'flex', alignItems: 'center', gap: 10,
-          zIndex: 115, pointerEvents: 'auto', userSelect: 'none',
-          color: '#E8D8A0', fontSize: '0.78rem', fontWeight: 600,
-          boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
-        }}>
-          <span style={{ color: '#C8A040' }}>👀</span>
-          Turno de {josePlay.name} — jugada {josePlay.idx + 1}/{josePlay.steps.length}
-          <button
-            onClick={() => setSlowJose(s => !s)}
-            style={{
-              background: 'rgba(200,160,64,0.18)', border: 'none',
-              borderRadius: 12, padding: '2px 10px',
-              color: '#E8D8A0', cursor: 'pointer', fontSize: '0.78rem',
-            }}>
-            {slowJose ? '🐢 lento' : '🐇 rápido'}
-          </button>
-        </div>
-      )}
-
       {/* Onboarding — solo Q1, solo primera vez */}
       {showOnboard && game.turn === 1 && queue.length === 0 && (
         <OnboardModal onClose={() => setShowOnboard(false)} />
@@ -2098,23 +1930,6 @@ function App() {
           onClick={() => { setFlash(null); setCelebrate(false); }}>
           {celebrate && <div className="toast-confetti">✦ ✶ ✦ ✶ ✦</div>}
           {flash}
-        </div>
-      )}
-      {/* Confirmación breezy de acción: NO bloquea, el panel sigue abierto para repetir con clicks */}
-      {actionToast && (
-        <div
-          onClick={() => setActionToast(null)}
-          style={{
-            position: 'fixed', bottom: 88, left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(20,14,4,0.88)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(200,160,64,0.4)',
-            color: '#E8D8A0', fontSize: '0.82rem', fontWeight: 500,
-            padding: '7px 16px', borderRadius: 20,
-            maxWidth: 340, textAlign: 'center',
-            zIndex: 120, pointerEvents: 'auto', cursor: 'pointer',
-            animation: 'fadeInUp 0.18s ease',
-          }}>
-          {actionToast}
         </div>
       )}
 
