@@ -1089,11 +1089,12 @@ function Board({ game, onInspect, inspecting, onAction }: {
 
 
 // ── Top bar HUD ──
-function TopBar({ openPanel, setOpenPanel, turn, economy }: {
+function TopBar({ openPanel, setOpenPanel, turn, economy, player }: {
   openPanel: PanelId;
   setOpenPanel: (p: PanelId) => void;
   turn: number;
   economy: string;
+  player: PlayerState;
 }) {
   const [musicOn, setMusicOn] = useState(cityMusic.wanted);
   function toggle(id: PanelId) { setOpenPanel(openPanel === id ? null : id); }
@@ -1101,11 +1102,20 @@ function TopBar({ openPanel, setOpenPanel, turn, economy }: {
     cityMusic.toggle();
     setMusicOn(cityMusic.wanted);
   }
+  const cq = cuadrante(player);
+  const nw = patrimonio(player);
+  const loc = locById(player.currentLocation);
   return (
     <div id="top-bar">
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
       <span className="bar-motto">el juego de la vida plena · Cuenca, Ecuador</span>
-      <span className={"econ-pill " + (economy === "good" ? "econ-good" : "econ-bad")}>{economy === "good" ? "Buen año económico del país" : "Mal año económico del país"}</span>
+      <div className="topbar-pulse">
+        <span className="pulse-nw">${nw}</span>
+        <span className="pulse-sep">·</span>
+        <span className="pulse-cq" data-cq={cq}>{CUADRANTE_ICON[cq]}</span>
+        <span className="pulse-sep">·</span>
+        <span className="pulse-loc">{loc.icon} {loc.name.split('(')[0].trim()}</span>
+      </div>
       <div className="bar-right">
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
           onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
@@ -1660,7 +1670,7 @@ function App() {
       {showBackstory && game && (
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
-      <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
+      <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} player={game.players[game.activePlayerIndex]} />
       <PawnOverlay game={game} />
       <div className="game-layout">
         <div className="game-main">
@@ -1683,7 +1693,7 @@ function App() {
         </div>
         <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)} />
       </div>
-      {inspecting && (
+      {inspecting && inspecting !== game.players[game.activePlayerIndex].currentLocation && (
         <NodeInspect locId={inspecting} game={game}
           onMove={() => moveTo(inspecting)} onAction={doAction}
           onClose={() => setInspecting(null)} />

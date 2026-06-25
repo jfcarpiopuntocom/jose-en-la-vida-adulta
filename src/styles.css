@@ -744,7 +744,7 @@ input[type=text], input[type=number] {
     width: 36px !important; height: 36px !important;
     min-width: 36px; font-size: 1rem;
   }
-  .econ-pill { font-size: 0.7rem !important; padding: 3px 7px !important; }
+  .topbar-pulse { font-size: 0.68rem !important; padding: 2px 6px !important; }
 
   /* Layout: column con la mano apuntando arriba (board) y la mano operando abajo (actions) */
   .game-layout { flex-direction: column; top: 44px; }
@@ -917,7 +917,7 @@ input[type=text], input[type=number] {
   .tile-label { font-size: 0.6rem; -webkit-line-clamp: 2; }
   .tile-icon { font-size: 1.4rem; }
   .game-name { font-size: 0.72rem; }
-  .econ-pill { display: none; }
+  .topbar-pulse { display: none; }
 }
 
 /* Landscape on narrow phones (≤900px): keep right-sidebar layout */
@@ -931,12 +931,12 @@ input[type=text], input[type=number] {
   display: flex; align-items: center; gap: 6px;
 }
 .ind-lbl-mini {
-  flex: 0 0 auto; width: 72px;
-  font-size: 0.78rem; font-weight: 700;
+  flex: 1; min-width: 0;
+  font-size: 0.74rem; font-weight: 700;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ind-bar-mini { flex: 1; height: 7px; background: #2a3550; border-radius: 4px; overflow: hidden; }
+.ind-bar-mini { flex: 0 0 50px; height: 7px; background: #1a2540; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
 .ind-val-mini {
   flex: 0 0 auto; font-size: 0.78rem; font-weight: 800; text-align: right;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
@@ -1158,10 +1158,23 @@ input[type=text], input[type=number] {
   .stress-warning { animation: none; }
 }
 
-/* ── Economy indicator pill in TopBar ── */
-.econ-pill {
-  padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700;
+/* ── Topbar pulse: patrimonio + cuadrante + ubicación ── */
+.topbar-pulse {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 10px; border-radius: 10px; font-size: 0.74rem; font-weight: 700;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
   margin: 0 8px;
+}
+.pulse-nw {
+  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
+  font-weight: 800;
+}
+.pulse-sep {
+  color: #666666 !important; -webkit-text-fill-color: #666666 !important;
+}
+.pulse-loc {
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .econ-good {
   background: rgba(40,236,170,0.15); border: 1px solid #28ECAA;
@@ -2127,7 +2140,7 @@ input[type=text], input[type=number] {
     width: 36px !important; height: 36px !important;
     min-width: 36px !important; font-size: 1rem;
   }
-  .econ-pill { font-size: 0.7rem !important; padding: 3px 7px !important; }
+  .topbar-pulse { font-size: 0.68rem !important; padding: 2px 6px !important; }
 
   /* BOARD: grilla unificada 3 columnas, sin ring */
   .board {
