@@ -295,6 +295,40 @@ function RotateOverlay() {
 }
 
 const DIFFICULTY_LABEL: Record<number, string> = { 1: 'Fácil', 2: 'Normal', 3: 'Difícil' };
+
+// Nombre de lugar contextual: Feria Libre solo dice "tu negocio" si el jugador ya tiene uno.
+function locName(loc: typeof LOCATIONS[0], p: PlayerState): string {
+  if (loc.id === 'feria_libre') {
+    return p.businesses.length > 0 ? 'Feria Libre (tu negocio)' : 'Feria Libre (mercado)';
+  }
+  return loc.name;
+}
+
+// Resumen narrado situacional para el header (80-100 chars): cómo le va al jugador, vivo.
+function narrateHeadline(p: PlayerState, game: GameState): string {
+  const dif = DIFFICULTY_LABEL[(p as any).aiDifficulty ?? game.gameTier ?? 1] ?? 'Normal';
+  const m = metrics(p);
+  const g = game.goals;
+  const pi = passiveIncome(p), exp = expensesPerTurn(p);
+  const areas: { r: number; name: string }[] = [
+    { r: m.bienestar / g.bienestar, name: 'su bienestar' },
+    { r: m.conocimientos / g.conocimientos, name: 'sus conocimientos' },
+    { r: m.impacto / g.impacto, name: 'su impacto' },
+    { r: p.impact.comunitario / g.comunitario, name: 'su legado en la comunidad' },
+    { r: emergencyFundMonths(p) / g.emergencyMonths, name: 'su fondo de emergencia' },
+    { r: Math.min(1, pi / Math.max(exp, 1)), name: 'sus ingresos pasivos' },
+  ];
+  const win = areas.reduce((s, a) => s + Math.min(1, a.r), 0) / areas.length;
+  const weak = areas.slice().sort((a, b) => a.r - b.r)[0].name;
+  let phase: string;
+  if (game.turn <= 2) phase = `apenas empieza a hacerse una vida y aún le falta reforzar ${weak}`;
+  else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
+  else if (win < 0.5) phase = `va construyendo bases sólidas, pero aún le falta ${weak}`;
+  else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
+  else if (win < 1) phase = `está a un suspiro de lograrlo todo, solo le falta ${weak}`;
+  else phase = `ya construyó la vida plena que tanto buscaba`;
+  return `Nivel ${dif} · ${p.name} ${phase}`;
+}
 const DIFFICULTY_DESC: Record<number, string> = {
   1: 'José comete errores — bueno para aprender el juego',
   2: 'José juega con criterio — una competencia real',
@@ -552,7 +586,7 @@ function StatsPanel({
         <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
           {p.name}
         </div>
-        <div className="player-loc">{loc.icon} {loc.name}</div>
+        <div className="player-loc">{loc.icon} {locName(loc, p)}</div>
         <div className="econ-line">
           {game.world.economy === 'good'
             ? <span className="econ-good">● buen año económico del país</span>
@@ -823,7 +857,7 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
   return (
     <div className="node-inspect">
       <button className="insp-close-btn" onClick={onClose}>✕</button>
-      <div className="insp-title">{loc.icon} {loc.name}</div>
+      <div className="insp-title">{loc.icon} {locName(loc, p)}</div>
       <button className="insp-move" disabled={isHere || !canMove} onClick={onMove}>
         {isHere ? 'Estás aquí' : canMove ? `Ir · ${fh(cost)}h` : `Necesitas ${fh(cost)}h`}
       </button>
@@ -855,7 +889,12 @@ function PawnOverlay({ game }: { game: GameState }) {
         const ty = r.top + r.height / 2;
         const dx = cx - tx, dy = cy - ty;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        next[p.id] = { x: tx + (dx / dist) * 38, y: ty + (dy / dist) * 38 };
+        // landing spot: empujar hacia adentro del tablero + a la derecha,
+        // y arriba (zona del icono), para NO tapar el nombre del casillero (abajo)
+        next[p.id] = {
+          x: tx + (dx / dist) * 22 + r.width * 0.16,
+          y: ty + (dy / dist) * 18 - r.height * 0.14,
+        };
       }
     }
     setPos(next);
@@ -963,15 +1002,18 @@ function clerkQuip(locId: string): string {
 function ClerkPortrait({ locId, size = 56 }: { locId: string; size?: number }) {
   const c = CLERKS[locId];
   if (!c) return null;
-  const cols = 4, cellW = 100 / cols;
-  const rows = 2, cellH = 100 / rows;
+  // Sprite sheet 4 cols x 2 filas. Posición correcta en %: col/(cols-1)*100.
+  const cols = 4, rows = 2;
+  const posX = (c.gridCol / (cols - 1)) * 100;
+  const posY = (c.gridRow / (rows - 1)) * 100;
   return (
     <div className="clerk-portrait" style={{ width: size, height: size }}>
       <div style={{
         width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
         backgroundImage: 'url(/jose-en-la-vida-adulta/clerks/grid-old.png)',
         backgroundSize: `${cols * 100}% ${rows * 100}%`,
-        backgroundPosition: `${c.gridCol * cellW}% ${c.gridRow * cellH}% `,
+        backgroundPosition: `${posX}% ${posY}%`,
+        backgroundRepeat: 'no-repeat',
       }} />
     </div>
   );
@@ -1089,11 +1131,10 @@ function Board({ game, onInspect, inspecting, onAction }: {
 
 
 // ── Top bar HUD ──
-function TopBar({ openPanel, setOpenPanel, turn, economy, player }: {
+function TopBar({ openPanel, setOpenPanel, game, player }: {
   openPanel: PanelId;
   setOpenPanel: (p: PanelId) => void;
-  turn: number;
-  economy: string;
+  game: GameState;
   player: PlayerState;
 }) {
   const [musicOn, setMusicOn] = useState(cityMusic.wanted);
@@ -1102,20 +1143,11 @@ function TopBar({ openPanel, setOpenPanel, turn, economy, player }: {
     cityMusic.toggle();
     setMusicOn(cityMusic.wanted);
   }
-  const cq = cuadrante(player);
-  const nw = patrimonio(player);
-  const loc = locById(player.currentLocation);
+  const headline = narrateHeadline(player, game);
   return (
     <div id="top-bar">
       <span className="game-name">JOSÉ EN LA VIDA ADULTA</span>
-      <span className="bar-motto">el juego de la vida plena · Cuenca, Ecuador</span>
-      <div className="topbar-pulse">
-        <span className="pulse-nw">${nw}</span>
-        <span className="pulse-sep">·</span>
-        <span className="pulse-cq" data-cq={cq}>{CUADRANTE_ICON[cq]}</span>
-        <span className="pulse-sep">·</span>
-        <span className="pulse-loc">{loc.icon} {loc.name.split('(')[0].trim()}</span>
-      </div>
+      <span className="topbar-headline">{headline}</span>
       <div className="bar-right">
         <button className={'hud-btn music-btn'+(musicOn?' on':'')}
           onClick={toggleMusic} title={musicOn ? 'Silenciar' : 'Jazz de ciudad'}>
@@ -1670,7 +1702,7 @@ function App() {
       {showBackstory && game && (
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
-      <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} player={game.players[game.activePlayerIndex]} />
+      <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} game={game} player={game.players[game.activePlayerIndex]} />
       <PawnOverlay game={game} />
       <div className="game-layout">
         <div className="game-main">

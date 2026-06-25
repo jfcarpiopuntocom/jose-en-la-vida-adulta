@@ -13,7 +13,7 @@ export const LOCATIONS: Location[] = [
   { id:'terminal',           code:'TER',  name:'Terminal (bolsa de empleo)',    zone:'transporte',   crimeRisk:35, x:656, y:208, icon:'🚌', tc:{walk:1.1,bus:0.45,taxi:0.3,bicycle:0.6,motorcycle:0.3,car:0.25} },
   { id:'zona_industrial',    code:'IND',  name:'Zona Industrial (fabrica)',       zone:'industrial',   crimeRisk:25, x:640, y:296, icon:'🏭', tc:{walk:1.2,bus:0.5,taxi:0.3,bicycle:0.65,motorcycle:0.3,car:0.25} },
   { id:'hospital',           code:'HOS',  name:'Clinica Kennedy (salud)',       zone:'salud',        crimeRisk:10, x:564, y:360, icon:'🏥', tc:{walk:0.7,bus:0.3,taxi:0.2,bicycle:0.4,motorcycle:0.2,car:0.2} },
-  { id:'feria_libre',        code:'FER',  name:'Feria Libre (tu negocio)',      zone:'comercial',    crimeRisk:45, x:438, y:394, icon:'🛒', tc:{walk:0.8,bus:0.35,taxi:0.25,bicycle:0.45,motorcycle:0.2,car:0.2} },
+  { id:'feria_libre',        code:'FER',  name:'Feria Libre (mercado)',      zone:'comercial',    crimeRisk:45, x:438, y:394, icon:'🛒', tc:{walk:0.8,bus:0.35,taxi:0.25,bicycle:0.45,motorcycle:0.2,car:0.2} },
   { id:'centro_historico',   code:'CEN',  name:'Centro Historico (arte · ley)',zone:'centro',       crimeRisk:30, x:298, y:394, icon:'⛪', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
   { id:'parque_calderon',    code:'PAR',  name:'Parque Calderon (descanso)',    zone:'centro',       crimeRisk:20, x:162, y:360, icon:'🌳', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
   { id:'rio_tomebamba',      code:'RIO',  name:'Rio Tomebamba (meditacion)',    zone:'rio',          crimeRisk:18, x:81,  y:304, icon:'🌉', tc:{walk:0.6,bus:0.25,taxi:0.2,bicycle:0.35,motorcycle:0.2,car:0.2} },
