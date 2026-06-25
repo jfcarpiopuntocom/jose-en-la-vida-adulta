@@ -11,7 +11,7 @@ export const LOCATIONS: Location[] = [
   { id:'zona_universitaria', code:'UNI',  name:'UDA (estudiar)',                zone:'universitaria',crimeRisk:15, x:529, y:81,  icon:'🎓', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
   { id:'zona_financiera',    code:'FIN',  name:'Banco (ahorrar · invertir)',    zone:'financiera',   crimeRisk:10, x:618, y:128, icon:'🏦', tc:{walk:0.5,bus:0.25,taxi:0.15,bicycle:0.35,motorcycle:0.15,car:0.15} },
   { id:'terminal',           code:'TER',  name:'Terminal (bolsa de empleo)',    zone:'transporte',   crimeRisk:35, x:656, y:208, icon:'🚌', tc:{walk:1.1,bus:0.45,taxi:0.3,bicycle:0.6,motorcycle:0.3,car:0.25} },
-  { id:'zona_industrial',    code:'IND',  name:'Z. Industrial (fabrica)',       zone:'industrial',   crimeRisk:25, x:640, y:296, icon:'🏭', tc:{walk:1.2,bus:0.5,taxi:0.3,bicycle:0.65,motorcycle:0.3,car:0.25} },
+  { id:'zona_industrial',    code:'IND',  name:'Zona Industrial (fabrica)',       zone:'industrial',   crimeRisk:25, x:640, y:296, icon:'🏭', tc:{walk:1.2,bus:0.5,taxi:0.3,bicycle:0.65,motorcycle:0.3,car:0.25} },
   { id:'hospital',           code:'HOS',  name:'Clinica Kennedy (salud)',       zone:'salud',        crimeRisk:10, x:564, y:360, icon:'🏥', tc:{walk:0.7,bus:0.3,taxi:0.2,bicycle:0.4,motorcycle:0.2,car:0.2} },
   { id:'feria_libre',        code:'FER',  name:'Feria Libre (tu negocio)',      zone:'comercial',    crimeRisk:45, x:438, y:394, icon:'🛒', tc:{walk:0.8,bus:0.35,taxi:0.25,bicycle:0.45,motorcycle:0.2,car:0.2} },
   { id:'centro_historico',   code:'CEN',  name:'Centro Historico (arte · ley)',zone:'centro',       crimeRisk:30, x:298, y:394, icon:'⛪', tc:{walk:0.4,bus:0.2,taxi:0.15,bicycle:0.3,motorcycle:0.15,car:0.15} },
@@ -206,4 +206,5 @@ export const EVENTS: GameEvent[] = [
 ];
 
 // Validación dura: ningún negativo sin silver
-EVENTS.forEach(e => { if (e.neg && (!e.silver || e.silver.length === 0)) throw new Error('Evento negativo sin silver: ' + e.id); });
+// Eventos bifurcados (con choices) no requieren silver — el jugador elige
+EVENTS.forEach(e => { if (e.neg && (!e.choices || e.choices.length === 0) && (!e.silver || e.silver.length === 0)) throw new Error('Evento negativo sin silver: ' + e.id); });

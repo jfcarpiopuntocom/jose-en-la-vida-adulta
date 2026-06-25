@@ -824,7 +824,6 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
     <div className="node-inspect">
       <button className="insp-close-btn" onClick={onClose}>✕</button>
       <div className="insp-title">{loc.icon} {loc.name}</div>
-      {!isHere && <div className="insp-hint">Ve para descubrir qué puedes hacer aquí.</div>}
       <button className="insp-move" disabled={isHere || !canMove} onClick={onMove}>
         {isHere ? 'Estás aquí' : canMove ? `Ir · ${fh(cost)}h` : `Necesitas ${fh(cost)}h`}
       </button>
@@ -841,16 +840,26 @@ function PawnOverlay({ game }: { game: GameState }) {
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
 
   useLayoutEffect(() => {
+    const center = document.querySelector<HTMLElement>('.board-center');
+    if (!center) return;
+    const cr = center.getBoundingClientRect();
+    const cx = cr.left + cr.width / 2;
+    const cy = cr.top + cr.height / 2;
+
     const next: Record<string, { x: number; y: number }> = {};
     for (const p of game.players) {
       const tile = document.querySelector<HTMLElement>(`[data-loc="${p.currentLocation}"]`);
       if (tile) {
         const r = tile.getBoundingClientRect();
-        next[p.id] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        const tx = r.left + r.width / 2;
+        const ty = r.top + r.height / 2;
+        const dx = cx - tx, dy = cy - ty;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        next[p.id] = { x: tx + (dx / dist) * 38, y: ty + (dy / dist) * 38 };
       }
     }
     setPos(next);
-  }, [locKey]); // re-measure only when someone moves
+  }, [locKey]);
 
   const count = game.players.length;
   return (
@@ -858,7 +867,7 @@ function PawnOverlay({ game }: { game: GameState }) {
       {game.players.map((p, i) => {
         const pp = pos[p.id];
         if (!pp) return null;
-        const offset = (i - (count - 1) / 2) * 28;
+        const offset = (i - (count - 1) / 2) * 26;
         return (
           <div key={p.id} className="pawn-float" style={{
             left: pp.x + offset,
@@ -868,7 +877,7 @@ function PawnOverlay({ game }: { game: GameState }) {
               ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
               : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
           }}>
-            <Portrait p={p} size={48} />
+            <Portrait p={p} size={44} />
           </div>
         );
       })}
@@ -957,8 +966,10 @@ function Board({ game, onInspect, inspecting, onAction }: {
         {showActions && acts.length > 0 && (
           <div className="tile-actions-pop" onClick={e => e.stopPropagation()}>
             {acts.map((a, i) => (
-              <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)} title={a.desc}>
-                {a.label} <span className="tac-cost">{fh(a.hours)}h</span>
+              <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)}>
+                <span className="tac-name">{a.label}</span>
+                <span className="tac-desc">{a.desc}</span>
+                <span className="tac-cost">{fh(a.hours)}h</span>
               </button>
             ))}
           </div>
