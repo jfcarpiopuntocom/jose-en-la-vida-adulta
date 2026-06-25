@@ -1620,6 +1620,28 @@ input[type=text], input[type=number] {
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
 }
 .progress-philo b { color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important; }
+/* Knizia: la vida contada en frases — segundo nivel para los números */
+.progress-prose {
+  margin-bottom: 14px;
+  font-size: 1rem; line-height: 1.5;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.progress-prose p { margin: 0 0 6px 0; }
+.progress-details { margin-bottom: 14px; }
+.progress-details summary {
+  cursor: pointer; font-size: 0.9rem; font-weight: 800; padding: 4px 0;
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
+}
+.progress-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.progress-row {
+  display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.05); font-size: 0.92rem; font-weight: 700;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.progress-row-done {
+  background: rgba(40,236,170,0.12); border-left: 3px solid #28ECAA;
+}
+.progress-row-lbl, .progress-row-val { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }
 .progress-legacy { margin-bottom: 14px; }
 .progress-legacy-top {
   display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 800; margin-bottom: 5px;

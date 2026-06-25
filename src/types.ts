@@ -154,6 +154,8 @@ export interface PlayerState {
   stocksValue?: number; // valor actual de acciones BVQ/BVG en cartera
   stocksCost?: number;  // costo histórico (para mostrar P&L)
   rentals?: Rental[];   // bienes raíces que arriendas a inquilinos
+  savedHoursThisTurn?: number; // horas que el transporte te ahorró vs caminar
+  savedHoursLast?: number;     // último cierre, para narrar al jugador
   isAI?: boolean;
   aiStrategy?: 'empleado' | 'empresa';
   aiDifficulty?: 1 | 2 | 3;

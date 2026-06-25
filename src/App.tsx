@@ -16,6 +16,55 @@ import { cityMusic } from './citymusic';
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
+// ── Narración estilo Knizia ──
+// La cifra cruda existe (segundo nivel, expandible), pero la primera línea es una frase humana.
+const TRANSPORT_NAME: Record<string, string> = {
+  walk: 'a pie', bus: 'el bus', taxi: 'el taxi',
+  bicycle: 'la bici', motorcycle: 'la moto', car: 'el carro',
+};
+function narrateClose(p: PlayerState, turn: number): string {
+  const pi = Math.round(passiveIncome(p));
+  const exp = expensesPerTurn(p);
+  const net = pi - exp;
+  const lines: string[] = [];
+  lines.push(`Quincena ${turn} cerrada.`);
+  if (net > 30)        lines.push(`Cerraste con $${net} más en el bolsillo.`);
+  else if (net > 0)    lines.push(`Quedaste con $${net} de saldo a favor.`);
+  else if (net === 0)  lines.push(`Cerraste en cero, sin sobresaltos.`);
+  else if (net > -50)  lines.push(`Quedaste $${-net} corto: ajusta esta vez.`);
+  else                 lines.push(`Mal mes: $${-net} en rojo. Toca priorizar.`);
+  const saved = p.savedHoursThisTurn ?? 0;
+  if (saved >= 3 && p.transport !== 'walk') {
+    lines.push(`${TRANSPORT_NAME[p.transport]} te ahorró ${saved}h esta quincena.`);
+  }
+  if (p.rentals && p.rentals.length > 0 && pi >= exp) {
+    lines.push(`Tus arriendos van pagando solos.`);
+  }
+  return lines.join(' ');
+}
+
+// Frases para "Cómo me va" (Knizia: el mismo dato dicho como vida, no como spreadsheet)
+function narrateLife(p: PlayerState, goals: Goals): string[] {
+  const m = metrics(p);
+  const em = emergencyFundMonths(p);
+  const piPct = Math.min(100, (passiveIncome(p) / Math.max(expensesPerTurn(p), 1)) * 100);
+  const out: string[] = [];
+  if (em >= goals.emergencyMonths) out.push(`Tienes colchón para ${em.toFixed(1)} meses: duermes tranquilo.`);
+  else if (em >= 1)                 out.push(`Tu colchón aguanta ${em.toFixed(1)} meses; te falta para dormir tranquilo del todo.`);
+  else                              out.push(`Vives al día: si algo se cae, no hay red.`);
+  if (piPct >= 100)                 out.push(`Tu dinero ya trabaja por ti — eres inversionista de verdad.`);
+  else if (piPct >= 35)             out.push(`Tu flujo pasivo cubre ${Math.round(piPct)}% de los gastos: vas armando libertad.`);
+  else if (piPct > 0)               out.push(`Algo de pasivo entra (${Math.round(piPct)}% de los gastos): es el inicio.`);
+  else                              out.push(`Todavía cambias todas tus horas por sueldo.`);
+  if (m.bienestar >= goals.bienestar) out.push(`Te sientes bien, en cuerpo y ánimo.`);
+  else if (p.stats.health < 40)       out.push(`La salud te está cobrando; cuídate antes de seguir.`);
+  else if (p.stats.stress > 65)       out.push(`El estrés te está apretando; necesitas un respiro.`);
+  if (p.impact.comunitario >= goals.comunitario) out.push(`Tu comunidad recuerda tu nombre — vas dejando huella.`);
+  else if (p.impact.comunitario >= 10)            out.push(`Empiezas a aportar a la comunidad; el legado se cultiva.`);
+  if (m.conocimientos >= goals.conocimientos)     out.push(`Tu conocimiento te abre puertas que ni ves.`);
+  return out.slice(0, 4);
+}
+
 // Heurística sencilla para que la IA evalúe el "valor" de una opción en eventos bifurcados
 function scoreEff(eff: any[]): number {
   let s = 0;
@@ -1258,6 +1307,12 @@ function App() {
     if (active.timeLeft < cost) { setFlash('No te alcanza el tiempo para moverte.'); return; }
     mutate(g => {
       const p = g.players[g.activePlayerIndex];
+      // Tracking de tiempo ahorrado vs caminar (para narrar al cierre)
+      if (p.transport !== 'walk') {
+        const walkCost = locById(locId).tc['walk'];
+        const saved = walkCost - cost;
+        if (saved > 0) p.savedHoursThisTurn = (p.savedHoursThisTurn ?? 0) + saved;
+      }
       p.timeLeft -= cost; p.currentLocation = locId;
     });
     setInspecting(null);
@@ -1411,14 +1466,15 @@ function App() {
     // Victoria (ya con pasivos aplicados)
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
-    // Flash turn summary
-    const firstP = g.players[0];
-    const piSum = Math.round(passiveIncome(firstP));
-    const expSum = expensesPerTurn(firstP);
-    const net = piSum - expSum;
-    setFlash(`Quincena ${g.turn} cerrada. Gastos: -$${expSum}${piSum > 0 ? ` · Pasivos: +$${piSum}` : ''} · Balance: ${net >= 0 ? '+' : ''}$${net}`);
+    // Cierre narrado (elegancia Knizia): el toast cuenta una historia, no recita KPI
+    const humanForNarrative = g.players.find(p => !p.isAI) || g.players[0];
+    setFlash(narrateClose(humanForNarrative, g.turn));
     g.turn++; g.activePlayerIndex = 0;
-    for (const p of g.players) p.timeLeft = HOURS_PER_TURN;
+    for (const p of g.players) {
+      p.timeLeft = HOURS_PER_TURN;
+      p.savedHoursLast = p.savedHoursThisTurn ?? 0;
+      p.savedHoursThisTurn = 0;
+    }
     commit(g, true);
   }
 
@@ -1571,6 +1627,18 @@ function ProgressModal({ game, onClose }: { game: GameState; onClose: () => void
   const p = game.players[game.activePlayerIndex];
   const col = PLAYER_COLORS[p.colorIndex];
   const hist = [...game.log].reverse().slice(0, 16);
+  const phrases = narrateLife(p, game.goals);
+  const m = metrics(p);
+  const em = emergencyFundMonths(p);
+  const piPct = Math.min(100, (passiveIncome(p) / Math.max(expensesPerTurn(p), 1)) * 100);
+  const rows: { label: string; val: string; pct: number }[] = [
+    { label: 'Bienestar',         val: Math.round(m.bienestar) + ' / ' + game.goals.bienestar,         pct: (m.bienestar / game.goals.bienestar) * 100 },
+    { label: 'Conocimiento',      val: Math.round(m.conocimientos) + ' / ' + game.goals.conocimientos, pct: (m.conocimientos / game.goals.conocimientos) * 100 },
+    { label: 'Impacto',           val: Math.round(m.impacto) + ' / ' + game.goals.impacto,             pct: (m.impacto / game.goals.impacto) * 100 },
+    { label: 'Legado',            val: p.impact.comunitario + ' / ' + game.goals.comunitario,          pct: (p.impact.comunitario / game.goals.comunitario) * 100 },
+    { label: 'Colchón',           val: em.toFixed(1) + ' / ' + game.goals.emergencyMonths + ' meses',  pct: (em / game.goals.emergencyMonths) * 100 },
+    { label: 'Flujo pasivo',      val: Math.round(piPct) + '% de los gastos',                          pct: piPct },
+  ];
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal progress-modal" onClick={e => e.stopPropagation()}>
@@ -1582,8 +1650,29 @@ function ProgressModal({ game, onClose }: { game: GameState; onClose: () => void
             <div className="progress-sub">Quincena {game.turn}</div>
           </div>
         </div>
+        {/* Frases primero (Knizia): tu vida contada, no tu spreadsheet */}
+        <div className="progress-prose">
+          {phrases.map((s, i) => <p key={i}>{s}</p>)}
+          {(p.savedHoursLast ?? 0) >= 3 && p.transport !== 'walk' && (
+            <p>La quincena pasada {TRANSPORT_NAME[p.transport]} te ahorró {p.savedHoursLast}h.</p>
+          )}
+        </div>
+        <details className="progress-details">
+          <summary>Ver los números</summary>
+          <div className="progress-rows">
+            {rows.map(r => {
+              const done = r.pct >= 100;
+              return (
+                <div key={r.label} className={'progress-row' + (done ? ' progress-row-done' : '')}>
+                  <span className="progress-row-lbl">{r.label}</span>
+                  <span className="progress-row-val">{r.val}{done ? ' ✓' : ''}</span>
+                </div>
+              );
+            })}
+          </div>
+        </details>
         <div className="progress-philo">
-          Aquí no se gana solo con plata. Se gana viviendo <b>pleno</b>: la <b>eudaimonía</b> de Aristóteles, el equilibrio entre bienestar, conocimiento, vínculos, comunidad, seguridad y libertad. Todo a la vez.
+          Aquí no se gana solo con plata. Se gana viviendo <b>pleno</b>: la <b>eudaimonía</b> de Aristóteles — equilibrio entre bienestar, conocimiento, vínculos, comunidad, seguridad y libertad.
         </div>
         {/* #13 Hito de legado visible: crece con voluntariado y filantropía */}
         {(() => {
