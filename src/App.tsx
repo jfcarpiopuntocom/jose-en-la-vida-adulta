@@ -562,13 +562,14 @@ function StatsPanel({
       <div className="stat-divider" />
       <div className="resources">
         <div className="resource"><span className="res-icon">💰</span><span className="res-val">${p.liquidity}</span></div>
-        {(() => { const nw = patrimonio(p); return <div className="resource net-worth-row"><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:800}}>Patrimonio neto: ${nw}</span></div>; })()}
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
-        <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos académicos</span></div>
-        {p.job && <div className="resource"><span className="res-icon">W</span><span className="res-val" style={{fontSize:"0.78rem"}}>{p.job.title}</span></div>}
-        {p.education.enrolledId && <div className="resource"><span className="res-icon">E</span><span className="res-val" style={{fontSize:"0.78rem"}}>Estudiando...</span></div>}
-        <div className="resource"><span className="res-icon">Q</span><span className="res-val">Quincena {game.turn}</span></div>
-      <div className="resource"><span className="res-icon" style={{color:"#E8A020",WebkitTextFillColor:"#E8A020"}}>T</span><span className="res-val" style={{fontSize:"0.75rem",color:"#E8A020",WebkitTextFillColor:"#E8A020"}}>{TIER_GOALS[game.gameTier ?? 1].label}</span></div>
+        {(() => { const nw = patrimonio(p); return <div className="resource net-worth-row"><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:700,fontSize:"0.82rem"}}>Neto: ${nw}</span></div>; })()}
+        <div className="res-compact">
+          <span>🎓 {p.education.completed.length}</span>
+          <span>Q{game.turn}</span>
+          {p.job && <span title={p.job.title}>💼</span>}
+          {p.education.enrolledId && <span>📖</span>}
+        </div>
       </div>
       <div className="win-pct-bar">
         <div className="win-pct-fill" style={{ width: winPct + '%' }} />
@@ -626,19 +627,18 @@ function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number)
         {urgent && <span className="actions-urgent-tag">⏳ últimas {Math.round(p.timeLeft)}h — aprovéchalas</span>}
       </div>
       {acts.length === 0
-        ? <div className="actions-empty">Sin acciones aquí — muévete o termina tu quincena.</div>
+        ? <div className="actions-empty">Muévete o termina la quincena.</div>
         : (
           <div className="actions-row">
             {acts.map((a, i) => {
-              // #4 Costo de oportunidad explícito: cuánto te queda si eliges esta
-              const after = Math.max(0, p.timeLeft - a.hours);
               return (
-                <button key={a.id} className="action-card"
+                <button key={a.id} className="action-chip"
                   style={{ '--ac': 'var(--'+ACT_COLORS[i%ACT_COLORS.length]+')' } as any}
-                  onClick={() => onAction(i)}>
-                  <span className="act-name"><span className="act-icon">{actionIcon(a.id)}</span>{a.label}</span>
-                  <span className="act-desc">{a.desc}</span>
-                  <span className="act-cost">−{fh(a.hours)}h · quedan {fh(after / 8)}d</span>
+                  onClick={() => onAction(i)}
+                  title={a.desc}>
+                  <span className="chip-icon">{actionIcon(a.id)}</span>
+                  <span className="chip-label">{a.label}</span>
+                  <span className="chip-cost">{fh(a.hours)}h</span>
                 </button>
               );
             })}
@@ -858,17 +858,17 @@ function PawnOverlay({ game }: { game: GameState }) {
       {game.players.map((p, i) => {
         const pp = pos[p.id];
         if (!pp) return null;
-        const offset = (i - (count - 1) / 2) * 22;
+        const offset = (i - (count - 1) / 2) * 28;
         return (
           <div key={p.id} className="pawn-float" style={{
             left: pp.x + offset,
             top: pp.y,
             zIndex: p.id === active.id ? 22 : 20,
             filter: p.id === active.id
-              ? `drop-shadow(0 0 9px ${PLAYER_COLORS[p.colorIndex]})`
+              ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
               : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
           }}>
-            <Portrait p={p} size={34} />
+            <Portrait p={p} size={48} />
           </div>
         );
       })}

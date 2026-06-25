@@ -227,10 +227,14 @@ h1,h2,h3,p,span,div,button,label,li,a {
   background: linear-gradient(90deg, transparent, var(--line), transparent);
 }
 
-.resources { width: 100%; display: flex; flex-direction: column; gap: 6px; }
-.resource { display: flex; align-items: center; gap: 7px; font-size: 0.9rem; }
-.res-icon { font-size: 1.05rem; width: 22px; text-align: center; }
-.res-val { font-weight: 700; font-size: 0.9rem; color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }
+.resources { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+.resource { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; }
+.res-icon { font-size: 0.95rem; width: 18px; text-align: center; }
+.res-val { font-weight: 700; font-size: 0.85rem; color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }
+.res-compact {
+  display: flex; gap: 8px; font-size: 0.82rem; font-weight: 700;
+  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
+}
 
 .btn-end {
   position: sticky; bottom: 0; margin-top: auto;
@@ -907,20 +911,19 @@ input[type=text], input[type=number] {
 }
 
 /* ── Inline indicators inside StatsPanel ── */
-.ind-inline { width: 100%; display: flex; flex-direction: column; gap: 8px; }
-/* Etiqueta en su propia línea (nunca encimada), barra + valor debajo */
+.ind-inline { width: 100%; display: flex; flex-direction: column; gap: 4px; }
 .ind-row-mini {
-  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto;
-  align-items: center; gap: 3px 8px;
+  display: flex; align-items: center; gap: 6px;
 }
 .ind-lbl-mini {
-  grid-column: 1 / -1;
-  font-size: 0.88rem; font-weight: 700;
+  flex: 0 0 auto; width: 72px;
+  font-size: 0.78rem; font-weight: 700;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ind-bar-mini { grid-column: 1; height: 8px; background: #2a3550; border-radius: 4px; overflow: hidden; }
+.ind-bar-mini { flex: 1; height: 7px; background: #2a3550; border-radius: 4px; overflow: hidden; }
 .ind-val-mini {
-  grid-column: 2; font-size: 0.85rem; font-weight: 800; text-align: right;
+  flex: 0 0 auto; font-size: 0.78rem; font-weight: 800; text-align: right;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
 }
 .cuadrante-chip.sml {
@@ -1367,7 +1370,7 @@ input[type=text], input[type=number] {
 }
 .pawn-float {
   position: absolute;
-  transform: translate(-50%, -115%);
+  transform: translate(-50%, -50%);
   transition: left 0.45s cubic-bezier(0.4,0,0.2,1), top 0.45s cubic-bezier(0.4,0,0.2,1);
 }
 .bc-log {
@@ -1459,25 +1462,35 @@ input[type=text], input[type=number] {
   color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important;
 }
 .actions-row {
-  display: flex; gap: 8px; flex-wrap: wrap;
+  display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
 }
-.action-card {
-  flex: 0 1 auto; padding: 8px 12px;
-  border-radius: 10px;
-  background: linear-gradient(145deg, rgba(30,40,60,0.8), rgba(17,28,45,0.9));
-  border: 2px solid var(--gold);
-  cursor: pointer; text-align: left;
-  transition: all .2s ease;
-  box-shadow: 0 2px 8px rgba(200,160,64,0.15), inset 0 0 8px rgba(200,160,64,0.05);
+.action-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 20px;
+  background: rgba(30,40,60,0.85);
+  border: 1.5px solid var(--gold);
+  cursor: pointer; white-space: nowrap;
+  transition: all .15s ease;
+  box-shadow: 0 1px 4px rgba(200,160,64,0.2);
 }
-.action-card:hover {
+.action-chip:hover {
   background: linear-gradient(145deg, var(--gold), #D4921D);
-  color: #0c0c0c !important; -webkit-text-fill-color: #0c0c0c !important;
-  box-shadow: 0 6px 20px rgba(200,160,64,0.4), inset 0 0 12px rgba(255,255,255,0.1);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(200,160,64,0.4);
 }
-.action-card:active {
-  transform: translateY(0);
+.action-chip:hover .chip-label,
+.action-chip:hover .chip-cost {
+  color: #0c0c0c !important; -webkit-text-fill-color: #0c0c0c !important;
+}
+.action-chip:active { transform: translateY(0); }
+.chip-icon { font-size: 0.9rem; }
+.chip-label {
+  font-size: 0.78rem; font-weight: 700;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.chip-cost {
+  font-size: 0.7rem; font-weight: 800;
+  color: var(--gold) !important; -webkit-text-fill-color: var(--gold) !important;
 }
 .act-name {
   display: block; font-size: 0.82rem; font-weight: 800;
@@ -1600,14 +1613,14 @@ input[type=text], input[type=number] {
   border-top: 1px solid rgba(196,158,72,0.2);
 }
 .time-section .clock-face {
-  width: 108px; height: 108px;
+  width: 58px; height: 58px;
   position: relative;
 }
 .time-section .clock-face .clock-svg {
-  filter: drop-shadow(0 0 8px rgba(232,160,32,0.55));
+  filter: drop-shadow(0 0 6px rgba(232,160,32,0.5));
 }
-.time-section .clock-num { font-size: 2.2rem; }
-.time-section .clock-unit { font-size: 0.7rem; }
+.time-section .clock-num { font-size: 1.1rem; }
+.time-section .clock-unit { font-size: 0.5rem; }
 .clock-urgent .clock-svg {
   filter: drop-shadow(0 0 10px rgba(224,48,58,0.7));
   animation: clockPulse 0.9s ease-in-out infinite;
@@ -1620,15 +1633,15 @@ input[type=text], input[type=number] {
 /* ── Footer bar: clock + actions + end button ── */
 .footer-bar {
   display: flex; gap: 8px; align-items: center; justify-content: flex-start;
-  padding: 10px 8px; margin-top: auto;
+  padding: 6px 8px; margin-top: auto;
   background: linear-gradient(135deg, rgba(17,30,56,0.8), rgba(11,18,37,0.9));
   border-top: 2px solid rgba(196,158,72,0.2);
-  min-height: 120px;
+  max-height: 72px; overflow: hidden;
 }
 .time-section {
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  width: 110px;
+  width: 66px;
 }
 #actions-bar {
   flex: 1;
