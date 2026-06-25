@@ -47,8 +47,19 @@ URL: https://jfcarpiopuntocom.github.io/jose-en-la-vida-adulta/
 - `styles_2026-06-25_03-15.css` (antes del fix masivo de tablero)
 - `citymusic_2026-06-25_03-15.ts` (antes del speed bump)
 
+## Estado reciente (2026-06-25 tarde)
+- Reloj movido al board-center (debajo de "Quincena N"), mitad de tamaño (~50px), Verdana 11/13. TimeRing prop `compact`. Quitado del footer (footer ahora 64px).
+- Acciones del lugar: auto-abren ~20s y hacen fade (.clerk-fading). Click/mouseover sobre el casillero actual reabren. Lógica: openActionsHere/closeActionsHere + useEffect de llegada; props fading/onReopen/onClose a Board.
+- Legado (impact.comunitario) arranca en 0 (engine.ts) — 18 años, recién se lanza.
+- Notificación board-toast compacta (max 300px) en banda central, no tapa tiles.
+- Clerks: sprite fix (background-position %), grid-old.png. Header narrado (narrateHeadline). Feria Libre label dinámico (locName).
+- Música: citymusic.ts prefiere public/audio/track.mp3 (nativo, loop, sin warp). JFC ya subió track.mp3 (6.2MB).
+- Toggle velocidad José (slowJose) en footer.
+- Recap fin de semana SIEMPRE dispara para humano (rollEvent force).
+- Mobile: board protagonista, dashboard con tope de altura + scroll interno.
+
 ## Pendiente
-- Verificar tablero ocupa 75-80% en PC (screenshot pendiente de JFC)
-- Verificar overlay de avatares se mueve correctamente
-- Setup screen: verificar 2-columnas en PC (fix cascade especificidad)
-- Stops ocultos (feature futura, no tocar sin aprobación)
+- Verificar en PC/landscape que todo entra sin scroll-up con el nuevo layout.
+- José VISIBLE jugando tile-por-tile (hoy solo toggle de velocidad; playback paso a paso requiere refactor de cpuTurn para emitir pasos). Confirmar con JFC si invertir.
+- Celebración de logros (ej. bachillerato) con la familia si se llevan bien.
+- Stops ocultos (feature futura, no tocar sin aprobación).
