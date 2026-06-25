@@ -3,7 +3,7 @@ import { GameState, PlayerState, GameEvent, Goals } from './types';
 import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
   hasWon, canRetire, makeHeir, cpuTurn, portfolioSlices, collectiblesValue,
-  expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
+  patrimonio, expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
   CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle, generateBackstory,
   joseQuip, COLLECTIBLE_LORE,
@@ -15,6 +15,22 @@ import { cityMusic } from './citymusic';
 
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
+// Heurística sencilla para que la IA evalúe el "valor" de una opción en eventos bifurcados
+function scoreEff(eff: any[]): number {
+  let s = 0;
+  for (const e of eff) {
+    if (e[0] === 'liq' || e[0] === 'bank') s += Number(e[1]) || 0;
+    else if (e[0] === 'time') s += (Number(e[1]) || 0) * 5; // cada hora vale ~$5 de jornal
+    else if (e[0] === 'stat') {
+      const k = e[1]; const v = Number(e[2]) || 0;
+      if (k === 'stress') s -= v * 4;
+      else s += v * 3;
+    }
+    else if (e[0] === 'impact') s += (Number(e[2]) || 0) * 4;
+  }
+  return s;
+}
 
 // Progreso hacia la vida plena: promedio de las 6 áreas, tope 100% (igual que el dashboard)
 function winProgress(p: PlayerState, goals: Goals): number {
@@ -461,11 +477,13 @@ function StatsPanel({
       <button className="turn-banner turn-banner-btn" onClick={onShowProgress} title="Ver cómo me va">
         <Portrait p={p} size={72} />
         <div className="turn-banner-text">Tu Turno</div>
-        {(p.streak ?? 0) >= 2 && (
-          <div className="streak-badge">🔥 Racha {p.streak}</div>
-        )}
-        {p.weeklyFocus && (
-          <div className="focus-chip">Foco: {p.weeklyFocus}</div>
+        {/* Banner-strip: una sola línea compacta (evita sobrecarga visual del banner) */}
+        {((p.streak ?? 0) >= 2 || p.weeklyFocus) && (
+          <div className="banner-strip">
+            {(p.streak ?? 0) >= 2 && <span className="strip-streak">🔥{p.streak}</span>}
+            {(p.streak ?? 0) >= 2 && p.weeklyFocus && <span className="strip-sep">·</span>}
+            {p.weeklyFocus && <span className="strip-focus">🎯 {p.weeklyFocus}</span>}
+          </div>
         )}
         <div className="turn-banner-hint">toca para ver cómo te va ▾</div>
       </button>
@@ -483,7 +501,7 @@ function StatsPanel({
       <div className="stat-divider" />
       <div className="resources">
         <div className="resource"><span className="res-icon">💰</span><span className="res-val">${p.liquidity}</span></div>
-        {(() => { const nw = p.liquidity + p.bank + p.businesses.reduce((s,b)=>s+b.capital,0) + collectiblesValue(p); return <div className="resource net-worth-row"><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:800}}>Patrimonio neto: ${nw}</span></div>; })()}
+        {(() => { const nw = patrimonio(p); return <div className="resource net-worth-row"><span className="res-val" style={{color:"#28ECAA",WebkitTextFillColor:"#28ECAA",fontWeight:800}}>Patrimonio neto: ${nw}</span></div>; })()}
         <div className="resource"><span className="res-icon">🏦</span><span className="res-val">${p.bank}</span></div>
         <div className="resource"><span className="res-icon">🎓</span><span className="res-val">{p.education.completed.length} títulos académicos</span></div>
         {p.job && <div className="resource"><span className="res-icon">W</span><span className="res-val" style={{fontSize:"0.78rem"}}>{p.job.title}</span></div>}
@@ -921,6 +939,18 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
         <span className="pm-row"><span>🏦 Banco</span><b>${portfolio.stable}</b></span>
         <span className="pm-row"><span>🏭 Negocio</span><b>${portfolio.growth}</b></span>
         <span className="pm-row"><span>🚗 Bienes</span><b>${portfolio.hard}</b></span>
+        {portfolio.stocks > 0 && (
+          <span className="pm-row"><span>📈 Acciones BVQ</span><b>${portfolio.stocks}{p.stocksCost ? ` (costo $${p.stocksCost})` : ''}</b></span>
+        )}
+        {portfolio.rentals > 0 && (
+          <span className="pm-row"><span>🏘️ Arrendamientos</span><b>${portfolio.rentals}{portfolio.rentalDebt > 0 ? ` (deuda $${portfolio.rentalDebt})` : ''}</b></span>
+        )}
+        {p.rentals && p.rentals.map((r, i) => (
+          <span key={i} className="pm-col">
+            {r.kind === 'apto' ? '🏢' : '🏬'} {r.kind === 'apto' ? 'Depto' : 'Local'} en {r.note} · renta $${r.rent}/q
+            <span className="pm-col-lore">{r.remaining > 0 ? `Préstamo: $${r.payment}/q por ${r.remaining}q. Renta neta $${r.rent - r.payment}/q.` : `Préstamo pagado. Renta plena $${r.rent}/q.`}</span>
+          </span>
+        ))}
         {p.collectibles.length > 0 && (
           <span className="pm-row"><span>🎨 Coleccionables</span><b>${portfolio.collectibles}</b></span>
         )}
@@ -1259,9 +1289,15 @@ function App() {
         let silvered = false;
         const hasChoices = !!ev.choices && ev.choices.length > 0;
         // #5 Evento bifurcado: si hay opciones, el efecto se aplica al elegir.
-        // La IA decide la primera opción por defecto (la más activa).
+        // La IA decide según dificultad: Fácil = al azar, Normal/Difícil = mejor valor neto.
         if (hasChoices) {
-          if (p.isAI) { applyEff(p, ev.choices![0].eff); }
+          if (p.isAI) {
+            const diff = (p.aiDifficulty ?? 2) as 1|2|3;
+            const idx = diff === 1
+              ? Math.floor(Math.random() * ev.choices!.length)
+              : ev.choices!.reduce((bestI, c, i, arr) => scoreEff(c.eff) > scoreEff(arr[bestI].eff) ? i : bestI, 0);
+            applyEff(p, ev.choices![idx].eff);
+          }
         } else {
           applyEff(p, ev.eff);
           if (ev.neg && ev.silver.length) { applyEff(p, ev.silver); silvered = true; }
@@ -1370,7 +1406,8 @@ function App() {
       }
     }
     // Tras cerrar la quincena, pregunta al humano por su próxima meta
-    if (g.players.some(p => !p.isAI && !p.weeklyFocus)) setTimeout(() => setShowFocusPick(true), 1200);
+    // (esperamos a que el toast del cierre termine para que no se monten en iOS)
+    if (g.players.some(p => !p.isAI && !p.weeklyFocus)) setTimeout(() => { setFlash(null); setShowFocusPick(true); }, 3200);
     // Victoria (ya con pasivos aplicados)
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }

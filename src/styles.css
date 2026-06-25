@@ -1486,19 +1486,16 @@ input[type=text], input[type=number] {
   color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
 }
 
-/* #1 racha + #7 meta de foco: micro-chips en el banner del turno */
-.streak-badge {
-  display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
-  font-size: 0.82rem; font-weight: 800; letter-spacing: 0.3px;
-  background: rgba(232,96,64,0.18); border: 1px solid #E86040;
-  color: #E86040 !important; -webkit-text-fill-color: #E86040 !important;
+/* Banner-strip: una sola línea compacta con racha + foco para no saturar el banner */
+.banner-strip {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 4px; padding: 3px 9px; border-radius: 11px;
+  background: rgba(245,194,74,0.10); border: 1px solid rgba(245,194,74,0.45);
+  font-size: 0.85rem; font-weight: 800; line-height: 1;
 }
-.focus-chip {
-  display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
-  font-size: 0.82rem; font-weight: 800;
-  background: rgba(40,236,170,0.14); border: 1px solid #28ECAA;
-  color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important;
-}
+.strip-streak { color: #E86040 !important; -webkit-text-fill-color: #E86040 !important; }
+.strip-focus { color: #28ECAA !important; -webkit-text-fill-color: #28ECAA !important; }
+.strip-sep { color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important; }
 
 /* #7 modal de meta autoimpuesta */
 .focus-modal { max-width: 480px; text-align: center; }

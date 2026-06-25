@@ -151,9 +151,22 @@ export interface PlayerState {
   stats: PlayerStats;
   retired: boolean;
   collectibles: Collectible[];
+  stocksValue?: number; // valor actual de acciones BVQ/BVG en cartera
+  stocksCost?: number;  // costo histórico (para mostrar P&L)
+  rentals?: Rental[];   // bienes raíces que arriendas a inquilinos
   isAI?: boolean;
   aiStrategy?: 'empleado' | 'empresa';
   aiDifficulty?: 1 | 2 | 3;
+}
+
+export type RentalKind = 'apto' | 'local';
+export interface Rental {
+  kind: RentalKind;
+  value: number;     // valor de mercado de la propiedad
+  rent: number;      // renta cobrada por quincena
+  payment: number;   // cuota del préstamo (cero cuando ya pagaste)
+  remaining: number; // quincenas restantes del préstamo
+  note: string;      // dónde está, para el lore
 }
 
 export type CollectibleKind = 'cuadro' | 'vino' | 'joyeria' | 'tarjeta' | 'bitcoin';

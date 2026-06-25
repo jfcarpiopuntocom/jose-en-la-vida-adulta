@@ -84,6 +84,12 @@ export function passiveIncome(p: PlayerState): number {
   }
   // Apreciación media de coleccionables
   pi += Math.round(p.collectibles.reduce((s, c) => s + c.value * 0.022, 0));
+  // Acciones BVQ: ~1.2% promedio por turno (la varianza se tickea aparte)
+  if (p.stocksValue) pi += Math.round(p.stocksValue * 0.012);
+  // Bienes para arrendar: renta neta (renta − cuota de préstamo) por quincena
+  if (p.rentals) {
+    for (const r of p.rentals) pi += Math.max(0, r.rent - r.payment);
+  }
   return Math.max(0, pi);
 }
 
@@ -238,14 +244,18 @@ export function portfolioSlices(p: PlayerState) {
     growth:      Math.round(p.businesses.reduce((s, b) => s + b.capital, 0)),
     hard:        Math.round(p.vehicles.reduce((s, v) => s + v.value, 0)),
     collectibles:collectiblesValue(p),
+    stocks:      Math.round(p.stocksValue ?? 0),
+    rentals:     Math.round((p.rentals ?? []).reduce((s, r) => s + r.value, 0)),
+    rentalDebt:  Math.round((p.rentals ?? []).reduce((s, r) => s + r.payment * r.remaining, 0)),
   };
 }
 export function patrimonio(p: PlayerState): number {
   const sl = portfolioSlices(p);
-  return sl.cash + sl.stable + sl.growth + sl.hard + sl.collectibles;
+  // Patrimonio neto = activos − pasivos (deuda hipotecaria restante)
+  return sl.cash + sl.stable + sl.growth + sl.hard + sl.collectibles + sl.stocks + sl.rentals - sl.rentalDebt;
 }
 export function totalAssets(p: PlayerState): number {
-  return p.liquidity + p.bank + collectiblesValue(p) + p.businesses.reduce((s,b)=>s+b.capital,0);
+  return p.liquidity + p.bank + collectiblesValue(p) + p.businesses.reduce((s,b)=>s+b.capital,0) + (p.stocksValue ?? 0) + (p.rentals ?? []).reduce((s, r) => s + r.value, 0);
 }
 export function bienestar(p: PlayerState): number {
   return Math.round((p.stats.health + p.stats.happiness + (100 - p.stats.stress)) / 3);
@@ -475,16 +485,50 @@ export function actionsFor(p: PlayerState, world: World): GameAction[] {
     if (p.liquidity >= 500)
       out.push({ id: 'save500', label: 'Ahorrar $500 en banco (1h)', hours: 1, desc: 'depósito grande', ok: p.timeLeft >= 1 && p.liquidity >= 500,
         run: () => { applyEff(p, [['time', -1], ['liq', -500], ['bank', 500]]); return `Depositaste $500 en el banco`; } });
-    if (p.liquidity >= 200)
-      out.push({ id: 'invest_bolsa', label: 'Invertir en bolsa (2h · $200)', hours: 2, desc: 'especulativo: puede ganar o perder', ok: p.timeLeft >= 2 && p.liquidity >= 200,
+    // ── Acciones BVQ/BVG: cartera persistente con apreciación variable ──
+    // (jaja sí, JFC, también podemos mirar el ticker)
+    const stocksTier = (amount: number, hours: number, id: string, label: string, desc: string) =>
+      ({ id, label, hours, desc, ok: p.timeLeft >= hours && p.liquidity >= amount,
         run: () => {
-          const win = Math.random() > 0.45;
-          const delta = win ? rnd(120) + 60 : -(rnd(80) + 30);
-          applyEff(p, [['time', -2], ['liq', -200 + delta], ['stat', 'knowledge', 1]]);
-          return win
-            ? `${p.name} invirtió en bolsa y ganó $${delta}`
-            : `${p.name} invirtió en bolsa y perdió $${-delta}`;
+          p.stocksValue = (p.stocksValue ?? 0) + amount;
+          p.stocksCost = (p.stocksCost ?? 0) + amount;
+          applyEff(p, [['time', -hours], ['liq', -amount], ['stat', 'knowledge', 1]]);
+          return `Compraste $${amount} en acciones BVQ (cartera: $${Math.round(p.stocksValue)})`;
         } });
+    if (p.liquidity >= 200)
+      out.push(stocksTier(200, 1, 'buy_stocks_200', 'Comprar acciones BVQ ($200, 1h)', 'cartera persistente · apreciación variable'));
+    if (p.liquidity >= 500)
+      out.push(stocksTier(500, 1, 'buy_stocks_500', 'Comprar acciones BVQ ($500, 1h)', 'paquete mediano'));
+    if (p.liquidity >= 2000)
+      out.push(stocksTier(2000, 2, 'buy_stocks_2000', 'Comprar acciones BVQ ($2000, 2h)', 'posición fuerte de cartera'));
+    if ((p.stocksValue ?? 0) > 0)
+      out.push({ id: 'sell_stocks', label: `Vender toda la cartera ($${Math.round(p.stocksValue ?? 0)}, 1h)`, hours: 1,
+        desc: (p.stocksValue ?? 0) > (p.stocksCost ?? 0) ? `ganancia: $${Math.round((p.stocksValue ?? 0) - (p.stocksCost ?? 0))}` : `pérdida: $${Math.round((p.stocksCost ?? 0) - (p.stocksValue ?? 0))}`,
+        ok: p.timeLeft >= 1,
+        run: () => {
+          const v = Math.round(p.stocksValue ?? 0); const c = Math.round(p.stocksCost ?? 0);
+          applyEff(p, [['time', -1], ['liq', v]]);
+          p.stocksValue = 0; p.stocksCost = 0;
+          return v >= c ? `Vendiste tu cartera: +$${v} (ganancia $${v-c})` : `Vendiste tu cartera: +$${v} (pérdida $${c-v})`;
+        } });
+
+    // ── Bienes para arrendar: apalancamiento de mutualista/cooperativa ──
+    const rentalDeal = (
+      kind: 'apto' | 'local', down: number, loan: number, hours: number,
+      rent: number, payment: number, remaining: number, value: number,
+      id: string, label: string, note: string
+    ) => ({ id, label, hours, desc: `entrada $${down} + préstamo $${loan} (${remaining}q a $${payment}/q) · renta $${rent}/q`,
+      ok: p.timeLeft >= hours && p.liquidity >= down && p.stats.dependability >= 55,
+      run: () => {
+        applyEff(p, [['time', -hours], ['liq', -down], ['stat', 'dependability', 2], ['stat', 'knowledge', 2], ['impact', 'profesional', 2]]);
+        p.rentals = p.rentals ?? [];
+        p.rentals.push({ kind, value, rent, payment, remaining, note });
+        return `Compraste un ${kind === 'apto' ? 'departamento' : 'local'} para arrendar (${note}) con préstamo de mutualista. Renta neta: $${rent - payment}/q`;
+      } });
+    out.push(rentalDeal('apto',  1500, 6500,  1, 180, 130, 60, 8000,
+      'buy_apto_rent',  'Depto para arrendar ($1500 + préstamo, 1h)', 'Totoracocha'));
+    out.push(rentalDeal('local', 3000, 12000, 1, 330, 240, 60, 15000,
+      'buy_local_rent', 'Local comercial para arrendar ($3000 + préstamo, 1h)', 'Av. Solano'));
     // Fondo mutuo: aporte genera ingreso pasivo fijo (0.6%/turno sobre capital)
     const fondoMutuo = (p as any).fondoMutuo as number || 0;
     if (p.liquidity >= 500)
@@ -776,10 +820,37 @@ function tickCollectibles(p: PlayerState): string[] {
   return logs;
 }
 
+// Acciones BVQ: apreciación variable por quincena (perfil entre bonos y BTC)
+function tickStocks(p: PlayerState): string[] {
+  if (!p.stocksValue) return [];
+  const rate = -0.08 + Math.random() * 0.24; // -8% a +16%, media ~+1.2%/q
+  const delta = Math.round(p.stocksValue * rate);
+  p.stocksValue = Math.max(1, p.stocksValue + delta);
+  if (Math.abs(rate) > 0.10)
+    return [`Acciones BVQ: ${rate >= 0 ? '+' : ''}${Math.round(rate*100)}% → cartera $${Math.round(p.stocksValue)}`];
+  return [];
+}
+// Bienes para arrendar: cobra renta, paga cuota del préstamo, decrementa el plazo
+function tickRentals(p: PlayerState): string[] {
+  const logs: string[] = [];
+  if (!p.rentals) return logs;
+  for (const r of p.rentals) {
+    // Pequeña apreciación inmobiliaria (~0.4%/q)
+    r.value = Math.round(r.value * 1.004);
+    if (r.remaining > 0) {
+      r.remaining--;
+      if (r.remaining === 0) { logs.push(`${r.kind === 'apto' ? 'Departamento' : 'Local'} de ${r.note}: préstamo pagado por completo (renta neta plena $${r.rent}/q)`); r.payment = 0; }
+    }
+  }
+  return logs;
+}
+
 /* ---------- CIERRE DE QUINCENA ---------- */
 export function closeBusinessAndEmployees(p: PlayerState): string[] {
   const logs: string[] = [];
   logs.push(...tickCollectibles(p));
+  logs.push(...tickStocks(p));
+  logs.push(...tickRentals(p));
   for (const b of p.businesses) {
     p.liquidity -= b.costosFijos;
     for (const e of b.employees) {
