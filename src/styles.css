@@ -6,7 +6,7 @@
 :root {
   color-scheme: light only;
   forced-color-adjust: none;
-  --ts: 94px; /* tile size — todos los casilleros exactamente este cuadrado */
+  --tc: 100px; /* cross-axis tile dimension: height for top/bottom rows, width for side columns */
 
   /* ── Fondos cuencanos — azul noche andina ── */
   --bg: #0B1225;
@@ -211,11 +211,13 @@ h1,h2,h3,p,span,div,button,label,li,a {
   color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
 }
 .player-loc {
-  font-size: 0.95rem; font-weight: 700;
+  font-size: 0.9rem; font-weight: 700;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .econ-line {
-  font-size: 0.86rem; font-weight: 700; line-height: 1.3;
+  font-size: 0.82rem; font-weight: 700; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .econ-good { color: var(--green) !important; -webkit-text-fill-color: var(--green) !important; }
 .econ-bad  { color: var(--rose)  !important; -webkit-text-fill-color: var(--rose)  !important; }
@@ -1247,37 +1249,50 @@ input[type=text], input[type=number] {
 }
 .game-main {
   flex: 1.5; display: flex; flex-direction: column;
-  align-items: center; /* tablero centrado horizontalmente */
   padding: 8px; gap: 6px; overflow-y: auto;
 }
 
-/* ── Board grid ── */
+/* ── Board grid ──
+   Estrategia: --tc fija la dimensión "corta" de cada tile.
+   Top/bottom tiles: height=--tc, width flexible (llenan el ancho del tablero).
+   Left/right tiles: width=--tc, height flexible (llenan la altura del body).
+   El tablero llena todo el game-main horizontalmente.
+*/
 .board {
   display: flex; flex-direction: column;
   border: 2px solid rgba(196,158,72,0.3);
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(17,30,56,0.9), rgba(11,18,37,0.95));
-  flex: 0 0 auto; /* no estirarse — el tablero tiene tamaño propio */
-  align-self: center;
+  flex-shrink: 0;
+  width: 100%;
 }
 
-.board-edge {
-  display: flex;
+.board-edge { display: flex; }
+.board-top  { height: var(--tc); border-bottom: 1px solid rgba(196,158,72,0.15); }
+.board-bottom { height: var(--tc); border-top: 1px solid rgba(196,158,72,0.15); }
+
+/* top/bottom tiles: height=100% of row, width flexes */
+.board-top .tile, .board-bottom .tile {
+  flex: 1; height: 100%; min-width: calc(var(--tc) * 0.8);
 }
-.board-top { border-bottom: 1px solid rgba(196,158,72,0.15); }
-.board-bottom { border-top: 1px solid rgba(196,158,72,0.15); }
 
 .board-body {
   display: flex;
-  height: calc(4 * (var(--ts) + 6px)); /* columna derecha tiene 4 tiles */
+  height: calc(4 * var(--tc)); /* right col has 4 tiles → body = 4×--tc tall */
 }
 .board-left {
+  flex: 0 0 var(--tc);
   flex-direction: column;
   border-right: 1px solid rgba(196,158,72,0.15);
 }
 .board-right {
+  flex: 0 0 var(--tc);
   flex-direction: column;
   border-left: 1px solid rgba(196,158,72,0.15);
+}
+/* left/right tiles: width=100% of column, height flexes */
+.board-left .tile, .board-right .tile {
+  flex: 1; width: 100%;
 }
 
 /* ── Center panel (log + city name) ── */
@@ -1349,9 +1364,6 @@ input[type=text], input[type=number] {
 
 /* ── Tile (each board square) ── */
 .tile {
-  /* Cuadrado fijo — igual en todos los lados como Monopoly */
-  flex: 0 0 var(--ts);
-  width: var(--ts); height: var(--ts);
   padding: 5px 4px;
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 2px;
@@ -1507,7 +1519,7 @@ input[type=text], input[type=number] {
 
 /* ── Stats Panel sidebar ── */
 #stats-panel {
-  width: clamp(230px, 24vw, 300px); flex-shrink: 0;
+  width: clamp(260px, 22vw, 340px); flex-shrink: 0;
   background: var(--panel-bg);
   border-left: 1px solid var(--line);
   padding: 8px;
@@ -1927,16 +1939,9 @@ input[type=text], input[type=number] {
   color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important;
 }
 
-/* Tile size por viewport — desktop usa --ts: 94px del :root */
-@media (max-height: 820px) {
-  :root { --ts: 82px; }
-}
-@media (max-height: 700px) {
-  :root { --ts: 72px; }
-}
-@media (max-width: 640px) {
-  :root { --ts: 64px; }
-}
+/* Tile cross-axis shrinks on smaller screens */
+@media (max-height: 750px) { :root { --tc: 80px; } }
+@media (max-width: 640px)  { :root { --tc: 72px; } }
 
 /* ═══════════════════════════════════════════════════════════════════════
    MOBILE OVERRIDES (orden de cascada: van al final para ganar a las reglas base)
@@ -2025,16 +2030,10 @@ input[type=text], input[type=number] {
   .bc-dice { width: 26px !important; height: 26px !important; }
   .bc-suerte-label { font-size: 0.55rem !important; }
 
-  /* TILES — tamaño controlado por --ts (ya seteado en 64px para mobile) */
-  .tile {
-    padding: 4px 2px !important; margin: 0 !important;
-    border-radius: 10px;
-    display: flex !important; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 2px; overflow: hidden;
-  }
-  .tile-art { width: 28px !important; height: 28px !important; border-radius: 6px !important; }
-  .tile-art-emoji { font-size: 1rem !important; }
+  /* TILES mobile — --tc ya es 72px desde media query arriba */
+  .tile { padding: 4px 2px !important; margin: 0 !important; border-radius: 10px; }
+  .tile-art { width: 26px !important; height: 26px !important; border-radius: 6px !important; }
+  .tile-art-emoji { font-size: 0.95rem !important; }
   .tile-label {
     font-size: 0.66rem !important; line-height: 1.05 !important;
     max-width: 100% !important; font-weight: 800;

@@ -4,8 +4,8 @@
 // iOS/Safari: AudioContext se crea en el primer gesto del usuario.
 
 const WAV_URL = '/jose-en-la-vida-adulta/audio/jazz-cuenca.wav';
-const BPM = 132;
-const SPEED = 1.15;   // 15% más rápido que el original
+const BPM = 148;
+const SPEED = 1.28;   // 28% más rápido — jazz de pasillo activo
 const LOOKAHEAD = 0.35; // segundos de anticipación para el scheduler
 
 let ctx: AudioContext | null = null;
