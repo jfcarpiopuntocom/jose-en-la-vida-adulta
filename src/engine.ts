@@ -9,6 +9,12 @@ import {
   FNAMES_M, FNAMES_F, EMP_NAMES, RELATIONS, PERSONALITIES, PERS_WEALTH,
 } from './data';
 
+// Diseño de engagement (v0.90):
+// - Recurso escaso = tiempo (Sid Meier: "una serie de decisiones interesantes").
+// - Pérdida visible (Kahneman): costo de oportunidad en cada acción.
+// - Maestría + autonomía + propósito (Self-Determination Theory): meta autoimpuesta + bifurcaciones.
+// - Octalysis CD2 (Desarrollo) + CD7 (Variable): racha + varianza en negocio.
+// - Sherpa (Joseph Campbell): José va dos pasos adelante, sin sermonear.
 export const HOURS_PER_TURN = 112;
 
 export interface TierMeta extends Goals {
