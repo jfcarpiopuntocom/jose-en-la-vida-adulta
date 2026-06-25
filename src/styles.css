@@ -920,9 +920,25 @@ input[type=text], input[type=number] {
   .topbar-pulse { display: none; }
 }
 
-/* Landscape on narrow phones (≤900px): keep right-sidebar layout */
+/* Landscape on narrow phones (≤900px): sidebar derecho COMPACTO, board protagonista */
 @media (max-width: 900px) and (orientation: landscape) {
   .rotate-overlay { display: none; }
+  .game-layout { flex-direction: row !important; }
+  .game-main { flex: 1 1 auto !important; min-height: 0 !important; overflow: hidden !important; }
+  #stats-panel {
+    width: clamp(190px, 30vw, 250px) !important; flex: 0 0 auto !important;
+    overflow-y: auto !important; max-height: 100% !important;
+    padding: 6px 8px !important; gap: 5px !important;
+  }
+  .turn-banner img, .turn-banner svg { width: 40px !important; height: 40px !important; }
+  .turn-banner-text { font-size: 0.9rem !important; }
+  .turn-banner-hint { font-size: 0.66rem !important; }
+  .res-val { font-size: 0.78rem !important; }
+  .ind-lbl-mini { font-size: 0.68rem !important; }
+  .ind-val-mini { font-size: 0.68rem !important; }
+  /* Reloj y footer más chicos para que el board respire */
+  .footer-bar { height: 84px !important; }
+  .time-section .clock-face { width: 64px !important; height: 64px !important; }
 }
 
 /* ── Inline indicators inside StatsPanel ── */
@@ -2118,14 +2134,16 @@ input[type=text], input[type=number] {
    ═══════════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) and (orientation: portrait),
        (max-height: 500px) and (max-width: 420px) {
-  /* Layout principal en columna */
-  .game-layout { flex-direction: column !important; top: 44px !important; }
+  /* Layout principal en columna: BOARD protagonista, dashboard compacto abajo */
+  .game-layout { flex-direction: column !important; top: 44px !important; overflow: hidden !important; }
   .game-main {
     flex: 1 1 auto !important; min-height: 0 !important;
     padding: 8px 8px 6px !important; gap: 8px !important;
     display: flex !important; flex-direction: column !important;
-    overflow-y: auto !important;
+    overflow: hidden !important;
   }
+  /* El board manda: ocupa el espacio disponible del game-main */
+  .game-main .board { flex: 1 1 auto !important; min-height: 0 !important; }
 
   /* Top bar */
   #top-bar { height: 44px !important; padding: 0 10px !important; gap: 6px !important; }
@@ -2174,10 +2192,12 @@ input[type=text], input[type=number] {
   }
   .tile-cost { font-size: 0.62rem !important; font-weight: 800; }
 
-  /* STATS PANEL en strip horizontal abajo del board */
+  /* STATS PANEL: strip compacto abajo, con TOPE de altura y scroll interno.
+     Nunca debe comerse la pantalla — el board es el protagonista. */
   #stats-panel {
     width: 100% !important; max-width: none !important;
     flex: 0 0 auto !important; min-height: 0 !important;
+    max-height: 40vh !important; overflow-y: auto !important;
     border-left: none !important; border-top: 2px solid var(--gold) !important;
     padding: 8px 10px !important; gap: 6px !important;
     border-radius: 14px;
