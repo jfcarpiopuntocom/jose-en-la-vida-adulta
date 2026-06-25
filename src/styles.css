@@ -6,6 +6,7 @@
 :root {
   color-scheme: light only;
   forced-color-adjust: none;
+  --ts: 94px; /* tile size — todos los casilleros exactamente este cuadrado */
 
   /* ── Fondos cuencanos — azul noche andina ── */
   --bg: #0B1225;
@@ -761,8 +762,8 @@ input[type=text], input[type=number] {
     align-items: center; justify-content: center;
     gap: 2px; overflow: hidden;
   }
-  .tile-art { width: 32px !important; height: 32px !important; border-radius: 7px !important; }
-  .tile-art-emoji { font-size: 1.15rem !important; }
+  .tile-art { width: 28px !important; height: 28px !important; border-radius: 6px !important; }
+  .tile-art-emoji { font-size: 1rem !important; }
   .tile-label {
     font-size: 0.66rem; line-height: 1.05; max-width: 100%;
     font-weight: 800; letter-spacing: 0.2px;
@@ -1246,6 +1247,7 @@ input[type=text], input[type=number] {
 }
 .game-main {
   flex: 1.5; display: flex; flex-direction: column;
+  align-items: center; /* tablero centrado horizontalmente */
   padding: 8px; gap: 6px; overflow-y: auto;
 }
 
@@ -1255,8 +1257,8 @@ input[type=text], input[type=number] {
   border: 2px solid rgba(196,158,72,0.3);
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(17,30,56,0.9), rgba(11,18,37,0.95));
-  flex-shrink: 0;
-  flex: 2; min-height: 0;
+  flex: 0 0 auto; /* no estirarse — el tablero tiene tamaño propio */
+  align-self: center;
 }
 
 .board-edge {
@@ -1266,7 +1268,8 @@ input[type=text], input[type=number] {
 .board-bottom { border-top: 1px solid rgba(196,158,72,0.15); }
 
 .board-body {
-  display: flex; flex: 1; min-height: 100px;
+  display: flex;
+  height: calc(4 * (var(--ts) + 6px)); /* columna derecha tiene 4 tiles */
 }
 .board-left {
   flex-direction: column;
@@ -1346,9 +1349,9 @@ input[type=text], input[type=number] {
 
 /* ── Tile (each board square) ── */
 .tile {
-  flex: 1 1 0;
-  aspect-ratio: 1 / 1;
-  min-width: 76px; max-width: 108px;
+  /* Cuadrado fijo — igual en todos los lados como Monopoly */
+  flex: 0 0 var(--ts);
+  width: var(--ts); height: var(--ts);
   padding: 5px 4px;
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 2px;
@@ -1518,6 +1521,9 @@ input[type=text], input[type=number] {
   display: flex; flex-direction: row; align-items: center; gap: 10px;
   padding: 8px 10px; width: 100%;
   position: relative;
+}
+.turn-banner-right {
+  display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px;
 }
 .turn-banner img, .turn-banner svg { width: 66px !important; height: 66px !important; flex-shrink: 0; }
 .turn-banner::before {
@@ -1921,6 +1927,17 @@ input[type=text], input[type=number] {
   color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important;
 }
 
+/* Tile size por viewport — desktop usa --ts: 94px del :root */
+@media (max-height: 820px) {
+  :root { --ts: 82px; }
+}
+@media (max-height: 700px) {
+  :root { --ts: 72px; }
+}
+@media (max-width: 640px) {
+  :root { --ts: 64px; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    MOBILE OVERRIDES (orden de cascada: van al final para ganar a las reglas base)
    ═══════════════════════════════════════════════════════════════════════ */
@@ -2008,18 +2025,16 @@ input[type=text], input[type=number] {
   .bc-dice { width: 26px !important; height: 26px !important; }
   .bc-suerte-label { font-size: 0.55rem !important; }
 
-  /* TILES cuadrados con label legible */
+  /* TILES — tamaño controlado por --ts (ya seteado en 64px para mobile) */
   .tile {
-    min-width: 0 !important; max-width: none !important;
-    min-height: 0 !important; max-height: none !important;
-    aspect-ratio: 1 / 1 !important; padding: 5px 3px !important; margin: 0 !important;
-    border-radius: 12px;
+    padding: 4px 2px !important; margin: 0 !important;
+    border-radius: 10px;
     display: flex !important; flex-direction: column;
     align-items: center; justify-content: center;
     gap: 2px; overflow: hidden;
   }
-  .tile-art { width: 30px !important; height: 30px !important; border-radius: 7px !important; }
-  .tile-art-emoji { font-size: 1.1rem !important; }
+  .tile-art { width: 28px !important; height: 28px !important; border-radius: 6px !important; }
+  .tile-art-emoji { font-size: 1rem !important; }
   .tile-label {
     font-size: 0.66rem !important; line-height: 1.05 !important;
     max-width: 100% !important; font-weight: 800;

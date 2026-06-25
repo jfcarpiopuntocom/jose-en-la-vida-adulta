@@ -142,6 +142,18 @@ export const cityMusic = {
   arm(): void {
     if (armed) return;
     armed = true;
+    // Precarga el buffer completo en background — no espera al primer gesto
+    // AudioContext en estado 'suspended' sólo bloquea el output, no el decode
+    try {
+      const ac = getCtx();
+      if (!wasBuf) {
+        fetch(WAV_URL)
+          .then(r => r.arrayBuffer())
+          .then(arr => ac.decodeAudioData(arr))
+          .then(buf => { wasBuf = buf; })
+          .catch(() => {});
+      }
+    } catch (_) {}
     const evs: string[] = ['pointerdown', 'touchstart', 'keydown', 'click'];
     const handler = () => {
       startMusic();

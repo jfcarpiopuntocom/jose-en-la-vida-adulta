@@ -527,17 +527,18 @@ function StatsPanel({
   return (
     <div id="stats-panel">
       <button className="turn-banner turn-banner-btn" onClick={onShowProgress} title="Ver cómo me va">
-        <Portrait p={p} size={72} />
-        <div className="turn-banner-text">Tu Turno</div>
-        {/* Banner-strip: una sola línea compacta (evita sobrecarga visual del banner) */}
-        {((p.streak ?? 0) >= 2 || p.weeklyFocus) && (
-          <div className="banner-strip">
-            {(p.streak ?? 0) >= 2 && <span className="strip-streak">🔥{p.streak}</span>}
-            {(p.streak ?? 0) >= 2 && p.weeklyFocus && <span className="strip-sep">·</span>}
-            {p.weeklyFocus && <span className="strip-focus">🎯 {p.weeklyFocus}</span>}
-          </div>
-        )}
-        <div className="turn-banner-hint">toca para ver cómo te va ▾</div>
+        <Portrait p={p} size={62} />
+        <div className="turn-banner-right">
+          <div className="turn-banner-text">Tu Turno</div>
+          {((p.streak ?? 0) >= 2 || p.weeklyFocus) && (
+            <div className="banner-strip">
+              {(p.streak ?? 0) >= 2 && <span className="strip-streak">🔥{p.streak}</span>}
+              {(p.streak ?? 0) >= 2 && p.weeklyFocus && <span className="strip-sep">·</span>}
+              {p.weeklyFocus && <span className="strip-focus">🎯 {p.weeklyFocus}</span>}
+            </div>
+          )}
+          <div className="turn-banner-hint">toca para ver cómo te va ▾</div>
+        </div>
       </button>
       <div className="player-block">
         <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
