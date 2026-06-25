@@ -532,10 +532,14 @@ function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number)
   const p = game.players[game.activePlayerIndex];
   const loc = locById(p.currentLocation);
   const acts = actionsFor(p, game.world);
-  const [savedAt] = useState('');
+  // #11 Urgencia visual: cuando quedan pocas horas, las acciones se resaltan
+  const urgent = p.timeLeft > 0 && p.timeLeft < 20;
   return (
-    <div id="actions-bar">
-      <div className="actions-label">Acciones en {loc.icon} {loc.name}</div>
+    <div id="actions-bar" className={urgent ? 'actions-urgent' : ''}>
+      <div className="actions-label">
+        Acciones en {loc.icon} {loc.name}
+        {urgent && <span className="actions-urgent-tag">⏳ últimas {Math.round(p.timeLeft)}h — aprovéchalas</span>}
+      </div>
       {acts.length === 0
         ? <div className="actions-empty">Sin acciones aquí — muévete o termina tu quincena.</div>
         : (
@@ -1414,6 +1418,20 @@ function ProgressModal({ game, onClose }: { game: GameState; onClose: () => void
         <div className="progress-philo">
           Aquí no se gana solo con plata. Se gana viviendo <b>pleno</b>: la <b>eudaimonía</b> de Aristóteles, el equilibrio entre bienestar, conocimiento, vínculos, comunidad, seguridad y libertad. Todo a la vez.
         </div>
+        {/* #13 Hito de legado visible: crece con voluntariado y filantropía */}
+        {(() => {
+          const legPct = Math.min(100, (p.impact.comunitario / Math.max(game.goals.comunitario, 1)) * 100);
+          return (
+            <div className="progress-legacy">
+              <div className="progress-legacy-top">
+                <span>Tu legado</span>
+                <span>{p.impact.comunitario}/{game.goals.comunitario}{legPct >= 100 ? ' ✓' : ''}</span>
+              </div>
+              <div className="progress-legacy-bar"><div className="progress-legacy-fill" style={{ width: legPct + '%' }} /></div>
+              <div className="progress-legacy-cap">Voluntariado, Scouts y filantropía hacen crecer lo que dejas a tu comunidad.</div>
+            </div>
+          );
+        })()}
         <div className="progress-hist-title">Tu historia reciente</div>
         <div className="progress-hist">
           {hist.length === 0
