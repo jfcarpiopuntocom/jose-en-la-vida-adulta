@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GameState, PlayerState, GameEvent, Goals } from './types';
 import {
   newGame, actionsFor, metrics, rollEvent, applyEff, closeBusinessAndEmployees,
@@ -15,6 +15,9 @@ import { cityMusic } from './citymusic';
 
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
+// Redondear horas a 1 decimal máximo, sin basura flotante como 41.59999999994
+function fh(n: number): number { return Math.round(n * 10) / 10; }
 
 // ── Narración estilo Knizia ──
 // La cifra cruda existe (segundo nivel, expandible), pero la primera línea es una frase humana.
@@ -516,7 +519,7 @@ function StatsPanel({
     { key:'conoc',      label:'Conocimiento',  color:'var(--violet)', val: m.conocimientos,      goal: game.goals.conocimientos },
     { key:'impacto',    label:'Impacto',    color:'var(--pink)',   val: m.impacto,            goal: game.goals.impacto },
     { key:'legado',     label:'Legado',    color:'var(--teal)',   val: p.impact.comunitario, goal: game.goals.comunitario },
-    { key:'emergencia', label:'Emergencia',  color:'var(--gold)',   val: emMonths,             goal: game.goals.emergencyMonths },
+    { key:'emergencia', label:'Fondo de Emergencia', color:'var(--gold)', val: emMonths, goal: game.goals.emergencyMonths },
     { key:'pasivo',     label:'Ingresos Pasivos', color:'var(--orange)', val: piPct,                goal: 100 },
   ];
   // Win progress: average of all 6 bars capped at 100%
@@ -626,7 +629,7 @@ function ActionsBar({ game, onAction }: { game: GameState; onAction: (i: number)
                   onClick={() => onAction(i)}>
                   <span className="act-name"><span className="act-icon">{actionIcon(a.id)}</span>{a.label}</span>
                   <span className="act-desc">{a.desc}</span>
-                  <span className="act-cost">−{a.hours}h · te quedan {after}h</span>
+                  <span className="act-cost">−{fh(a.hours)}h · te quedan {fh(after)}h</span>
                 </button>
               );
             })}
@@ -707,9 +710,9 @@ function IndicatorsContent({ game }: { game: GameState }) {
 
             {/* Fondo de emergencia (6 meses de gastos) */}
             <div className="ind-row">
-              <span className="ind-label">Emergencia</span>
+              <span className="ind-label">Fondo Emergencia</span>
               <div className="ind-bar"><div className="ind-fill" style={{ width: emPct+'%', '--bc': 'var(--gold)' } as any} /></div>
-              <span className="ind-val">{emMonths.toFixed(1)}m/{game.goals.emergencyMonths}{emMonths >= game.goals.emergencyMonths ? <span className="check-icon"> ✓</span> : ''}</span>
+              <span className="ind-val">{fh(emMonths)}m/{game.goals.emergencyMonths}{emMonths >= game.goals.emergencyMonths ? <span className="check-icon"> ✓</span> : ''}</span>
             </div>
 
             {/* Flujo pasivo: meta = 35% de gastos cubiertos */}
@@ -832,6 +835,50 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
   );
 }
 
+// ── Pawn Overlay: avatares flotando encima de los casilleros, animados con CSS ──
+// position:fixed para evitar clipping de cualquier overflow en el árbol del DOM.
+// getBoundingClientRect() da coordenadas de viewport → left/top directos.
+function PawnOverlay({ game }: { game: GameState }) {
+  const active = game.players[game.activePlayerIndex];
+  const locKey = game.players.map(p => p.currentLocation).join(',');
+  const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
+
+  useLayoutEffect(() => {
+    const next: Record<string, { x: number; y: number }> = {};
+    for (const p of game.players) {
+      const tile = document.querySelector<HTMLElement>(`[data-loc="${p.currentLocation}"]`);
+      if (tile) {
+        const r = tile.getBoundingClientRect();
+        next[p.id] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }
+    }
+    setPos(next);
+  }, [locKey]); // re-measure only when someone moves
+
+  const count = game.players.length;
+  return (
+    <div className="pawn-overlay">
+      {game.players.map((p, i) => {
+        const pp = pos[p.id];
+        if (!pp) return null;
+        const offset = (i - (count - 1) / 2) * 22;
+        return (
+          <div key={p.id} className="pawn-float" style={{
+            left: pp.x + offset,
+            top: pp.y,
+            zIndex: p.id === active.id ? 22 : 20,
+            filter: p.id === active.id
+              ? `drop-shadow(0 0 9px ${PLAYER_COLORS[p.colorIndex]})`
+              : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
+          }}>
+            <Portrait p={p} size={34} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Gradiente por zona — color de tablero sin fotos externas
 const ZONE_GRAD: Record<string, string> = {
   hogar:        'linear-gradient(135deg,#7c3a1a,#4a2010)',
@@ -871,6 +918,7 @@ function Board({ game, onInspect, inspecting }: {
 
     return (
       <div
+        data-loc={loc.id}
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
         onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
       >
@@ -878,13 +926,8 @@ function Board({ game, onInspect, inspecting }: {
           <span className="tile-art-emoji">{loc.icon}</span>
         </div>
         <div className="tile-label">{loc.name.split('(')[0].trim()}</div>
-        {pawns.length > 0 && (
-          <div className="tile-pawns">
-            {pawns.map(p => <PawnAvatar key={p.id} p={p} size={18} glow={p.id === active.id} />)}
-          </div>
-        )}
-        {here && <div className="tile-you">AQUI</div>}
-        {!here && reachable && <div className="tile-cost">{cost}h</div>}
+        {here && <div className="tile-you">● AQUÍ</div>}
+        {!here && reachable && <div className="tile-cost">{fh(cost)}h</div>}
       </div>
     );
   }
@@ -902,14 +945,21 @@ function Board({ game, onInspect, inspecting }: {
           <div className="bc-city">CUENCA</div>
           <div className="bc-turn">Quincena {game.turn}</div>
           <div className="bc-suerte">
+            {/* Dado 1: cara 3 */}
             <svg className="bc-dice" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.12)" stroke="rgba(200,160,64,0.55)" strokeWidth="1.5"/>
-              {/* dots for face 5 */}
-              <circle cx="10" cy="10" r="3" fill="#C8A040"/>
-              <circle cx="26" cy="10" r="3" fill="#C8A040"/>
-              <circle cx="18" cy="18" r="3" fill="#C8A040"/>
-              <circle cx="10" cy="26" r="3" fill="#C8A040"/>
-              <circle cx="26" cy="26" r="3" fill="#C8A040"/>
+              <rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.14)" stroke="rgba(200,160,64,0.6)" strokeWidth="1.5"/>
+              <circle cx="10" cy="10" r="3.2" fill="#C8A040"/>
+              <circle cx="18" cy="18" r="3.2" fill="#C8A040"/>
+              <circle cx="26" cy="26" r="3.2" fill="#C8A040"/>
+            </svg>
+            {/* Dado 2: cara 5 */}
+            <svg className="bc-dice bc-dice-2" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="34" height="34" rx="7" fill="rgba(200,160,64,0.10)" stroke="rgba(200,160,64,0.5)" strokeWidth="1.5"/>
+              <circle cx="10" cy="10" r="3.2" fill="#C8A040"/>
+              <circle cx="26" cy="10" r="3.2" fill="#C8A040"/>
+              <circle cx="18" cy="18" r="3.2" fill="#C8A040"/>
+              <circle cx="10" cy="26" r="3.2" fill="#C8A040"/>
+              <circle cx="26" cy="26" r="3.2" fill="#C8A040"/>
             </svg>
             <span className="bc-suerte-label">Suerte</span>
           </div>
@@ -1086,8 +1136,8 @@ function EventModal({ pend, onChoose, onNext }: { pend: Pending; onChoose: (idx:
   const col = PLAYER_COLORS[p.colorIndex];
   const hasChoices = !!ev.choices && ev.choices.length > 0;
   return (
-    <div className="modal-bg">
-      <div className="modal">
+    <div className="modal-bg" onClick={!hasChoices ? onNext : undefined}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="ev-tag">¿Qué pasó en mi fin de semana?</div>
         <h3>
           <span style={{ color: ev.neg ? 'var(--rose)' : 'var(--green)', WebkitTextFillColor: ev.neg ? 'var(--rose)' : 'var(--green)' }}>
@@ -1495,6 +1545,7 @@ function App() {
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} turn={game.turn} economy={game.world.economy} />
+      <PawnOverlay game={game} />
       <div className="game-layout">
         <div className="game-main">
           <Board game={game}

@@ -407,6 +407,8 @@ h1,h2,h3,p,span,div,button,label,li,a {
   border: 2px solid rgba(232,160,32,0.35); border-radius: 14px;
   padding: 22px 20px; max-width: 480px; width: 100%;
   box-shadow: 0 12px 60px rgba(0,0,0,0.7);
+  max-height: 90dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .modal h3 { font-family: 'Cinzel', serif; font-size: 1.1rem; margin-bottom: 12px; font-weight: 700; }
 .modal .body { font-size: 0.9rem; line-height: 1.55; color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important; }
@@ -643,7 +645,7 @@ input[type=text], input[type=number] {
 
 /* ── Zoom Modal ── */
 .modal-zoom { max-width: 380px; position: relative; padding-top: 32px; }
-.zoom-close { position: absolute; top: 10px; right: 10px; min-height: 28px; width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 0.78rem; background: transparent; border: 1px solid rgba(255,255,255,0.1); }
+.zoom-close { position: absolute; top: 10px; right: 10px; min-height: 44px; width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 0.9rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); cursor: pointer; }
 
 /* ── Rotate overlay ── */
 .rotate-overlay { display: none; }
@@ -759,8 +761,8 @@ input[type=text], input[type=number] {
     align-items: center; justify-content: center;
     gap: 2px; overflow: hidden;
   }
-  .tile-art { width: 38px !important; height: 38px !important; }
-  .tile-art-emoji { font-size: 1.35rem !important; }
+  .tile-art { width: 32px !important; height: 32px !important; border-radius: 7px !important; }
+  .tile-art-emoji { font-size: 1.15rem !important; }
   .tile-label {
     font-size: 0.66rem; line-height: 1.05; max-width: 100%;
     font-weight: 800; letter-spacing: 0.2px;
@@ -1296,24 +1298,38 @@ input[type=text], input[type=number] {
   font-size: 0.82rem;
   color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important;
 }
-/* Dado de suerte en el centro del tablero */
+/* Dados de suerte — par de dados en el centro del tablero */
 .bc-suerte {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  margin-top: 8px;
+  display: flex; flex-direction: row; align-items: center; gap: 4px;
+  margin-top: 8px; flex-wrap: nowrap;
 }
 .bc-dice {
-  width: 38px; height: 38px;
+  width: 22px; height: 22px;
   animation: dice-float 3.2s ease-in-out infinite;
-  filter: drop-shadow(0 2px 6px rgba(200,160,64,0.4));
+  filter: drop-shadow(0 2px 5px rgba(200,160,64,0.5));
+}
+.bc-dice-2 {
+  animation-delay: 0.4s;
+  animation-direction: alternate-reverse;
 }
 @keyframes dice-float {
   0%,100% { transform: translateY(0) rotate(0deg); }
-  30%      { transform: translateY(-4px) rotate(-6deg); }
-  65%      { transform: translateY(-2px) rotate(4deg); }
+  40%      { transform: translateY(-3px) rotate(-8deg); }
+  70%      { transform: translateY(-1px) rotate(5deg); }
 }
 .bc-suerte-label {
-  font-size: 0.6rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  font-size: 0.55rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
   color: var(--gold) !important; -webkit-text-fill-color: var(--gold) !important;
+}
+
+/* ── Pawn overlay: avatares animados encima del tablero ── */
+.pawn-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 18;
+}
+.pawn-float {
+  position: absolute;
+  transform: translate(-50%, -115%);
+  transition: left 0.45s cubic-bezier(0.4,0,0.2,1), top 0.45s cubic-bezier(0.4,0,0.2,1);
 }
 .bc-log {
   width: 100%; max-height: 72px; overflow-y: auto;
@@ -1330,10 +1346,12 @@ input[type=text], input[type=number] {
 
 /* ── Tile (each board square) ── */
 .tile {
-  flex: 1; min-width: 92px; min-height: 92px;
-  padding: 6px 5px;
+  flex: 1 1 0;
+  aspect-ratio: 1 / 1;
+  min-width: 76px; max-width: 108px;
+  padding: 5px 4px;
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 3px;
+  justify-content: center; gap: 2px;
   cursor: pointer; position: relative;
   border: 2px solid rgba(196,158,72,0.22);
   border-radius: 12px;
@@ -1486,7 +1504,7 @@ input[type=text], input[type=number] {
 
 /* ── Stats Panel sidebar ── */
 #stats-panel {
-  width: 200px; flex-shrink: 0;
+  width: clamp(230px, 24vw, 300px); flex-shrink: 0;
   background: var(--panel-bg);
   border-left: 1px solid var(--line);
   padding: 8px;
@@ -1992,15 +2010,16 @@ input[type=text], input[type=number] {
 
   /* TILES cuadrados con label legible */
   .tile {
-    min-width: 0 !important; min-height: 0 !important;
-    aspect-ratio: 1 / 1; padding: 6px 4px !important; margin: 0 !important;
+    min-width: 0 !important; max-width: none !important;
+    min-height: 0 !important; max-height: none !important;
+    aspect-ratio: 1 / 1 !important; padding: 5px 3px !important; margin: 0 !important;
     border-radius: 12px;
     display: flex !important; flex-direction: column;
     align-items: center; justify-content: center;
     gap: 2px; overflow: hidden;
   }
-  .tile-art { width: 36px !important; height: 36px !important; border-radius: 8px !important; }
-  .tile-art-emoji { font-size: 1.3rem !important; }
+  .tile-art { width: 30px !important; height: 30px !important; border-radius: 7px !important; }
+  .tile-art-emoji { font-size: 1.1rem !important; }
   .tile-label {
     font-size: 0.66rem !important; line-height: 1.05 !important;
     max-width: 100% !important; font-weight: 800;
