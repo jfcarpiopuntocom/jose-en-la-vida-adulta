@@ -402,8 +402,8 @@ function TimeRing({ hours }: { hours: number }) {
 
 // ── Stats Panel (right side overlay) ──
 function StatsPanel({
-  game, onEnd, onLegacy
-}: { game: GameState; onEnd: () => void; onLegacy: () => void }) {
+  game, onEnd, onLegacy, onShowProgress
+}: { game: GameState; onEnd: () => void; onLegacy: () => void; onShowProgress: () => void }) {
   const p = game.players[game.activePlayerIndex];
   const m = metrics(p);
   const col = PLAYER_COLORS[p.colorIndex];
@@ -425,10 +425,11 @@ function StatsPanel({
   const winPct = Math.round(indBars.reduce((s, b) => s + Math.min(100, (b.val / b.goal) * 100), 0) / indBars.length);
   return (
     <div id="stats-panel">
-      <div className="turn-banner">
+      <button className="turn-banner turn-banner-btn" onClick={onShowProgress} title="Ver cómo me va">
         <Portrait p={p} size={72} />
         <div className="turn-banner-text">Tu Turno</div>
-      </div>
+        <div className="turn-banner-hint">toca para ver cómo te va ▾</div>
+      </button>
       <div className="player-block">
         <div className="player-name" style={{ color: col, WebkitTextFillColor: col, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
           {p.name}
@@ -489,36 +490,6 @@ function StatsPanel({
           Estres critico ({p.stats.stress}%) — salario reducido. Descansa ya.
         </div>
       )}
-      <details className="metas-detail">
-        <summary className="metas-summary">Ver metas de victoria</summary>
-        <div className="metas-philo">
-          <p className="philo-lead">Esto no se gana acumulando plata. Se gana viviendo <b>pleno</b>.</p>
-          <p>José busca la <b>vida plena</b>: el equilibrio entre seis áreas que se sostienen unas a otras, como en el coaching ontológico. Es la <b>eudaimonía</b> de Aristóteles, el florecer humano: no un solo número alto, sino una vida entera bien vivida.</p>
-          <p>Sí cuentan la <b>seguridad financiera</b> y, por qué no, una fortuna, pequeña o grande, hecha con <b>medios éticos</b> y con productos buenos para la vida. Abundancia entendida como lo que es: <b>multidimensional</b>. Salud, saber, vínculos, comunidad, libertad y legado, todo junto.</p>
-          <div className="philo-areas">
-            <div className="philo-area"><b>Bienestar</b> — salud, ánimo y calma. El cuerpo y la mente primero.</div>
-            <div className="philo-area"><b>Conocimiento</b> — lo que aprendes te abre puertas para siempre.</div>
-            <div className="philo-area"><b>Impacto</b> — tu red: profesional, familiar, empresarial y comunitaria.</div>
-            <div className="philo-area"><b>Legado</b> — lo que dejas a tu comunidad. Buenas acciones que perduran.</div>
-            <div className="philo-area"><b>Emergencia</b> — meses de gastos cubiertos. Dormir tranquilo.</div>
-            <div className="philo-area"><b>Ingresos pasivos</b> — libertad: que el dinero trabaje por ti, no al revés.</div>
-          </div>
-        </div>
-        <div className="metas-list">
-          {indBars.map(b => {
-            const pct = Math.min(100, (b.val / b.goal) * 100);
-            const done = pct >= 100;
-            return (
-              <div key={b.key} className={"meta-row" + (done ? " meta-done" : "")}>
-                <span style={{ color: b.color, WebkitTextFillColor: b.color }}>{b.label}</span>
-                <span>{b.key === "emergencia" ? b.val.toFixed(1) + "m / " + b.goal + "m" : b.key === "pasivo" ? Math.round(b.val) + "% / 100%" : Math.round(b.val) + " / " + b.goal}</span>
-                {done && <span className="meta-check">✓</span>}
-              </div>
-            );
-          })}
-        </div>
-      </details>
-
     </div>
   );
 }
@@ -804,11 +775,6 @@ function Board({ game, onInspect, inspecting }: {
         <div className="board-center">
           <div className="bc-city">CUENCA</div>
           <div className="bc-turn">Quincena {game.turn}</div>
-          <div className="bc-log">
-            {game.log.slice(-5).map((l, i) => (
-              <div key={i} className={'bc-line bc-' + l.kind}>{l.text}</div>
-            ))}
-          </div>
         </div>
         <div className="board-edge board-right">
           {right.map(l => <Tile key={l.id} loc={l} />)}
@@ -972,21 +938,6 @@ function OnboardModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Log Bar — live feed junto al board, siempre visible ──
-function LogBar({ game }: { game: GameState }) {
-  const last = [...game.log].slice(-5).reverse();
-  if (last.length === 0) return null;
-  return (
-    <div id="log-bar">
-      {last.map((l, i) => (
-        <span key={i} className={'lb-entry lb-' + l.kind}>
-          <span className="lb-q">Q{l.turn}</span>{l.text}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ── Event Modal ──
 function EventModal({ pend, onNext }: { pend: Pending; onNext: () => void }) {
   const { p, ev, silvered } = pend;
@@ -1127,9 +1078,17 @@ function App() {
   const [showOnboard, setShowOnboard] = useState(() =>
     localStorage.getItem(ONBOARD_KEY) !== '1'
   );
+  const [showProgress, setShowProgress] = useState(false);
 
   // Tema oficial: suena siempre (arranca al primer gesto en iOS/mobile)
   useEffect(() => { cityMusic.arm(); }, []);
+
+  // El anuncio sobre el tablero se desvanece solo en un tiempo prudencial
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 2800);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   function commit(g: GameState, persist = false) {
     setGame({ ...g });
@@ -1323,9 +1282,8 @@ function App() {
             </button>
           </div>
         </div>
-        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} />
+        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)} />
       </div>
-      <LogBar game={game} />
       {inspecting && (
         <NodeInspect locId={inspecting} game={game}
           onMove={() => moveTo(inspecting)} onAction={doAction}
@@ -1366,15 +1324,50 @@ function App() {
       {queue.length > 0 && qi < queue.length && (
         <EventModal pend={queue[qi]} onNext={advanceQueue} />
       )}
+      {/* Anuncio transitorio sobre la mitad del tablero — se desvanece solo */}
       {flash && (
-        <div className="modal-bg">
-          <div className="modal">
-            <div className="body">{flash}</div>
-            <button className="primary" onClick={() => setFlash(null)}>Ok</button>
-          </div>
-        </div>
+        <div className="board-toast" onClick={() => setFlash(null)}>{flash}</div>
+      )}
+
+      {/* "Cómo me va": historial + recordatorio de metas, al tocar el personaje */}
+      {showProgress && (
+        <ProgressModal game={game} onClose={() => setShowProgress(false)} />
       )}
     </>
+  );
+}
+
+// ── Progreso modal — historial del jugador + recordatorio de la vida plena ──
+function ProgressModal({ game, onClose }: { game: GameState; onClose: () => void }) {
+  const p = game.players[game.activePlayerIndex];
+  const col = PLAYER_COLORS[p.colorIndex];
+  const hist = [...game.log].reverse().slice(0, 16);
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal progress-modal" onClick={e => e.stopPropagation()}>
+        <button className="zoom-close" onClick={onClose}>✕</button>
+        <div className="progress-head">
+          <Portrait p={p} size={56} />
+          <div>
+            <div className="progress-name" style={{ color: col, WebkitTextFillColor: col }}>Cómo me va</div>
+            <div className="progress-sub">Quincena {game.turn}</div>
+          </div>
+        </div>
+        <div className="progress-philo">
+          Aquí no se gana solo con plata. Se gana viviendo <b>pleno</b>: la <b>eudaimonía</b> de Aristóteles, el equilibrio entre bienestar, conocimiento, vínculos, comunidad, seguridad y libertad. Todo a la vez.
+        </div>
+        <div className="progress-hist-title">Tu historia reciente</div>
+        <div className="progress-hist">
+          {hist.length === 0
+            ? <div className="progress-empty">Aún no hay nada que contar. Empieza a vivir.</div>
+            : hist.map((l, i) => (
+              <div key={i} className={'progress-line progress-' + l.kind}>
+                <span className="progress-q">Q{l.turn}</span>{l.text}
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

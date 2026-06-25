@@ -1462,6 +1462,62 @@ input[type=text], input[type=number] {
   font-size: 0.82rem; font-weight: 700;
   color: #E86040 !important; -webkit-text-fill-color: #E86040 !important;
 }
+/* ── Anuncio transitorio sobre el tablero (se desvanece solo) ── */
+.board-toast {
+  position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  z-index: 220; max-width: 460px; width: calc(100% - 48px);
+  padding: 16px 22px; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(150deg, rgba(20,30,48,0.97), rgba(8,14,30,0.97));
+  border: 2px solid var(--gold);
+  box-shadow: 0 14px 50px rgba(0,0,0,0.6), 0 0 26px rgba(232,160,32,0.25);
+  text-align: center; font-size: 1.02rem; font-weight: 700; line-height: 1.4;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  animation: toastIn .22s ease-out, toastOut .4s ease-in 2.4s forwards;
+}
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, -40%) scale(.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes toastOut { to { opacity: 0; transform: translate(-50%, -58%) scale(.97); } }
+@media (prefers-reduced-motion: reduce) {
+  .board-toast { animation: none; }
+}
+
+/* ── Banner del turno: ahora es botón para ver "cómo me va" ── */
+.turn-banner-btn {
+  border: none; background: transparent; cursor: pointer; width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.turn-banner-hint {
+  font-size: 0.8rem; font-weight: 700;
+  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
+}
+
+/* ── Modal "Cómo me va": historial + recordatorio de la vida plena ── */
+.progress-modal { max-width: 460px; text-align: left; }
+.progress-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.progress-name { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 800; }
+.progress-sub { font-size: 0.9rem; font-weight: 700; color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important; }
+.progress-philo {
+  font-size: 0.95rem; line-height: 1.5; margin-bottom: 14px;
+  padding: 12px 14px; border-radius: 10px;
+  background: rgba(232,160,32,0.10); border: 1px solid rgba(232,160,32,0.4);
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.progress-philo b { color: #F5C24A !important; -webkit-text-fill-color: #F5C24A !important; }
+.progress-hist-title {
+  font-size: 0.95rem; font-weight: 800; margin-bottom: 8px;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.progress-hist { max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.progress-line {
+  font-size: 0.92rem; line-height: 1.4; padding: 6px 8px; border-radius: 7px;
+  background: rgba(255,255,255,0.05);
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+.progress-q { font-weight: 800; margin-right: 7px; color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important; }
+.progress-pos { border-left: 3px solid #28ECAA; }
+.progress-neg { border-left: 3px solid #E86040; }
+.progress-jose { border-left: 3px solid #F5C24A; font-style: italic; }
+.progress-empty { font-size: 0.92rem; color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important; }
+
 /* Quip de José dentro del log */
 .bc-jose, .log-entry.bc-jose {
   font-style: italic; font-weight: 700;
