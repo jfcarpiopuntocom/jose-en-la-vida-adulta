@@ -6,7 +6,7 @@ import {
   patrimonio, expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
   CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle, generateBackstory,
-  joseQuip, COLLECTIBLE_LORE,
+  joseQuip, COLLECTIBLE_LORE, cpuTurnSteps,
 } from './engine';
 import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
@@ -1449,6 +1449,12 @@ function App() {
   const [actionsFading, setActionsFading] = useState(false);
   const actionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
+  // Confirmación breezy de acción (no bloquea, no cierra el panel: puedes repetir con clicks)
+  const [actionToast, setActionToast] = useState<string | null>(null);
+  const actionToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Reproducción visible del turno de José (pasos): como en Jones, lo observamos jugar
+  const [josePlay, setJosePlay] = useState<{ steps: import('./engine').CpuStep[]; idx: number; name: string } | null>(null);
+  const joseFinal = useRef<GameState | null>(null);
   // Velocidad del turno de José: lento (ves su jugada y aprendes) o rápido (saltas)
   const [slowJose, setSlowJose] = useState(true);
   const [showOnboard, setShowOnboard] = useState(() =>
@@ -1479,33 +1485,52 @@ function App() {
     commit(g, persist);
   }
 
-  // ── Auto-run CPU turns — MUST be before early returns (Rules of Hooks) ──
+  // ── Turno de la IA: calcula los pasos y los REPRODUCE visiblemente (como en Jones) ──
   useEffect(() => {
-    if (phase !== 'play' || !game || cpuThinking || queue.length > 0) return;
+    if (phase !== 'play' || !game || cpuThinking || queue.length > 0 || josePlay) return;
     const p = game.players[game.activePlayerIndex];
     if (!p?.isAI) return;
     setCpuThinking(true);
     const snap = game;
-    // Lento: pausa larga para leer la jugada de José y aprender. Rápido: casi instantáneo.
-    const delay = slowJose ? 2200 + Math.random() * 600 : 200 + Math.random() * 150;
+    const startDelay = slowJose ? 650 : 150;
     const timer = setTimeout(() => {
       const g: GameState = deepClone(snap);
       const ai = g.players[g.activePlayerIndex];
-      const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
+      const { steps, logs } = cpuTurnSteps(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
       logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
       // José, sherpa del Viaje del Héroe: a veces deja un quip socrático (sin spoilear)
       if (ai.name.toLowerCase().startsWith('jos') && Math.random() < 0.4) {
         const human = g.players.find(p => !p.isAI);
-        // La mitad de las veces apunta al área más floja del jugador; el resto, sabiduría general
         const line = human && Math.random() < 0.55 ? joseAdvice(human, g.goals) : joseQuip();
         g.log.push({ turn: g.turn, text: 'José: ' + line, kind: 'jose', importance: 2 });
       }
       setCpuThinking(false);
-      endPlayerTurn(g);
-    }, delay);
+      joseFinal.current = g;
+      if (steps.length === 0) { endPlayerTurn(g); return; }
+      // Arranca la reproducción paso a paso (el estado final se aplica al terminar)
+      setJosePlay({ steps, idx: 0, name: ai.name });
+    }, startDelay);
     return () => { clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.activePlayerIndex, game?.turn, phase, queue.length, slowJose]);
+  }, [game?.activePlayerIndex, game?.turn, phase, queue.length, slowJose, josePlay]);
+
+  // Avanza la reproducción del turno de José: 1 paso por intervalo (lento/rápido)
+  useEffect(() => {
+    if (!josePlay) return;
+    const stepMs = slowJose ? 1500 : 300;
+    const t = setTimeout(() => {
+      if (josePlay.idx + 1 < josePlay.steps.length) {
+        setJosePlay({ ...josePlay, idx: josePlay.idx + 1 });
+      } else {
+        const fin = joseFinal.current;
+        joseFinal.current = null;
+        setJosePlay(null);
+        if (fin) endPlayerTurn(fin);
+      }
+    }, stepMs);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [josePlay, slowJose]);
 
   // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas ~20s, luego fade.
   useEffect(() => {
@@ -1534,11 +1559,20 @@ function App() {
       g.log.push({ turn: g.turn, text: log, kind: 'plain', importance: 1 });
     });
     if (result) {
-      setFlash(result);
-      // #3 microcelebración: un hito grande (ascenso, graduación) merece fanfarria
-      setCelebrate(/graduaste|ascendiste|Ascendiste|legado máximo|Compraste un apartamento/.test(result));
+      const big = /graduaste|ascendiste|Ascendiste|legado máximo|Compraste un apartamento/.test(result);
+      if (big) {
+        // Hito grande (ascenso, graduación): fanfarria, esa SÍ se celebra
+        setFlash(result);
+        setCelebrate(true);
+      } else {
+        // Acción normal: confirmación breezy que NO interrumpe ni cierra el panel
+        setActionToast(result);
+        if (actionToastTimer.current) clearTimeout(actionToastTimer.current);
+        actionToastTimer.current = setTimeout(() => setActionToast(null), 1600);
+      }
     }
-    setInspecting(null);
+    // Mantén el panel abierto para repetir acciones con clicks (como en Jones) y reinicia el fade
+    openActionsHere();
   }
 
   // ── Acciones del lugar actual: se despliegan ~20s y luego hacen fade. Click/mouseover reabren. ──
