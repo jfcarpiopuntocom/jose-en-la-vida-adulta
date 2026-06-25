@@ -912,6 +912,71 @@ function TileIcon({ icon }: { icon: string }) {
   );
 }
 
+// ── Clerks: NPCs que atienden cada ubicación ──
+interface Clerk {
+  name: string;
+  role: string;
+  gridRow: number; // 0=top row, 1=bottom row in grid-old.png
+  gridCol: number; // 0-3 left to right
+  quips: string[]; // frases al interactuar
+}
+
+const CLERKS: Record<string, Clerk> = {
+  casa:               { name: 'Don Pancho', role: 'Casero', gridRow: 0, gridCol: 0,
+    quips: ['Uy, ya era hora de que llegues.', 'La casa no se limpia sola, mijo.', 'Otra vez sin llaves, carajo.'] },
+  zona_universitaria: { name: 'Doña Marthita', role: 'Secretaria Académica', gridRow: 0, gridCol: 1,
+    quips: ['A ver, esa matrícula no se paga sola.', 'Rápido que cierro a las 4.', 'El título no sale del aire, joven.'] },
+  zona_financiera:    { name: 'Don Patricio', role: 'Gerente de Ventanilla', gridRow: 0, gridCol: 2,
+    quips: ['Buenos días, ¿depósito o retiro?', 'El dólar sube, el dólar baja, aquí seguimos.', 'Firme aquí, aquí y aquí.'] },
+  terminal:           { name: 'Doña Carmita', role: 'Coordinadora de Empleo', gridRow: 0, gridCol: 3,
+    quips: ['Hay chamba, pero madrugue.', 'No me vengan con excusas.', '¿Experiencia? ¿Qué experiencia?'] },
+  zona_industrial:    { name: 'Doña Lupita', role: 'Jefa de Planta', gridRow: 1, gridCol: 0,
+    quips: ['Cuidado con la maquinaria.', 'Aquí se trabaja duro, no se pasea.', 'Producción es producción, no hay vacaciones.'] },
+  hospital:           { name: 'Don Memo', role: 'Administrador', gridRow: 1, gridCol: 1,
+    quips: ['Espere su turno, por favor.', 'El seguro cubre, el seguro no cubre...', 'Salud no tiene precio, pero sí tiene costo.'] },
+  feria_libre:        { name: 'Don Wilmer', role: 'Administrador del Mercado', gridRow: 1, gridCol: 2,
+    quips: ['¡Lleve, lleve, caserito!', 'Hoy está barato todo.', 'La yapa va por cuenta de la casa.'] },
+  centro_historico:   { name: 'Doña Rosita', role: 'Curadora Municipal', gridRow: 1, gridCol: 3,
+    quips: ['El centro es patrimonio, no parqueadero.', 'Aquí se respira historia.', 'Las leyes son las leyes, joven.'] },
+  parque_calderon:    { name: 'Don Pancho', role: 'Guardia del Parque', gridRow: 0, gridCol: 0,
+    quips: ['Siéntese un rato, descanse.', 'No pise el césped, carajo.', 'Las palomas también tienen derechos.'] },
+  rio_tomebamba:      { name: 'Doña Marthita', role: 'Guía del Río', gridRow: 0, gridCol: 1,
+    quips: ['El río lleva historias, no solo agua.', 'Meditar aquí es gratis, al menos.', 'Cuidado con el barranco.'] },
+  municipio:          { name: 'Don Patricio', role: 'Funcionario Público', gridRow: 0, gridCol: 2,
+    quips: ['¿Trámite? Saque turno.', 'Vuelva mañana con copia notarizada.', 'El sistema está caído, intente más tarde.'] },
+  mall_rio:           { name: 'Doña Carmita', role: 'Gerente de Piso', gridRow: 0, gridCol: 3,
+    quips: ['Bienvenido al Mall del Río.', 'Hay descuentos en el tercer piso.', '¿Va a comprar o solo a pasear?'] },
+  estadio:            { name: 'Don Memo', role: 'Entrenador', gridRow: 1, gridCol: 1,
+    quips: ['¡Dale duro, campeón!', 'El Deportivo necesita gente como vos.', 'Sudar es el precio del éxito.'] },
+  parque_paraiso:     { name: 'Doña Lupita', role: 'Cuidadora del Parque', gridRow: 1, gridCol: 0,
+    quips: ['El Paraíso es para todos.', 'No deje basura, pues.', 'La naturaleza sana todo.'] },
+  u_cuenca:           { name: 'Doña Rosita', role: 'Decana', gridRow: 1, gridCol: 3,
+    quips: ['La Universidad de Cuenca no es cualquier cosa.', 'Aquí se forjan profesionales.', 'Estudie, que para vago no le va a alcanzar.'] },
+};
+
+function clerkQuip(locId: string): string {
+  const c = CLERKS[locId];
+  if (!c) return '';
+  return c.quips[Math.floor(Math.random() * c.quips.length)];
+}
+
+function ClerkPortrait({ locId, size = 56 }: { locId: string; size?: number }) {
+  const c = CLERKS[locId];
+  if (!c) return null;
+  const cols = 4, cellW = 100 / cols;
+  const rows = 2, cellH = 100 / rows;
+  return (
+    <div className="clerk-portrait" style={{ width: size, height: size }}>
+      <div style={{
+        width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
+        backgroundImage: 'url(/jose-en-la-vida-adulta/clerks/grid-old.png)',
+        backgroundSize: `${cols * 100}% ${rows * 100}%`,
+        backgroundPosition: `${c.gridCol * cellW}% ${c.gridRow * cellH}% `,
+      }} />
+    </div>
+  );
+}
+
 // Gradiente por zona — color de tablero sin fotos externas
 const ZONE_GRAD: Record<string, string> = {
   hogar:        'linear-gradient(135deg,#7c3a1a,#4a2010)',
@@ -936,6 +1001,13 @@ function Board({ game, onInspect, inspecting, onAction }: {
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
+
+  const showingClerk = inspecting === active.currentLocation;
+  const clerkActs = showingClerk ? actionsFor(active, game.world) : [];
+  const [clerkMsg, setClerkMsg] = useState('');
+  useEffect(() => {
+    if (showingClerk) setClerkMsg(clerkQuip(active.currentLocation));
+  }, [showingClerk, active.currentLocation]);
 
   // 15 stops around a rectangle ring: top 4, right 4, bottom 4, left 3 (clockwise loop)
   const top    = locs.slice(0, 4);
@@ -963,17 +1035,6 @@ function Board({ game, onInspect, inspecting, onAction }: {
         <div className="tile-label">{loc.name.split('(')[0].trim()}</div>
         {here && !sel && <div className="tile-you">● AQUÍ</div>}
         {!here && reachable && <div className="tile-cost">{fh(cost)}h</div>}
-        {showActions && acts.length > 0 && (
-          <div className="tile-actions-pop" onClick={e => e.stopPropagation()}>
-            {acts.map((a, i) => (
-              <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)}>
-                <span className="tac-name">{a.label}</span>
-                <span className="tac-desc">{a.desc}</span>
-                <span className="tac-cost">{fh(a.hours)}h</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     );
   }
@@ -988,9 +1049,32 @@ function Board({ game, onInspect, inspecting, onAction }: {
           {left.map(l => <Tile key={l.id} loc={l} />)}
         </div>
         <div className="board-center">
-          <div className="bc-city">CUENCA</div>
-          <div className="bc-turn">Quincena {game.turn}</div>
-          {/* Dados aparecen solo en EventModal, no como decoración */}
+          {showingClerk ? (
+            <div className="clerk-panel" onClick={e => e.stopPropagation()}>
+              <div className="clerk-header">
+                <ClerkPortrait locId={active.currentLocation} size={52} />
+                <div className="clerk-info">
+                  <div className="clerk-name">{CLERKS[active.currentLocation]?.name}</div>
+                  <div className="clerk-role">{CLERKS[active.currentLocation]?.role}</div>
+                </div>
+              </div>
+              <div className="clerk-quip">{clerkMsg}</div>
+              <div className="clerk-actions">
+                {clerkActs.map((a, i) => (
+                  <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)}>
+                    <span className="tac-name">{a.label}</span>
+                    <span className="tac-desc">{a.desc}</span>
+                    <span className="tac-cost">{fh(a.hours)}h</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="bc-city">CUENCA</div>
+              <div className="bc-turn">Quincena {game.turn}</div>
+            </>
+          )}
         </div>
         <div className="board-edge board-right">
           {right.map(l => <Tile key={l.id} loc={l} />)}
