@@ -1772,6 +1772,16 @@ input[type=text], input[type=number] {
   transition: all .2s;
   min-height: 40px;
 }
+.btn-jose-speed {
+  flex-shrink: 0;
+  padding: 10px 14px; border-radius: 10px;
+  font-weight: 800; font-size: 0.82rem; cursor: pointer;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(232,160,32,0.45);
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  transition: all .2s; min-height: 40px;
+}
+.btn-jose-speed:hover { border-color: var(--gold); background: rgba(232,160,32,0.18); }
 .btn-end-footer:hover {
   background: linear-gradient(135deg, #F5C24A, var(--gold));
   box-shadow: 0 4px 16px rgba(200,160,64,0.4);

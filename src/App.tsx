@@ -1437,6 +1437,8 @@ function App() {
   const [openPanel, setOpenPanel] = useState<PanelId>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
+  // Velocidad del turno de José: lento (ves su jugada y aprendes) o rápido (saltas)
+  const [slowJose, setSlowJose] = useState(true);
   const [showOnboard, setShowOnboard] = useState(() =>
     localStorage.getItem(ONBOARD_KEY) !== '1'
   );
@@ -1472,7 +1474,8 @@ function App() {
     if (!p?.isAI) return;
     setCpuThinking(true);
     const snap = game;
-    const delay = 900 + Math.random() * 700;
+    // Lento: pausa larga para leer la jugada de José y aprender. Rápido: casi instantáneo.
+    const delay = slowJose ? 2200 + Math.random() * 600 : 200 + Math.random() * 150;
     const timer = setTimeout(() => {
       const g: GameState = deepClone(snap);
       const ai = g.players[g.activePlayerIndex];
@@ -1490,7 +1493,7 @@ function App() {
     }, delay);
     return () => { clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.activePlayerIndex, game?.turn, phase, queue.length]);
+  }, [game?.activePlayerIndex, game?.turn, phase, queue.length, slowJose]);
 
   if (phase === 'setup') return <Setup onStart={g => { setGame(g); setShowBackstory(true); setPhase('play'); saveLocal(g); }} />;
   if (!game) return null;
@@ -1719,6 +1722,10 @@ function App() {
             <div className="footer-loc">
               {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {loc.name}</>; })()}
             </div>
+            <button className="btn-jose-speed" onClick={() => setSlowJose(s => !s)}
+              title={slowJose ? 'José juega lento: ves su jugada y aprendes' : 'José juega rápido: salta su turno'}>
+              {slowJose ? '🐢 José lento' : '🐇 José rápido'}
+            </button>
             <button className="btn-end-footer" onClick={() => endPlayerTurn()}>
               Siguiente quincena ▶
             </button>
