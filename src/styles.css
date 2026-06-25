@@ -429,7 +429,7 @@ h1,h2,h3,p,span,div,button,label,li,a {
   padding: 16px; overflow: hidden;
 }
 /* Consola ancha que aprovecha el espacio lateral y cabe sin scroll */
-.setup-card-wide { max-width: 880px; padding: 22px 30px; }
+.setup-card.setup-card-wide { max-width: 980px; padding: 28px 48px; }
 .setup-grid { display: grid; grid-template-columns: 1fr; gap: 0 32px; }
 .setup-col { min-width: 0; }
 @media (min-width: 760px) {
