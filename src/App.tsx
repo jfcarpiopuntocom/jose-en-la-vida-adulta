@@ -495,7 +495,7 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
 }
 
 // ── SVG Clock with hands — shows days remaining ──
-function TimeRing({ hours }: { hours: number }) {
+function TimeRing({ hours, compact = false }: { hours: number; compact?: boolean }) {
   const pct = clamp(hours / HOURS_PER_TURN, 0, 1);
   const days = fh(hours / 8); // 8h útiles por día
   const urgent = pct <= 0.35;
@@ -509,7 +509,7 @@ function TimeRing({ hours }: { hours: number }) {
   const mRad = (minAngle - 90) * Math.PI / 180;
   const cx = 50, cy = 50;
   return (
-    <div className={'clock-face' + (urgent ? ' clock-urgent' : '')}>
+    <div className={'clock-face' + (urgent ? ' clock-urgent' : '') + (compact ? ' clock-sm' : '')}>
       <svg viewBox="0 0 100 100" className="clock-svg">
         {/* Caja del reloj */}
         <circle cx={cx} cy={cy} r="46" fill="#1A1408" stroke="#5A4218" strokeWidth="3"/>
@@ -1035,11 +1035,14 @@ const ZONE_GRAD: Record<string, string> = {
 };
 
 // ── Board ──
-function Board({ game, onInspect, inspecting, onAction }: {
+function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose }: {
   game: GameState;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
   onAction: (i: number) => void;
+  fading: boolean;
+  onReopen: () => void;
+  onClose: () => void;
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
@@ -1069,7 +1072,11 @@ function Board({ game, onInspect, inspecting, onAction }: {
       <div
         data-loc={loc.id}
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
-        onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
+        onClick={() => {
+          if (here) { sel ? onClose() : onReopen(); }
+          else onInspect(inspecting === loc.id ? null : loc.id);
+        }}
+        onMouseEnter={here ? onReopen : undefined}
       >
         <div className="tile-art" style={{ background: ZONE_GRAD[loc.zone] ?? 'rgba(255,255,255,0.06)' }}>
           <TileIcon icon={loc.icon} />
@@ -1091,10 +1098,16 @@ function Board({ game, onInspect, inspecting, onAction }: {
           {left.map(l => <Tile key={l.id} loc={l} />)}
         </div>
         <div className="board-center">
+          <div className="bc-head">
+            <div className="bc-turn">Quincena {game.turn}</div>
+            <TimeRing hours={active.timeLeft} compact />
+          </div>
           {showingClerk ? (
-            <div className="clerk-panel" onClick={e => e.stopPropagation()}>
+            <div className={'clerk-panel' + (fading ? ' clerk-fading' : '')}
+              onClick={e => e.stopPropagation()}
+              onMouseEnter={onReopen}>
               <div className="clerk-header">
-                <ClerkPortrait locId={active.currentLocation} size={52} />
+                <ClerkPortrait locId={active.currentLocation} size={44} />
                 <div className="clerk-info">
                   <div className="clerk-name">{CLERKS[active.currentLocation]?.name}</div>
                   <div className="clerk-role">{CLERKS[active.currentLocation]?.role}</div>
@@ -1112,10 +1125,7 @@ function Board({ game, onInspect, inspecting, onAction }: {
               </div>
             </div>
           ) : (
-            <>
-              <div className="bc-city">CUENCA</div>
-              <div className="bc-turn">Quincena {game.turn}</div>
-            </>
+            <div className="bc-city">CUENCA</div>
           )}
         </div>
         <div className="board-edge board-right">
@@ -1436,6 +1446,8 @@ function App() {
   const [zoom, setZoom] = useState<string | null>(null);
   const [openPanel, setOpenPanel] = useState<PanelId>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
+  const [actionsFading, setActionsFading] = useState(false);
+  const actionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
   // Velocidad del turno de José: lento (ves su jugada y aprendes) o rápido (saltas)
   const [slowJose, setSlowJose] = useState(true);
@@ -1495,6 +1507,16 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.activePlayerIndex, game?.turn, phase, queue.length, slowJose]);
 
+  // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas ~20s, luego fade.
+  useEffect(() => {
+    if (phase !== 'play' || !game) return;
+    const p = game.players[game.activePlayerIndex];
+    if (!p || p.isAI || queue.length > 0) return;
+    openActionsHere();
+    return clearActionsTimer;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.activePlayerIndex, game?.players[game?.activePlayerIndex ?? 0]?.currentLocation, phase, queue.length]);
+
   if (phase === 'setup') return <Setup onStart={g => { setGame(g); setShowBackstory(true); setPhase('play'); saveLocal(g); }} />;
   if (!game) return null;
   if (phase === 'victory') return <Victory game={game} onRestart={() => { clearLocal(); location.reload(); }} />;
@@ -1519,6 +1541,28 @@ function App() {
     setInspecting(null);
   }
 
+  // ── Acciones del lugar actual: se despliegan ~20s y luego hacen fade. Click/mouseover reabren. ──
+  function clearActionsTimer() {
+    if (actionsTimer.current) { clearTimeout(actionsTimer.current); actionsTimer.current = null; }
+  }
+  function openActionsHere() {
+    if (!game) return;
+    const loc = game.players[game.activePlayerIndex].currentLocation;
+    setActionsFading(false);
+    setInspecting(loc);
+    clearActionsTimer();
+    // 20s visibles (estándar de lectura), luego fade y se colapsa
+    actionsTimer.current = setTimeout(() => {
+      setActionsFading(true);
+      actionsTimer.current = setTimeout(() => { setInspecting(null); setActionsFading(false); }, 700);
+    }, 20000);
+  }
+  function closeActionsHere() {
+    clearActionsTimer();
+    setActionsFading(false);
+    setInspecting(null);
+  }
+
   function moveTo(locId: string) {
     if (locId === active.currentLocation) return;
     const cost = locById(locId).tc[active.transport];
@@ -1533,7 +1577,7 @@ function App() {
       }
       p.timeLeft -= cost; p.currentLocation = locId;
     });
-    setInspecting(null);
+    // El effect de llegada despliega solo las acciones del nuevo lugar.
   }
 
   function endPlayerTurn(override?: GameState) {
@@ -1714,13 +1758,13 @@ function App() {
             onInspect={id => { setInspecting(id); setOpenPanel(null); }}
             inspecting={inspecting}
             onAction={doAction}
+            fading={actionsFading}
+            onReopen={openActionsHere}
+            onClose={closeActionsHere}
           />
           <div className="footer-bar">
-            <div className="time-section">
-              <TimeRing hours={game.activePlayerIndex >= 0 ? game.players[game.activePlayerIndex].timeLeft : HOURS_PER_TURN} />
-            </div>
             <div className="footer-loc">
-              {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {loc.name}</>; })()}
+              {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {locName(loc, p)}</>; })()}
             </div>
             <button className="btn-jose-speed" onClick={() => setSlowJose(s => !s)}
               title={slowJose ? 'José juega lento: ves su jugada y aprendes' : 'José juega rápido: salta su turno'}>

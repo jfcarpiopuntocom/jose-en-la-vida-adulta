@@ -188,7 +188,8 @@ export function newPlayer(
     birthBarrio: birth.id, birthCrime: birth.crimeRisk, currentLocation: 'casa',
     family, job: null, careerLevel: 0,
     education: { completed: [], enrolledId: null, hoursInvested: 0 },
-    impact: { profesional: 5, familiar: 10, comunitario: 5, empresarial: 0 },
+    // Legado arranca en 0: tiene 18 años y recién se lanza a La Vida Adulta.
+    impact: { profesional: 5, familiar: 10, comunitario: 0, empresarial: 0 },
     stats: { experience: 0, dependability: 50, leadership: 0, health, stress: 20, happiness, reputation: 30, resilience: 0, knowledge: 5 },
     retired: false,
     collectibles: [],
