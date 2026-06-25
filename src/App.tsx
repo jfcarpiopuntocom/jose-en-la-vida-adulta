@@ -16,6 +16,39 @@ import { cityMusic } from './citymusic';
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
+// Progreso hacia la vida plena: promedio de las 6 áreas, tope 100% (igual que el dashboard)
+function winProgress(p: PlayerState, goals: Goals): number {
+  const m = metrics(p);
+  const em = emergencyFundMonths(p);
+  const piPct = Math.min(100, (passiveIncome(p) / Math.max(expensesPerTurn(p), 1)) * 100);
+  const bars: [number, number][] = [
+    [m.bienestar, goals.bienestar],
+    [m.conocimientos, goals.conocimientos],
+    [m.impacto, goals.impacto],
+    [p.impact.comunitario, goals.comunitario],
+    [em, goals.emergencyMonths],
+    [piPct, 100],
+  ];
+  return Math.round(bars.reduce((s, [v, gl]) => s + Math.min(100, (v / gl) * 100), 0) / bars.length);
+}
+
+// #6 Quip contextual: José mira el área más descuidada del jugador y la nombra sin sermonear
+function joseAdvice(human: PlayerState, goals: Goals): string {
+  const m = metrics(human);
+  const em = emergencyFundMonths(human);
+  const piPct = Math.min(100, (passiveIncome(human) / Math.max(expensesPerTurn(human), 1)) * 100);
+  const areas: { pct: number; tip: string }[] = [
+    { pct: (m.bienestar / goals.bienestar) * 100,       tip: '¿cuándo fue la última vez que descansaste sin culpa? El cuerpo también cobra.' },
+    { pct: (m.conocimientos / goals.conocimientos) * 100, tip: 'lo que aprendes hoy te abre puertas que ni ves todavía. ¿Un curso?' },
+    { pct: (m.impacto / goals.impacto) * 100,           tip: 'nadie llega lejos solo. ¿A quién no has cuidado últimamente?' },
+    { pct: (human.impact.comunitario / goals.comunitario) * 100, tip: 'lo que das a tu comunidad es lo único que de verdad queda. Piénsalo.' },
+    { pct: (em / goals.emergencyMonths) * 100,          tip: 'un colchón para emergencias es dormir tranquilo. ¿Ya empezaste el tuyo?' },
+    { pct: piPct,                                        tip: 'que el dinero trabaje por ti, no al revés. ¿Dónde está tu primer ingreso pasivo?' },
+  ];
+  const weak = areas.reduce((a, b) => (b.pct < a.pct ? b : a));
+  return weak.tip;
+}
+
 const PAWN_ICONS = ['🧑‍💼', '👩‍🔧', '🧑‍🎨', '👨‍🌾']; // fallback
 function PawnAvatar({ p, size = 22, glow = false }: { p: PlayerState; size?: number; glow?: boolean }) {
   const col = PLAYER_COLORS[p.colorIndex];
@@ -1079,6 +1112,7 @@ function App() {
     localStorage.getItem(ONBOARD_KEY) !== '1'
   );
   const [showProgress, setShowProgress] = useState(false);
+  const [celebrate, setCelebrate] = useState(false); // #3 microcelebración juicy
 
   // Tema oficial: suena siempre (arranca al primer gesto en iOS/mobile)
   useEffect(() => { cityMusic.arm(); }, []);
@@ -1086,7 +1120,7 @@ function App() {
   // El anuncio sobre el tablero se desvanece solo en un tiempo prudencial
   useEffect(() => {
     if (!flash) return;
-    const t = setTimeout(() => setFlash(null), 2800);
+    const t = setTimeout(() => { setFlash(null); setCelebrate(false); }, 2800);
     return () => clearTimeout(t);
   }, [flash]);
 
@@ -1116,7 +1150,10 @@ function App() {
       logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
       // José, sherpa del Viaje del Héroe: a veces deja un quip socrático (sin spoilear)
       if (ai.name.toLowerCase().startsWith('jos') && Math.random() < 0.4) {
-        g.log.push({ turn: g.turn, text: 'José: ' + joseQuip(), kind: 'jose', importance: 2 });
+        const human = g.players.find(p => !p.isAI);
+        // La mitad de las veces apunta al área más floja del jugador; el resto, sabiduría general
+        const line = human && Math.random() < 0.55 ? joseAdvice(human, g.goals) : joseQuip();
+        g.log.push({ turn: g.turn, text: 'José: ' + line, kind: 'jose', importance: 2 });
       }
       setCpuThinking(false);
       endPlayerTurn(g);
@@ -1141,7 +1178,11 @@ function App() {
       result = log;
       g.log.push({ turn: g.turn, text: log, kind: 'plain', importance: 1 });
     });
-    if (result) setFlash(result);
+    if (result) {
+      setFlash(result);
+      // #3 microcelebración: un hito grande (ascenso, graduación) merece fanfarria
+      setCelebrate(/graduaste|ascendiste|Ascendiste|legado máximo|Compraste un apartamento/.test(result));
+    }
     setInspecting(null);
   }
 
@@ -1242,6 +1283,19 @@ function App() {
         }
       }
     }
+    // #8 Comparativa silenciosa con José: el sherpa va dos pasos adelante, sin juzgar
+    const human = g.players.find(p => !p.isAI);
+    const jose = g.players.find(p => p.isAI && p.name.toLowerCase().startsWith('jos'));
+    if (human && jose) {
+      const hp = winProgress(human, g.goals), jp = winProgress(jose, g.goals);
+      const diff = hp - jp;
+      const msg = Math.abs(diff) < 4
+        ? `José: vamos parejos hacia la vida plena (tú ${hp}% · yo ${jp}%).`
+        : diff > 0
+        ? `José: me llevas la delantera (tú ${hp}% · yo ${jp}%). Sigue así.`
+        : `José: voy un paso adelante (tú ${hp}% · yo ${jp}%). Tú marcas tu ritmo.`;
+      g.log.push({ turn: g.turn, text: msg, kind: 'jose', importance: 2 });
+    }
     // Victoria (ya con pasivos aplicados)
     const winner = g.players.find(p => hasWon(p, g.goals));
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
@@ -1326,7 +1380,11 @@ function App() {
       )}
       {/* Anuncio transitorio sobre la mitad del tablero — se desvanece solo */}
       {flash && (
-        <div className="board-toast" onClick={() => setFlash(null)}>{flash}</div>
+        <div className={'board-toast' + (celebrate ? ' board-toast-celebrate' : '')}
+          onClick={() => { setFlash(null); setCelebrate(false); }}>
+          {celebrate && <div className="toast-confetti">✦ ✶ ✦ ✶ ✦</div>}
+          {flash}
+        </div>
       )}
 
       {/* "Cómo me va": historial + recordatorio de metas, al tocar el personaje */}
