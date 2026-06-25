@@ -4,8 +4,11 @@
 // iOS/Safari: AudioContext se crea en el primer gesto del usuario.
 
 const WAV_URL = '/jose-en-la-vida-adulta/audio/jazz-cuenca.wav';
+// Si existe un MP3 con licencia comercial aquí, se usa ESE (nativo, en loop, sin warp de
+// pitch y sin batería procedural). Camino limpio: JFC suelta el archivo y suena bien.
+const MP3_URL = '/jose-en-la-vida-adulta/audio/track.mp3';
 const BPM = 148;
-const SPEED = 1.28;   // 28% más rápido — jazz de pasillo activo
+const SPEED = 1.28;   // 28% más rápido — solo para el WAV procedural de respaldo
 const LOOKAHEAD = 0.35; // segundos de anticipación para el scheduler
 
 let ctx: AudioContext | null = null;
@@ -99,8 +102,32 @@ function runScheduler() {
   }
 }
 
+// Reproductor MP3 nativo (preferido). Devuelve true si arrancó.
+let mp3El: HTMLAudioElement | null = null;
+let mp3Available: boolean | null = null; // null = no probado aún
+async function tryStartMp3(): Promise<boolean> {
+  if (mp3Available === false) return false;
+  try {
+    if (!mp3El) {
+      mp3El = new Audio(MP3_URL);
+      mp3El.loop = true;
+      mp3El.preload = 'auto';
+      mp3El.volume = 0.55;
+    }
+    await mp3El.play(); // si el archivo no existe, esto rechaza
+    mp3Available = true;
+    return true;
+  } catch (_) {
+    // 404 o autoplay bloqueado: si es 404 marcamos no-disponible; si fue gesto, reintentará
+    if (mp3El && mp3El.error) { mp3Available = false; mp3El = null; }
+    return false;
+  }
+}
+
 async function startMusic() {
   if (!wanted) return;
+  // 1) Intentar MP3 nativo (sin warp, sin batería procedural)
+  if (await tryStartMp3()) return;
   try {
     const ac = getCtx();
     if (ac.state === 'suspended') await ac.resume();
@@ -129,6 +156,7 @@ async function startMusic() {
 }
 
 function stopMusic() {
+  if (mp3El) { try { mp3El.pause(); } catch (_) {} }
   if (schedTimer) { clearInterval(schedTimer); schedTimer = null; }
   if (source) { try { source.stop(); } catch (_) {} source = null; }
   if (masterGain) { masterGain.disconnect(); masterGain = null; }
@@ -137,7 +165,7 @@ function stopMusic() {
 
 export const cityMusic = {
   get wanted(): boolean { return wanted; },
-  get playing(): boolean { return !!source; },
+  get playing(): boolean { return !!source || (!!mp3El && !mp3El.paused); },
 
   arm(): void {
     if (armed) return;
