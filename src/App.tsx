@@ -16,6 +16,15 @@ import { cityMusic } from './citymusic';
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
+// Safe localStorage — iOS Safari Private Mode throws SecurityError on every access.
+// These wrappers make all reads/writes a no-op instead of crashing the app.
+function lsGet(key: string, fallback = ''): string {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+}
+function lsSet(key: string, value: string): void {
+  try { localStorage.setItem(key, value); } catch { /* noop in Private Mode */ }
+}
+
 // Redondear horas a 1 decimal máximo, sin basura flotante como 41.59999999994
 function fh(n: number): number { return Math.round(n * 10) / 10; }
 
@@ -241,7 +250,14 @@ function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
     const C = [[200,160,64],[30,90,153],[160,25,44],[196,88,40],[240,232,214],[32,128,144],[107,78,154]];
     const P: {x:number;y:number;vx:number;vy:number;s:number;r:number;g:number;b:number;life:number;ml:number}[] = [];
     const N = 45;
-    function resize() { W = canvas!.width = innerWidth; H = canvas!.height = innerHeight; }
+    // visualViewport gives the correct dimensions on iOS Safari when the
+    // address bar animates in/out. Falls back to window for older browsers.
+    const vvp = (window as any).visualViewport as VisualViewport | undefined;
+    function resize() {
+      W = canvas!.width  = vvp ? Math.round(vvp.width)  : innerWidth;
+      H = canvas!.height = vvp ? Math.round(vvp.height) : innerHeight;
+    }
+    const resizeTarget: EventTarget = vvp ?? window;
     function spawn(rAge: boolean) {
       const c = C[(Math.random() * C.length) | 0];
       const ml = 300 + Math.random() * 400;
@@ -266,8 +282,8 @@ function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
       raf = requestAnimationFrame(loop);
     }
     loop();
-    addEventListener('resize', resize);
-    return () => { cancelAnimationFrame(raf); removeEventListener('resize', resize); };
+    resizeTarget.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); resizeTarget.removeEventListener('resize', resize); };
   }, []);
 }
 
@@ -310,37 +326,23 @@ function narrateHeadline(p: PlayerState, game: GameState): string {
   const m = metrics(p);
   const g = game.goals;
   const pi = passiveIncome(p), exp = expensesPerTurn(p);
-  const isHuman = !p.isAI;
-  const areas: { r: number; su: string; tu: string }[] = [
-    { r: m.bienestar / g.bienestar,                         su: 'su bienestar',          tu: 'tu bienestar' },
-    { r: m.conocimientos / g.conocimientos,                 su: 'sus conocimientos',     tu: 'tus conocimientos' },
-    { r: m.impacto / g.impacto,                             su: 'su impacto',            tu: 'tu impacto' },
-    { r: p.impact.comunitario / Math.max(g.comunitario, 1), su: 'su legado comunitario', tu: 'tu legado comunitario' },
-    { r: emergencyFundMonths(p) / g.emergencyMonths,        su: 'su fondo de emergencia',tu: 'tu fondo de emergencia' },
-    { r: Math.min(1, pi / Math.max(exp, 1)),                su: 'sus ingresos pasivos',  tu: 'tus ingresos pasivos' },
+  const areas: { r: number; name: string }[] = [
+    { r: m.bienestar / g.bienestar, name: 'su bienestar' },
+    { r: m.conocimientos / g.conocimientos, name: 'sus conocimientos' },
+    { r: m.impacto / g.impacto, name: 'su impacto' },
+    { r: p.impact.comunitario / g.comunitario, name: 'su legado en la comunidad' },
+    { r: emergencyFundMonths(p) / g.emergencyMonths, name: 'su fondo de emergencia' },
+    { r: Math.min(1, pi / Math.max(exp, 1)), name: 'sus ingresos pasivos' },
   ];
   const win = areas.reduce((s, a) => s + Math.min(1, a.r), 0) / areas.length;
-  // Prefiere áreas con progreso > 0 para identificar el punto débil real (el legado empieza en 0 por diseño)
-  const touched = areas.filter(a => a.r > 0);
-  const pool = touched.length >= 2 ? touched : areas;
-  const weakest = pool.slice().sort((a, b) => a.r - b.r)[0];
-  const weak = isHuman ? weakest.tu : weakest.su;
+  const weak = areas.slice().sort((a, b) => a.r - b.r)[0].name;
   let phase: string;
-  if (isHuman) {
-    if (game.turn <= 2)  phase = `empiezas a hacerte una vida`;
-    else if (win < 0.25) phase = `buscas estabilizarte sin descuidar ${weak}`;
-    else if (win < 0.5)  phase = `vas construyendo bases sólidas, pero te falta ${weak}`;
-    else if (win < 0.75) phase = `avanzas firme hacia una vida plena, atento a ${weak}`;
-    else if (win < 1)    phase = `estás a un suspiro de lograrlo todo, te falta ${weak}`;
-    else                 phase = `ya construiste la vida plena que tanto buscabas`;
-  } else {
-    if (game.turn <= 2)  phase = `empieza a hacerse una vida`;
-    else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
-    else if (win < 0.5)  phase = `va construyendo bases sólidas, pero le falta ${weak}`;
-    else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
-    else if (win < 1)    phase = `está a un suspiro de lograrlo todo, le falta ${weak}`;
-    else                 phase = `ya construyó la vida plena que tanto buscaba`;
-  }
+  if (game.turn <= 2) phase = `apenas empieza a hacerse una vida y aún le falta reforzar ${weak}`;
+  else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
+  else if (win < 0.5) phase = `va construyendo bases sólidas, pero aún le falta ${weak}`;
+  else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
+  else if (win < 1) phase = `está a un suspiro de lograrlo todo, solo le falta ${weak}`;
+  else phase = `ya construyó la vida plena que tanto buscaba`;
   return `Nivel ${dif} · ${p.name} ${phase}`;
 }
 const DIFFICULTY_DESC: Record<number, string> = {
@@ -358,7 +360,7 @@ function avatarUrl(seed: string, idx: number): string {
 
 const TIER_LOCK_KEY = 'jelva_max_tier';
 function getMaxTier(): GameTier {
-  const v = parseInt(localStorage.getItem(TIER_LOCK_KEY) || '1', 10);
+  const v = parseInt(lsGet(TIER_LOCK_KEY, '1'), 10);
   return (Math.min(4, Math.max(1, v)) as GameTier);
 }
 
@@ -886,6 +888,21 @@ function PawnOverlay({ game }: { game: GameState }) {
   const active = game.players[game.activePlayerIndex];
   const locKey = game.players.map(p => p.currentLocation).join(',');
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
+  // vpKey increments whenever iOS Safari's visualViewport resizes (address bar
+  // show/hide), forcing a re-run of getBoundingClientRect() so pawns stay aligned.
+  const [vpKey, setVpKey] = useState(0);
+
+  useEffect(() => {
+    const vvp = (window as any).visualViewport as VisualViewport | undefined;
+    if (!vvp) return;
+    const onVpChange = () => setVpKey(k => k + 1);
+    vvp.addEventListener('resize', onVpChange);
+    vvp.addEventListener('scroll', onVpChange);
+    return () => {
+      vvp.removeEventListener('resize', onVpChange);
+      vvp.removeEventListener('scroll', onVpChange);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const center = document.querySelector<HTMLElement>('.board-center');
@@ -903,8 +920,6 @@ function PawnOverlay({ game }: { game: GameState }) {
         const ty = r.top + r.height / 2;
         const dx = cx - tx, dy = cy - ty;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        // landing spot: empujar hacia adentro del tablero + a la derecha,
-        // y arriba (zona del icono), para NO tapar el nombre del casillero (abajo)
         next[p.id] = {
           x: tx + (dx / dist) * 22 + r.width * 0.16,
           y: ty + (dy / dist) * 18 - r.height * 0.14,
@@ -912,7 +927,7 @@ function PawnOverlay({ game }: { game: GameState }) {
       }
     }
     setPos(next);
-  }, [locKey]);
+  }, [locKey, vpKey]);
 
   const count = game.players.length;
   return (
@@ -1049,7 +1064,7 @@ const ZONE_GRAD: Record<string, string> = {
 };
 
 // ── Board ──
-function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose, lastActionIdx, clerkFeedback }: {
+function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose }: {
   game: GameState;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
@@ -1057,8 +1072,6 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
   fading: boolean;
   onReopen: () => void;
   onClose: () => void;
-  lastActionIdx: number | null;
-  clerkFeedback: string | null;
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
@@ -1120,63 +1133,19 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
           </div>
           {showingClerk ? (
             <div className={'clerk-panel' + (fading ? ' clerk-fading' : '')}
-              onClick={e => e.stopPropagation()}>
+              onClick={e => e.stopPropagation()}
+              onMouseEnter={onReopen}>
               <div className="clerk-header">
                 <ClerkPortrait locId={active.currentLocation} size={44} />
                 <div className="clerk-info">
                   <div className="clerk-name">{CLERKS[active.currentLocation]?.name}</div>
                   <div className="clerk-role">{CLERKS[active.currentLocation]?.role}</div>
                 </div>
-                <button className="clerk-close-btn" onClick={onClose}
-                  style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer',
-                    color:'rgba(240,232,210,0.45)', fontSize:'1rem', padding:'2px 6px', lineHeight:1 }}>✕</button>
               </div>
               <div className="clerk-quip">{clerkMsg}</div>
-
-              {/* Feedback inline: resultado de la última acción — aparece donde ya tienes los ojos */}
-              {clerkFeedback && (
-                <div style={{
-                  background: 'rgba(40,236,170,0.10)',
-                  border: '1px solid rgba(40,236,170,0.28)',
-                  borderRadius: 6, padding: '5px 10px',
-                  fontSize: '0.80rem', color: '#28ECAA', fontWeight: 600,
-                  margin: '4px 0 6px', letterSpacing: '0.01em',
-                }}>
-                  ✓ {clerkFeedback}
-                </div>
-              )}
-
               <div className="clerk-actions">
-                {/* Botón de repetición rápida — el primero que ves, siempre disponible */}
-                {lastActionIdx !== null && clerkActs[lastActionIdx] && (
-                  <button
-                    key="repeat-quick"
-                    className="tile-act-chip"
-                    onClick={() => onAction(lastActionIdx!)}
-                    style={{
-                      gridColumn: '1 / -1',
-                      borderColor: '#E8A020',
-                      background: 'linear-gradient(135deg,rgba(232,160,32,0.16),rgba(232,160,32,0.05))',
-                      order: -1,
-                    }}>
-                    <span className="tac-name" style={{ color: '#E8A020' }}>
-                      ↻ {clerkActs[lastActionIdx].label}
-                    </span>
-                    <span className="tac-desc" style={{ color: 'rgba(232,160,32,0.7)' }}>repetir</span>
-                    <span className="tac-cost" style={{ color: '#E8A020', fontWeight: 700 }}>
-                      {fh(clerkActs[lastActionIdx].hours)}h
-                    </span>
-                  </button>
-                )}
                 {clerkActs.map((a, i) => (
-                  <button key={a.id}
-                    className={'tile-act-chip' + (i === lastActionIdx ? ' tile-act-last' : '')}
-                    onClick={() => onAction(i)}
-                    title={a.desc}
-                    style={i === lastActionIdx ? {
-                      borderColor: 'rgba(232,160,32,0.45)',
-                      background: 'rgba(232,160,32,0.06)',
-                    } : undefined}>
+                  <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)}>
                     <span className="tac-name">{a.label}</span>
                     <span className="tac-desc">{a.desc}</span>
                     <span className="tac-cost">{fh(a.hours)}h</span>
@@ -1317,7 +1286,7 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
 // ── Onboarding modal — aparece solo en Q1, solo la primera vez ──
 const ONBOARD_KEY = 'jelva_onboard_v1';
 function OnboardModal({ onClose }: { onClose: () => void }) {
-  function dismiss() { localStorage.setItem(ONBOARD_KEY, '1'); onClose(); }
+  function dismiss() { lsSet(ONBOARD_KEY, '1'); onClose(); }
   const goals = [
     { icon: '🚌', place: 'Terminal (bolsa de empleo)', action: 'Busca tu primer empleo', why: 'Sin trabajo, no hay sueldo. Es tu primera parada.' },
     { icon: '🏦', place: 'Banco (ahorrar · invertir)', action: 'Deposita $100 en el banco', why: 'El fondo de emergencia es una de las 6 metas de victoria.' },
@@ -1401,7 +1370,7 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
   const prevMax = getMaxTier();
   // Unlock next tier
   if (wonTier >= prevMax && nextTier > prevMax) {
-    localStorage.setItem(TIER_LOCK_KEY, String(nextTier));
+    lsSet(TIER_LOCK_KEY, String(nextTier));
   }
   const unlockedNew = nextTier > prevMax;
   const [realName, setRealName] = useState('');
@@ -1509,18 +1478,15 @@ function App() {
   const [actionsFading, setActionsFading] = useState(false);
   const actionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
-  // Feedback inline en el clerk panel (reemplaza el toast flotante — aparece donde clickeaste)
-  const [lastActionIdx, setLastActionIdx] = useState<number | null>(null);
-  const [clerkFeedback, setClerkFeedback] = useState<string | null>(null);
-  const clerkFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Confirmación breezy de acción (no bloquea, no cierra el panel: puedes repetir con clicks)
+  const [actionToast, setActionToast] = useState<string | null>(null);
+  const actionToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Reproducción visible del turno de José (pasos): como en Jones, lo observamos jugar
   const [josePlay, setJosePlay] = useState<{ steps: import('./engine').CpuStep[]; idx: number; name: string } | null>(null);
   const joseFinal = useRef<GameState | null>(null);
   // Velocidad del turno de José: lento (ves su jugada y aprendes) o rápido (saltas)
   const [slowJose, setSlowJose] = useState(true);
-  const [showOnboard, setShowOnboard] = useState(() =>
-    localStorage.getItem(ONBOARD_KEY) !== '1'
-  );
+  const [showOnboard, setShowOnboard] = useState(() => lsGet(ONBOARD_KEY) !== '1');
   const [showProgress, setShowProgress] = useState(false);
   const [celebrate, setCelebrate] = useState(false); // #3 microcelebración juicy
   const [showFocusPick, setShowFocusPick] = useState(false); // #7 meta autoimpuesta
@@ -1593,13 +1559,11 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [josePlay, slowJose]);
 
-  // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas, sin fade.
+  // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas ~20s, luego fade.
   useEffect(() => {
     if (phase !== 'play' || !game) return;
     const p = game.players[game.activePlayerIndex];
     if (!p || p.isAI || queue.length > 0) return;
-    setLastActionIdx(null);
-    setClerkFeedback(null);
     openActionsHere();
     return clearActionsTimer;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1628,14 +1592,13 @@ function App() {
         setFlash(result);
         setCelebrate(true);
       } else {
-        // Feedback inline en el clerk panel — no interrumpe, aparece donde ya tienes los ojos
-        setClerkFeedback(result);
-        if (clerkFeedbackTimer.current) clearTimeout(clerkFeedbackTimer.current);
-        clerkFeedbackTimer.current = setTimeout(() => setClerkFeedback(null), 2400);
+        // Acción normal: confirmación breezy que NO interrumpe ni cierra el panel
+        setActionToast(result);
+        if (actionToastTimer.current) clearTimeout(actionToastTimer.current);
+        actionToastTimer.current = setTimeout(() => setActionToast(null), 1600);
       }
     }
-    setLastActionIdx(idx);
-    // Panel siempre abierto para repetir sin fricción (estilo Jones)
+    // Mantén el panel abierto para repetir acciones con clicks (como en Jones) y reinicia el fade
     openActionsHere();
   }
 
@@ -1649,7 +1612,11 @@ function App() {
     setActionsFading(false);
     setInspecting(loc);
     clearActionsTimer();
-    // Sin auto-fade: en tu ubicación actual las acciones quedan siempre visibles (estilo Jones)
+    // 20s visibles (estándar de lectura), luego fade y se colapsa
+    actionsTimer.current = setTimeout(() => {
+      setActionsFading(true);
+      actionsTimer.current = setTimeout(() => { setInspecting(null); setActionsFading(false); }, 700);
+    }, 20000);
   }
   function closeActionsHere() {
     clearActionsTimer();
@@ -1855,8 +1822,6 @@ function App() {
             fading={actionsFading}
             onReopen={openActionsHere}
             onClose={closeActionsHere}
-            lastActionIdx={lastActionIdx}
-            clerkFeedback={clerkFeedback}
           />
           <div className="footer-bar">
             <div className="footer-loc">
