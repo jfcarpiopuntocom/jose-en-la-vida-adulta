@@ -103,16 +103,29 @@ function winProgress(p: PlayerState, goals: Goals): number {
 
 // #6 Quip contextual: José mira el área más descuidada del jugador y la nombra sin sermonear
 function joseAdvice(human: PlayerState, goals: Goals): string {
+  const isEmpresa = (human as any).aiStrategy === 'empresa';
   const m = metrics(human);
   const em = emergencyFundMonths(human);
   const piPct = Math.min(100, (passiveIncome(human) / Math.max(expensesPerTurn(human), 1)) * 100);
   const areas: { pct: number; tip: string }[] = [
-    { pct: (m.bienestar / goals.bienestar) * 100,       tip: '¿cuándo fue la última vez que descansaste sin culpa? El cuerpo también cobra.' },
-    { pct: (m.conocimientos / goals.conocimientos) * 100, tip: 'lo que aprendes hoy te abre puertas que ni ves todavía. ¿Un curso?' },
-    { pct: (m.impacto / goals.impacto) * 100,           tip: 'nadie llega lejos solo. ¿A quién no has cuidado últimamente?' },
-    { pct: (human.impact.comunitario / goals.comunitario) * 100, tip: 'lo que das a tu comunidad es lo único que de verdad queda. Piénsalo.' },
-    { pct: (em / goals.emergencyMonths) * 100,          tip: 'un colchón para emergencias es dormir tranquilo. ¿Ya empezaste el tuyo?' },
-    { pct: piPct,                                        tip: 'que el dinero trabaje por ti, no al revés. ¿Dónde está tu primer ingreso pasivo?' },
+    { pct: (m.bienestar / goals.bienestar) * 100,
+      tip: '¿cuándo fue la última vez que descansaste sin culpa? El cuerpo también cobra.' },
+    { pct: (m.conocimientos / goals.conocimientos) * 100,
+      tip: isEmpresa
+        ? 'el conocimiento sube la rentabilidad de tu negocio. ¿Cuándo estudias algo útil para él?'
+        : 'lo que aprendes hoy te abre puertas que ni ves todavía. ¿Un curso?' },
+    { pct: (m.impacto / goals.impacto) * 100,
+      tip: 'nadie llega lejos solo. ¿A quién no has cuidado últimamente?' },
+    { pct: (human.impact.comunitario / goals.comunitario) * 100,
+      tip: 'lo que das a tu comunidad es lo único que de verdad queda. Piénsalo.' },
+    { pct: (em / goals.emergencyMonths) * 100,
+      tip: isEmpresa
+        ? 'un negocio sin colchón quiebra en el primer mal mes. ¿Ya tienes el fondo de emergencia?'
+        : 'un colchón para emergencias es dormir tranquilo. ¿Ya empezaste el tuyo?' },
+    { pct: piPct,
+      tip: isEmpresa
+        ? 'tu negocio debe pagarte mientras duermes, no solo cuando trabajas. ¿Ya genera pasivos?'
+        : 'que el dinero trabaje por ti, no al revés. ¿Dónde está tu primer ingreso pasivo?' },
   ];
   const weak = areas.reduce((a, b) => (b.pct < a.pct ? b : a));
   return weak.tip;
@@ -328,12 +341,17 @@ function narrateHeadline(p: PlayerState, game: GameState): string {
   const weak = isHuman ? weakest.tu : weakest.su;
   let phase: string;
   if (isHuman) {
-    if (game.turn <= 2)  phase = `empiezas a hacerte una vida`;
+    const isEmpresa = (p as any).aiStrategy === 'empresa';
+    if (game.turn <= 2)  phase = isEmpresa
+      ? `empiezas a construir tu negocio y tu vida en Cuenca`
+      : `empiezas a hacerte una vida`;
     else if (win < 0.25) phase = `buscas estabilizarte sin descuidar ${weak}`;
     else if (win < 0.5)  phase = `vas construyendo bases sólidas, pero te falta ${weak}`;
     else if (win < 0.75) phase = `avanzas firme hacia una vida plena, atento a ${weak}`;
     else if (win < 1)    phase = `estás a un suspiro de lograrlo todo, te falta ${weak}`;
-    else                 phase = `ya construiste la vida plena que tanto buscabas`;
+    else                 phase = isEmpresa
+      ? `ya construiste tu empresa y la vida plena que tanto buscabas`
+      : `ya construiste la vida plena que tanto buscabas`;
   } else {
     if (game.turn <= 2)  phase = `empieza a hacerse una vida`;
     else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
@@ -485,7 +503,7 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
                     color: strategy === r.key ? '#E8A020' : 'inherit',
                     WebkitTextFillColor: strategy === r.key ? '#E8A020' : 'inherit',
                   }}>{r.name}</span>
-                  <span style={{ fontSize: '0.75rem', opacity: 0.72 }}>{r.desc}</span>
+                  <span style={{ fontSize: '0.82rem', color: '#AFA898', WebkitTextFillColor: '#AFA898' }}>{r.desc}</span>
                 </span>
               </button>
             ))}
@@ -698,6 +716,10 @@ function StatsPanel({
         <div className="stress-warning">
           Estres critico ({p.stats.stress}%) — salario reducido. Descansa ya.
         </div>
+      )}
+      {/* Pista de ruta: coaching contextual Q1-Q3 según la ruta elegida */}
+      {!p.isAI && game.turn <= 3 && (
+        <TurnHint turn={game.turn} strategy={(p.aiStrategy as 'empleado'|'empresa') || 'empleado'} />
       )}
     </div>
   );
@@ -1976,7 +1998,10 @@ function App() {
 
       {/* Onboarding — solo Q1, solo primera vez */}
       {showOnboard && game.turn === 1 && queue.length === 0 && (
-        <OnboardModal onClose={() => setShowOnboard(false)} />
+        <OnboardModal
+          onClose={() => setShowOnboard(false)}
+          strategy={(game.players.find(p => !p.isAI)?.aiStrategy as 'empleado'|'empresa') || 'empleado'}
+        />
       )}
 
       {/* Event modals */}
