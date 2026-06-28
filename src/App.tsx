@@ -398,13 +398,17 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const [withJose, setWithJose] = useState(true);
   const [joseLine] = useState(joseQuip());
   const [avatar, setAvatar] = useState(0);
+  // Ruta de vida: asalariado (escala carrera) vs empresario (crea negocios)
+  const [strategy, setStrategy] = useState<'empleado'|'empresa'>('empleado');
 
   function start() {
     const tierGoals = TIER_GOALS[tier] as typeof TIER_GOALS[1];
-    const human = { id: 'p0', name: 'Tú', avatar };
+    // Fix 2: el jugador humano ahora lleva su ruta elegida
+    const human = { id: 'p0', name: 'Tú', avatar, aiStrategy: strategy };
     const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] = [human];
-    for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1) });
-    const joseDiff = (tier <= 1 ? 1 : tier === 2 ? 2 : 3) as 1|2|3; // José da ejemplo ajustado al nivel
+    // Jugadores 2-4: heredan la misma ruta (se puede personalizar después)
+    for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1), aiStrategy: strategy });
+    const joseDiff = (tier <= 1 ? 1 : tier === 2 ? 2 : 3) as 1|2|3;
     if (withJose) players.push({ id: 'jose', name: 'José', isAI: true, aiStrategy: 'empresa', aiDifficulty: joseDiff });
     const { label: _l, desc: _d, cpuMult: _c, ...goals } = tierGoals;
     onStart(newGame(players, goals, tier));
@@ -446,6 +450,43 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
                 className={'avatar-opt' + (avatar === i ? ' avatar-sel' : '')}
                 onClick={() => setAvatar(i)}>
                 <img src={'/jose-en-la-vida-adulta/avatars/player' + (i+1) + '.png'} alt={'Personaje ' + (i+1)} />
+              </button>
+            ))}
+          </div>
+
+          {/* Selector de ruta — la decisión más importante del juego */}
+          <div className="setup-label" style={{ marginTop: 14 }}>Tu ruta de vida</div>
+          <div style={{ display:'flex', flexDirection:'column', gap: 6 }}>
+            {([
+              { key: 'empleado', icon: '💼', name: 'Asalariado',
+                desc: 'Escala la carrera laboral. Estabilidad primero, luego inversiones.' },
+              { key: 'empresa', icon: '🏭', name: 'Empresario',
+                desc: 'Crea tu propio negocio. Más riesgo, más velocidad, más libertad.' },
+            ] as const).map(r => (
+              <button key={r.key} type="button"
+                onClick={() => setStrategy(r.key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
+                  textAlign: 'left', lineHeight: 1.3,
+                  border: strategy === r.key
+                    ? '2px solid #E8A020'
+                    : '2px solid rgba(240,232,210,0.15)',
+                  background: strategy === r.key
+                    ? 'linear-gradient(135deg,rgba(232,160,32,0.18),rgba(232,160,32,0.06))'
+                    : 'rgba(255,255,255,0.04)',
+                  color: 'var(--ink)',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}>
+                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{r.icon}</span>
+                <span>
+                  <span style={{
+                    display: 'block', fontWeight: 700, fontSize: '0.88rem',
+                    color: strategy === r.key ? '#E8A020' : 'inherit',
+                    WebkitTextFillColor: strategy === r.key ? '#E8A020' : 'inherit',
+                  }}>{r.name}</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.72 }}>{r.desc}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -491,8 +532,8 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             </button>
             <button style={{ flex:'0 0 auto', padding:'0 14px' }} onClick={() => {
               const { label: _l, desc: _d, cpuMult: _c, ...goals } = TIER_GOALS[1];
-              onStart(newGame([{ id:'p0', name:'Jugador 1' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:1 }], goals, 1));
-            }} title="Modo Rapido: 1 jugador + José, Principiante, sin configuracion">
+              onStart(newGame([{ id:'p0', name:'Jugador 1', aiStrategy: 'empleado' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:1 }], goals, 1));
+            }} title="Modo Rapido: 1 jugador + José, Principiante, ruta Asalariado">
               Rapido
             </button>
           </div>
@@ -1317,21 +1358,36 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
 
 // ── Onboarding modal — aparece solo en Q1, solo la primera vez ──
 const ONBOARD_KEY = 'jelva_onboard_v1';
-function OnboardModal({ onClose }: { onClose: () => void }) {
+function OnboardModal({ onClose, strategy }: { onClose: () => void; strategy: 'empleado'|'empresa' }) {
   function dismiss() { localStorage.setItem(ONBOARD_KEY, '1'); onClose(); }
-  const goals = [
-    { icon: '🚌', place: 'Terminal (bolsa de empleo)', action: 'Busca tu primer empleo', why: 'Sin trabajo, no hay sueldo. Es tu primera parada.' },
-    { icon: '🏦', place: 'Banco (ahorrar · invertir)', action: 'Deposita $100 en el banco', why: 'El fondo de emergencia es una de las 6 metas de victoria.' },
-    { icon: '🏠', place: 'Tu Casa (hogar)', action: 'Descansa cuando el estrés suba', why: 'Si el estrés llega a 100, pierdes rendimiento en todo.' },
+
+  const isEmp = strategy === 'empleado';
+  const routeLabel = isEmp ? '💼 Ruta Asalariado' : '🏭 Ruta Empresario';
+  const routeSub = isEmp
+    ? 'Consigue empleo, escala la carrera y construye patrimonio con estabilidad.'
+    : 'Abre tu negocio, genera ingresos propios y crece a tu propio ritmo.';
+
+  const goals = isEmp ? [
+    { icon: '🚌', place: 'Terminal (bolsa de empleo)',       action: 'Busca tu primer empleo',        why: 'Sin trabajo no hay sueldo. Es tu primera parada.' },
+    { icon: '🏦', place: 'Banco (ahorrar · invertir)',        action: 'Deposita $100 en el banco',     why: 'El fondo de emergencia es una de las 6 metas de victoria.' },
+    { icon: '🏠', place: 'Tu Casa (hogar)',                   action: 'Descansa cuando el estrés suba',why: 'Si el estrés llega a 100, pierdes rendimiento en todo.' },
+  ] : [
+    { icon: '🏪', place: 'Feria Libre (tu negocio)',          action: 'Abre tu primer negocio',        why: 'Sin negocio no hay ingresos propios. Empieza cuanto antes.' },
+    { icon: '🏦', place: 'Banco (ahorrar · invertir)',        action: 'Deposita capital inicial',      why: 'El fondo de emergencia te protege cuando el negocio tarda en arrancar.' },
+    { icon: '🎓', place: 'UDA / Universidad (estudiar)',      action: 'Estudia algo útil para tu negocio', why: 'El conocimiento sube la rentabilidad de lo que construyes.' },
   ];
+
   return (
     <div className="modal-bg">
       <div className="modal onboard-modal">
         <div className="onboard-jose">
           <img className="onboard-jose-img" src="/jose-en-la-vida-adulta/avatars/jose.png" alt="José" />
           <div>
-            <div className="onboard-title">Tu primera quincena</div>
-            <div className="onboard-sub">Soy José. Tienes <b>112 horas</b>: cada cosa cuesta tiempo y nada vuelve. Empieza por estas tres. No es la única ruta — es una buena.</div>
+            <div className="onboard-title">Tu primera quincena · {routeLabel}</div>
+            <div className="onboard-sub">
+              Soy José. Tienes <b>112 horas</b>: cada cosa cuesta tiempo y nada vuelve.
+              {' '}{routeSub}{' '}Empieza por estas tres.
+            </div>
           </div>
         </div>
         <div className="onboard-goals">
@@ -1480,13 +1536,20 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
 // MAIN APP
 // ═══════════════════════════════════════
 export // ── Turn-based contextual hints (visible Q1-Q3 only) ──
-const TURN_HINTS: Record<number, { icon: string; text: string }> = {
-  1: { icon: 'T', text: 'Q1: Ve a Terminal y busca empleo. Sin trabajo no hay progreso.' },
-  2: { icon: 'B', text: 'Q2: Deposita algo en el Banco. El fondo de emergencia es clave para ganar.' },
-  3: { icon: 'U', text: 'Q3: Visita la UDA y estudia. El conocimiento abre mejores empleos.' },
+const TURN_HINTS: Record<'empleado'|'empresa', Record<number, { icon: string; text: string }>> = {
+  empleado: {
+    1: { icon: 'T', text: 'Q1: Ve a Terminal y busca empleo. Sin trabajo no hay sueldo.' },
+    2: { icon: 'B', text: 'Q2: Deposita en el Banco. El fondo de emergencia es clave para ganar.' },
+    3: { icon: 'U', text: 'Q3: Estudia en la UDA. El conocimiento abre mejores empleos.' },
+  },
+  empresa: {
+    1: { icon: '🏪', text: 'Q1: Ve a Feria Libre y abre tu primer negocio. Sin negocio no hay ingresos propios.' },
+    2: { icon: 'B',  text: 'Q2: Deposita capital en el Banco. Un colchón te salva cuando el negocio tarda.' },
+    3: { icon: 'U',  text: 'Q3: Estudia en la UDA. El conocimiento sube la rentabilidad de tu negocio.' },
+  },
 };
-function TurnHint({ turn }: { turn: number }) {
-  const hint = TURN_HINTS[turn];
+function TurnHint({ turn, strategy }: { turn: number; strategy: 'empleado'|'empresa' }) {
+  const hint = TURN_HINTS[strategy]?.[turn];
   if (!hint) return null;
   return (
     <div className="turn-hint">
