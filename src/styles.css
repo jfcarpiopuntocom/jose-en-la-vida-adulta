@@ -1430,7 +1430,22 @@ input[type=text], input[type=number] {
 .pawn-float {
   position: absolute;
   transform: translate(-50%, -50%);
-  transition: left 0.45s cubic-bezier(0.4,0,0.2,1), top 0.45s cubic-bezier(0.4,0,0.2,1);
+  /* Viaje entre casillas: rápido y con rebote elástico → sensación "tip-tap" de tablero */
+  transition: left 0.4s cubic-bezier(0.34,1.56,0.64,1), top 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+/* Rebote vertical al llegar a una casilla (se remonta con key=ubicación) */
+.pawn-hop { animation: pawnHop 0.42s cubic-bezier(0.3,0.7,0.4,1.4); transform-origin: 50% 100%; }
+@keyframes pawnHop {
+  0%   { transform: translateY(0) scaleY(1); }
+  28%  { transform: translateY(-15px) scaleY(1.06); }
+  55%  { transform: translateY(0) scaleY(0.9); }   /* aterriza: squash */
+  72%  { transform: translateY(-5px) scaleY(1.02); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+.pawn-inner { display: block; }
+@media (prefers-reduced-motion: reduce) {
+  .pawn-float { transition: none; }
+  .pawn-hop { animation: none; }
 }
 .bc-log {
   width: 100%; max-height: 72px; overflow-y: auto;
@@ -1718,6 +1733,8 @@ input[type=text], input[type=number] {
   display: flex; flex-direction: column; align-items: stretch; gap: 6px;
   overflow-y: auto;
 }
+/* Handle del dashboard: oculto en desktop; se muestra en mobile/tablet (bottom-sheet) */
+.stats-handle { display: none; }
 
 
 /* ── Turn Banner — quien juega ahora ── */
@@ -2300,4 +2317,73 @@ input[type=text], input[type=number] {
     font-size: 0.8rem;
     background: rgba(20,28,48,0.7);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PORTRAIT phone + tablet (≤1024): TABLERO EN RING (estilo Jones, no grilla),
+   board protagonista a pantalla completa + dashboard colapsable (bottom).
+   Bloque autoritativo: va al final para ganarle a los overrides mobile previos.
+   NO toca desktop ni landscape (que están LOCKED).
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (orientation: portrait) and (max-width: 1024px) {
+  /* --tc que hace caber el ring (6 filas) en la altura disponible */
+  :root { --tc: clamp(50px, calc((100vh - 210px) / 6), 88px) !important; }
+
+  .game-layout { flex-direction: column !important; top: 44px !important; overflow: hidden !important; }
+  .game-main {
+    flex: 1 1 auto !important; min-height: 0 !important;
+    display: flex !important; flex-direction: column !important;
+    padding: 8px 8px 6px !important; gap: 6px !important;
+    overflow: hidden !important;
+  }
+
+  /* RING board — revierte cualquier grilla de los bloques mobile anteriores */
+  .game-main .board {
+    flex: 1 1 auto !important; min-height: 0 !important; overflow: auto !important;
+    display: flex !important; flex-direction: column !important; width: 100% !important;
+  }
+  .board-edge { display: flex !important; }
+  .board-top, .board-bottom { flex-direction: row !important; height: var(--tc) !important; flex: 0 0 auto !important; }
+  .board-body { display: flex !important; flex-direction: row !important; height: calc(4 * var(--tc)) !important; flex: 0 0 auto !important; }
+  .board-left, .board-right { flex: 0 0 var(--tc) !important; flex-direction: column !important; }
+  .board-top .tile, .board-bottom .tile { flex: 1 !important; height: 100% !important; width: auto !important; }
+  .board-left .tile, .board-right .tile { flex: 1 !important; width: 100% !important; height: auto !important; }
+  .board-center {
+    grid-column: auto !important; flex: 1 1 auto !important; margin: 4px !important; min-width: 0 !important;
+    display: flex !important; flex-direction: column !important;
+    align-items: center !important; justify-content: flex-start !important; flex-wrap: nowrap !important;
+  }
+
+  /* Dashboard colapsable inline (abajo): colapsado = barra fina; abierto = scroll interno */
+  #stats-panel {
+    width: 100% !important; max-width: none !important; flex: 0 0 auto !important;
+    border-left: none !important; border-top: 2px solid var(--gold) !important;
+    border-radius: 14px 14px 0 0 !important; padding: 0 10px 8px !important; gap: 6px !important;
+    max-height: 48vh !important; overflow-y: auto !important;
+    background: linear-gradient(170deg, rgba(20,28,48,0.98), rgba(10,16,32,0.98)) !important;
+  }
+  #stats-panel.stats-collapsed { max-height: 50px !important; overflow: hidden !important; padding-bottom: 0 !important; }
+  .stats-handle {
+    display: flex !important; align-items: center; justify-content: center; gap: 8px;
+    position: sticky; top: 0; z-index: 2;
+    width: 100%; height: 44px; margin: 0; background: transparent; border: none; cursor: pointer;
+  }
+  .stats-handle::before {
+    content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 4px; border-radius: 2px; background: rgba(232,160,32,0.5);
+  }
+  .stats-handle-label { font-size: 0.92rem; font-weight: 800; color:#E8A020 !important; -webkit-text-fill-color:#E8A020 !important; }
+  .stats-handle-chevron { font-size: 0.8rem; color:#E8A020 !important; -webkit-text-fill-color:#E8A020 !important; }
+
+  .footer-bar { height: 54px !important; flex-shrink: 0 !important; }
+  /* Tiles con altura decente en ring: aprovecha el icono y el nombre */
+  .tile-art { width: 30px !important; height: 30px !important; }
+  .tile-svg-icon { width: 20px !important; height: 20px !important; }
+}
+
+/* Landscape corto (teléfonos apaisados): que el ring quepa en la poca altura */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root { --tc: clamp(38px, calc((100vh - 92px) / 6), 66px) !important; }
+  .footer-bar { height: 48px !important; }
+  .stats-handle { display: none !important; }
 }
