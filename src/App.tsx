@@ -946,9 +946,15 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
 // ── Pawn Overlay: avatares flotando encima de los casilleros, animados con CSS ──
 // position:fixed para evitar clipping de cualquier overflow en el árbol del DOM.
 // getBoundingClientRect() da coordenadas de viewport → left/top directos.
-function PawnOverlay({ game }: { game: GameState }) {
+function PawnOverlay({ game, overrideLoc, actingId }: {
+  game: GameState;
+  overrideLoc?: { id: string; locId: string } | null; // José saltando durante su playback
+  actingId?: string | null;                            // pawn a resaltar 1s (acción/salto)
+}) {
   const active = game.players[game.activePlayerIndex];
-  const locKey = game.players.map(p => p.currentLocation).join(',');
+  // La ubicación mostrada de José se sobreescribe con el paso actual del playback
+  const dispLoc = (p: PlayerState) => (overrideLoc && p.id === overrideLoc.id ? overrideLoc.locId : p.currentLocation);
+  const locKey = game.players.map(p => dispLoc(p)).join(',');
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
 
   useLayoutEffect(() => {
@@ -960,7 +966,7 @@ function PawnOverlay({ game }: { game: GameState }) {
 
     const next: Record<string, { x: number; y: number }> = {};
     for (const p of game.players) {
-      const tile = document.querySelector<HTMLElement>(`[data-loc="${p.currentLocation}"]`);
+      const tile = document.querySelector<HTMLElement>(`[data-loc="${dispLoc(p)}"]`);
       if (tile) {
         const r = tile.getBoundingClientRect();
         const tx = r.left + r.width / 2;
@@ -986,7 +992,7 @@ function PawnOverlay({ game }: { game: GameState }) {
         if (!pp) return null;
         const offset = (i - (count - 1) / 2) * 26;
         return (
-          <div key={p.id} className="pawn-float" style={{
+          <div key={p.id} className={'pawn-float' + (p.id === actingId ? ' pawn-acting' : '')} style={{
             left: pp.x + offset,
             top: pp.y,
             zIndex: p.id === active.id ? 22 : 20,
@@ -1113,7 +1119,7 @@ const ZONE_GRAD: Record<string, string> = {
 };
 
 // ── Board ──
-function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose, lastActionIdx, clerkFeedback }: {
+function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose, lastActionIdx, clerkFeedback, joseStep }: {
   game: GameState;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
@@ -1123,6 +1129,7 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
   onClose: () => void;
   lastActionIdx: number | null;
   clerkFeedback: string | null;
+  joseStep: (import('./engine').CpuStep & { name: string }) | null;
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
@@ -1179,10 +1186,27 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
         </div>
         <div className="board-center">
           <div className="bc-head">
-            <div className="bc-turn">Quincena {game.turn}</div>
+            <div className="bc-turn">{joseStep ? `Turno de ${joseStep.name}` : `Quincena ${game.turn}`}</div>
             <TimeRing hours={active.timeLeft} compact />
           </div>
-          {showingClerk ? (
+          {joseStep ? (
+            /* Observamos a José jugar (como en Jones): su casillero, la acción que elige y el resultado */
+            <div className="clerk-panel jose-watch">
+              <div className="clerk-header">
+                <ClerkPortrait locId={joseStep.locId} size={44} />
+                <div className="clerk-info">
+                  <div className="clerk-name">{locById(joseStep.locId).name.split('(')[0].trim()}</div>
+                  <div className="clerk-role">{joseStep.name} está aquí</div>
+                </div>
+              </div>
+              <div className="clerk-actions">
+                <div key={joseStep.locId + joseStep.label + joseStep.log} className="tile-act-chip jose-hl">
+                  <span className="tac-name">{joseStep.label}</span>
+                  <span className="tac-desc">{joseStep.log}</span>
+                </div>
+              </div>
+            </div>
+          ) : showingClerk ? (
             <div className={'clerk-panel' + (fading ? ' clerk-fading' : '')}
               onClick={e => e.stopPropagation()}>
               <div className="clerk-header">
@@ -1425,6 +1449,7 @@ function OnboardModal({ onClose, strategy }: { onClose: () => void; strategy: 'e
           ))}
         </div>
         <div className="onboard-win">Meta: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez. El camino lo decides tú.</div>
+        <div className="onboard-watch">👀 En mi turno, obsérvame jugar: verás cómo salto entre casilleros y elijo mis acciones. Aprende de mí y compárate. Usa <b>🐢 lento</b> para seguir cada jugada o <b>🐇 rápido</b> para saltarla.</div>
         <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={dismiss}>
           Entendido — empezar
         </button>
@@ -1937,7 +1962,10 @@ function App() {
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} game={game} player={game.players[game.activePlayerIndex]} />
-      <PawnOverlay game={game} />
+      <PawnOverlay game={game}
+        overrideLoc={josePlay ? { id: game.players[game.activePlayerIndex].id, locId: josePlay.steps[josePlay.idx].locId } : null}
+        actingId={josePlay ? game.players[game.activePlayerIndex].id : null}
+      />
       <div className="game-layout">
         <div className="game-main">
           <Board game={game}
@@ -1949,6 +1977,7 @@ function App() {
             onClose={closeActionsHere}
             lastActionIdx={lastActionIdx}
             clerkFeedback={clerkFeedback}
+            joseStep={josePlay ? { ...josePlay.steps[josePlay.idx], name: josePlay.name } : null}
           />
           <div className="footer-bar">
             <div className="footer-loc">

@@ -938,10 +938,21 @@ function cpuNextTarget(p: PlayerState, world: World, strategy: 'empleado'|'empre
   return { locId: 'casa', actionId: 'rest' };
 }
 
-export function cpuTurn(
+// Un paso visible del turno de José: a dónde se movió, qué acción eligió y el resultado.
+export interface CpuStep {
+  locId: string;     // casillero donde ocurrió la acción
+  moved: boolean;    // si saltó de casillero en este paso
+  label: string;     // nombre de la acción elegida (para highlight en la UI)
+  log: string;       // resultado narrado
+}
+
+// Calcula el turno completo de la IA y devuelve la SECUENCIA de pasos para reproducirla
+// visualmente (José saltando entre casilleros y eligiendo acciones, como en Jones).
+export function cpuTurnSteps(
   p: PlayerState, world: World,
   strategy: 'empleado'|'empresa', difficulty: 1|2|3
-): string[] {
+): { steps: CpuStep[]; logs: string[] } {
+  const steps: CpuStep[] = [];
   const logs: string[] = [];
   const noiseRate = difficulty === 1 ? 0.50 : difficulty === 2 ? 0.20 : 0;
   let safety = 0;
@@ -950,6 +961,7 @@ export function cpuTurn(
     const target = cpuNextTarget(p, world, strategy);
     if (!target) break;
 
+    let moved = false;
     // Move if needed
     if (target.locId !== p.currentLocation) {
       const loc = locById(target.locId);
@@ -958,11 +970,11 @@ export function cpuTurn(
         // Try casa as fallback
         const casaCost = locById('casa').tc[p.transport];
         if (p.currentLocation !== 'casa' && p.timeLeft >= casaCost) {
-          p.currentLocation = 'casa'; p.timeLeft -= casaCost;
+          p.currentLocation = 'casa'; p.timeLeft -= casaCost; moved = true;
         } else break;
       } else {
         p.currentLocation = target.locId;
-        p.timeLeft -= cost;
+        p.timeLeft -= cost; moved = true;
       }
     }
 
@@ -976,12 +988,21 @@ export function cpuTurn(
     if (!act) break;
 
     const log = act.run();
+    steps.push({ locId: p.currentLocation, moved, label: act.label, log });
     // Las acciones se narran en 2da persona (tú); para la IA atribuimos con el nombre
     logs.push(`${p.name}: ${log}`);
   }
 
   p.timeLeft = 0;
-  return logs;
+  return { steps, logs };
+}
+
+// Compatibilidad: devuelve solo los logs (turno resuelto de una vez).
+export function cpuTurn(
+  p: PlayerState, world: World,
+  strategy: 'empleado'|'empresa', difficulty: 1|2|3
+): string[] {
+  return cpuTurnSteps(p, world, strategy, difficulty).logs;
 }
 
 /* ---------- MODO LEGADO ---------- */

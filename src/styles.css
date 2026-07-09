@@ -1515,6 +1515,39 @@ input[type=text], input[type=number] {
   display: flex; flex-direction: column; gap: 3px;
   flex: 1; overflow-y: auto;
 }
+
+/* ── José jugando (observación pasiva, estilo Jones) ── */
+/* La acción que José elige se resalta exactamente 1s en cada paso */
+.jose-hl {
+  border-color: #E8A020 !important;
+  animation: joseHl 1s ease-out;
+}
+@keyframes joseHl {
+  0%   { background: rgba(232,160,32,0.42); box-shadow: 0 0 0 2px rgba(232,160,32,0.8); }
+  70%  { background: rgba(232,160,32,0.20); box-shadow: 0 0 0 2px rgba(232,160,32,0.3); }
+  100% { background: rgba(232,160,32,0.10); box-shadow: 0 0 0 0 rgba(232,160,32,0); }
+}
+.jose-hl .tac-name { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }
+.jose-hl .tac-desc { color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important; }
+
+/* Nota "observa a José" en el onboarding */
+.onboard-watch {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(232,160,32,0.10); border: 1px solid rgba(232,160,32,0.35);
+  font-size: 0.86rem; line-height: 1.4;
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* El pawn de José recibe un pulso dorado de ~1s cuando salta/actúa, para seguir su jugada */
+.pawn-acting { animation: pawnActing 1s ease-out; z-index: 30 !important; }
+@keyframes pawnActing {
+  0%   { filter: drop-shadow(0 0 14px #E8A020) drop-shadow(0 0 6px #E8A020); transform: translate(-50%, -50%) scale(1.18); }
+  60%  { filter: drop-shadow(0 0 8px #E8A020); transform: translate(-50%, -50%) scale(1.05); }
+  100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jose-hl, .pawn-acting { animation: none; }
+}
 .tile-act-chip {
   display: flex; flex-direction: column; gap: 1px;
   padding: 5px 8px; border-radius: 6px;
