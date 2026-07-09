@@ -192,7 +192,8 @@ export const cityMusic = {
   },
 
   toggle(): void {
-    if (source) { wanted = false; stopMusic(); }
+    /* Chequear AMBAS fuentes: WebAudio (source) y MP3 nativo (mp3El) */
+    if (source || (mp3El && !mp3El.paused)) { wanted = false; stopMusic(); }
     else { wanted = true; startMusic(); }
   },
 };

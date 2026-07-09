@@ -984,8 +984,8 @@ input[type=text], input[type=number] {
 /* LogBar: fix right edge when stats panel is 172px */
 #log-bar { right: 192px; }
 
-/* ── Onboarding modal ── */
-.onboard-modal { max-width: 420px; width: 94vw; }
+/* ── Onboarding modal — ancho para que los 3 goals quepan en fila horizontal ── */
+.onboard-modal { max-width: min(920px, 96vw); width: min(920px, 96vw); }
 .onboard-title {
   font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 6px;
   color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
@@ -994,10 +994,11 @@ input[type=text], input[type=number] {
   font-size: 0.82rem; text-align: center; margin-bottom: 16px;
   color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
 }
-.onboard-goals { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+/* Goals en fila horizontal: aprovecha el ancho del modal, sin scroll */
+.onboard-goals { display: flex; flex-direction: row; gap: 12px; margin-bottom: 14px; }
 .onboard-goal {
-  display: flex; gap: 12px; align-items: flex-start;
-  background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 12px;
+  flex: 1; display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px 14px;
   border: 1px solid rgba(255,255,255,0.08);
 }
 .og-num {
@@ -2030,6 +2031,7 @@ input[type=text], input[type=number] {
 /* #15 onboarding: José abre la primera quincena como sherpa */
 .onboard-jose {
   display: flex; gap: 12px; align-items: center; margin-bottom: 12px; text-align: left;
+  max-width: 600px; /* limita el ancho del bloque intro para no estirar en pantalla grande */
 }
 .onboard-jose-img {
   width: 56px; height: 56px; flex-shrink: 0;
@@ -2421,6 +2423,9 @@ input[type=text], input[type=number] {
 @media (min-width: 1025px) and (orientation: landscape) {
   /* El tablero (ring) LLENA la altura del viewport */
   :root { --tc: clamp(94px, calc((100vh - 150px) / 6), 172px) !important; }
+
+  /* NUNCA scroll vertical en desktop: el board cabe exacto en la pantalla */
+  .game-main { overflow: hidden !important; }
 
   /* Tiles: icono grande + nombre legible */
   .tile-art { width: 66px !important; height: 66px !important; }
