@@ -2406,3 +2406,70 @@ input[type=text], input[type=number] {
   .footer-bar { height: 48px !important; }
   .stats-handle { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESKTOP / PANTALLA GRANDE — TODO grande y legible a simple vista.
+   REGLA DURA (JFC): es un juego de MESA que ocupa TODA la pantalla; las letras
+   deben leerse desde lejos en un monitor externo. Nada enano. Va al final.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Palanca global: sube el tamaño raíz → todo lo que está en rem crece parejo */
+@media (min-width: 1200px) { :root { font-size: 18px; } }
+@media (min-width: 1500px) { :root { font-size: 20px; } }
+@media (min-width: 1900px) { :root { font-size: 22px; } }
+
+@media (min-width: 1025px) and (orientation: landscape) {
+  /* El tablero (ring) LLENA la altura del viewport */
+  :root { --tc: clamp(94px, calc((100vh - 150px) / 6), 172px) !important; }
+
+  /* Tiles: icono grande + nombre legible */
+  .tile-art { width: 66px !important; height: 66px !important; }
+  .tile-svg-icon { width: 42px; height: 42px; }
+  .tile-label { font-size: 1rem; padding: 2px 6px; }
+  .tile-cost { font-size: 0.95rem; }
+  .tile-you { font-size: 0.85rem; padding: 2px 8px; }
+
+  /* Centro del tablero: reloj y cabecera grandes */
+  .clock-sm { width: 78px !important; height: 78px !important; }
+  .clock-sm .clock-num { font-size: 22px; }
+  .clock-sm .clock-unit { font-size: 15px; }
+  .bc-turn { font-size: 19px; }
+  .bc-city { font-size: 2.2rem; }
+
+  /* Clerk / acciones legibles a simple vista */
+  .clerk-name { font-size: 1.15rem; }
+  .clerk-role { font-size: 0.95rem; }
+  .clerk-quip { font-size: 1.02rem; }
+  .tac-name { font-size: 1.08rem; }
+  .tac-desc { font-size: 0.98rem; }
+  .tac-cost { font-size: 0.95rem; }
+
+  /* Dashboard más ancho y con texto grande */
+  #stats-panel { width: clamp(330px, 26vw, 470px) !important; }
+  .turn-banner-text { font-size: 1.5rem; }
+  .turn-banner img, .turn-banner svg { width: 72px !important; height: 72px !important; }
+  .player-name { font-size: 1.25rem; }
+  .player-loc { font-size: 1.02rem; }
+  .res-val { font-size: 1.1rem !important; }
+  .ind-lbl-mini { font-size: 1rem; }
+  .ind-val-mini { font-size: 1rem; }
+  .ind-bar-mini { height: 10px; }
+  .win-pct-label { font-size: 1rem; }
+  .cuadrante-chip.sml { font-size: 0.95rem; }
+
+  /* Header / footer grandes */
+  .game-name { font-size: 1.2rem; }
+  .topbar-headline { font-size: 1.08rem; }
+  .footer-loc { font-size: 1.1rem; }
+  .btn-end-footer { font-size: 1.15rem; padding: 14px 28px; }
+  .btn-jose-speed { font-size: 1.02rem; padding: 12px 18px; }
+
+  /* Splash: título imponente y controles grandes */
+  .setup-card.setup-card-wide .setup-title { font-size: clamp(3rem, 5vw, 4.4rem) !important; }
+  .setup-card.setup-card-wide .setup-sub { font-size: clamp(1.1rem, 1.6vw, 1.5rem) !important; }
+  .setup-label { font-size: 1.05rem !important; }
+  .setup-opt, .setup-sel { font-size: 1.1rem !important; }
+  .tier-name { font-size: 1.1rem !important; }
+  .tier-desc, .tier-lock { font-size: 0.95rem !important; }
+  .setup-card.setup-card-wide .primary { font-size: 1.2rem !important; padding: 17px !important; }
+}
