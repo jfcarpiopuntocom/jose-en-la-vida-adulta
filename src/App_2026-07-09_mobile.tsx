@@ -619,9 +619,8 @@ function TimeRing({ hours, compact = false }: { hours: number; compact?: boolean
 
 // ── Stats Panel (right side overlay) ──
 function StatsPanel({
-  game, onEnd, onLegacy, onShowProgress, collapsed, onToggleCollapse
-}: { game: GameState; onEnd: () => void; onLegacy: () => void; onShowProgress: () => void;
-  collapsed: boolean; onToggleCollapse: () => void }) {
+  game, onEnd, onLegacy, onShowProgress
+}: { game: GameState; onEnd: () => void; onLegacy: () => void; onShowProgress: () => void }) {
   const p = game.players[game.activePlayerIndex];
   const m = metrics(p);
   const col = PLAYER_COLORS[p.colorIndex];
@@ -642,13 +641,7 @@ function StatsPanel({
   // Win progress: average of all 6 bars capped at 100%
   const winPct = Math.round(indBars.reduce((s, b) => s + Math.min(100, (b.val / b.goal) * 100), 0) / indBars.length);
   return (
-    <div id="stats-panel" className={collapsed ? 'stats-collapsed' : ''}>
-      {/* Handle: solo visible en mobile/tablet — colapsa el dashboard para que el board mande */}
-      <button className="stats-handle" onClick={onToggleCollapse}
-        title={collapsed ? 'Ver mi progreso' : 'Ocultar y ver el tablero'}>
-        <span className="stats-handle-label">{collapsed ? 'Mi progreso' : 'Ver tablero'}</span>
-        <span className="stats-handle-chevron">{collapsed ? '▲' : '▼'}</span>
-      </button>
+    <div id="stats-panel">
       <button className="turn-banner turn-banner-btn" onClick={onShowProgress} title="Ver cómo me va">
         <Portrait p={p} size={62} />
         <div className="turn-banner-right">
@@ -1003,17 +996,11 @@ function PawnOverlay({ game, overrideLoc, actingId }: {
             left: pp.x + offset,
             top: pp.y,
             zIndex: p.id === active.id ? 22 : 20,
+            filter: p.id === active.id
+              ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
+              : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
           }}>
-            {/* key por ubicación: remonta y dispara el rebote "tip-tap" en cada salto de casillero */}
-            <div className="pawn-hop" key={dispLoc(p)}>
-              <div className="pawn-inner" style={{
-                filter: p.id === active.id
-                  ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
-                  : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-              }}>
-                <Portrait p={p} size={44} />
-              </div>
-            </div>
+            <Portrait p={p} size={44} />
           </div>
         );
       })}
@@ -1171,7 +1158,6 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
     return (
       <div
         data-loc={loc.id}
-        title={loc.name} /* tooltip PC: nombre COMPLETO del lugar en mouseover */
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
         onClick={() => {
           if (here) { sel ? onClose() : onReopen(); }
@@ -1643,8 +1629,6 @@ function App() {
   const joseFinal = useRef<GameState | null>(null);
   // Velocidad del turno de José: lento (ves su jugada y aprendes) o rápido (saltas)
   const [slowJose, setSlowJose] = useState(true);
-  // Dashboard colapsado por defecto (relevante solo en mobile/tablet; en desktop el handle se oculta)
-  const [statsCollapsed, setStatsCollapsed] = useState(true);
   const [showOnboard, setShowOnboard] = useState(() =>
     localStorage.getItem(ONBOARD_KEY) !== '1'
   );
@@ -2008,8 +1992,7 @@ function App() {
             </button>
           </div>
         </div>
-        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)}
-          collapsed={statsCollapsed} onToggleCollapse={() => setStatsCollapsed(c => !c)} />
+        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)} />
       </div>
       {inspecting && inspecting !== game.players[game.activePlayerIndex].currentLocation && (
         <NodeInspect locId={inspecting} game={game}

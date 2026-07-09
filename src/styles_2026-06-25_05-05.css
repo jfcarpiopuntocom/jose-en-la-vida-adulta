@@ -414,7 +414,6 @@ h1,h2,h3,p,span,div,button,label,li,a {
   border: 2px solid rgba(232,160,32,0.35); border-radius: 14px;
   padding: 22px 20px; max-width: 480px; width: 100%;
   box-shadow: 0 12px 60px rgba(0,0,0,0.7);
-  max-height: 90vh; /* fallback para navegadores sin dvh (iOS <15.4) */
   max-height: 90dvh; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -433,39 +432,20 @@ h1,h2,h3,p,span,div,button,label,li,a {
   position: fixed; inset: 0; z-index: 150;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 20px;
-  padding: 2.2vh 2vw; overflow: hidden;
-  /* Superficie inmersiva: la pantalla ENTERA es el juego, no un fondo vacío con tarjeta */
-  background:
-    radial-gradient(1200px 700px at 50% -10%, rgba(232,160,32,0.12), transparent 60%),
-    radial-gradient(900px 600px at 90% 110%, rgba(232,96,64,0.10), transparent 60%),
-    linear-gradient(160deg, #0b1220, #070b16);
+  padding: 16px; overflow: hidden;
 }
-/* Consola: en desktop OCUPA CASI TODA LA PANTALLA (regla dura: se ve como tablero a pantalla completa) */
-.setup-card.setup-card-wide {
-  max-width: min(1320px, 96vw); width: 96vw;
-  min-height: 92vh; max-height: 96vh;
-  padding: clamp(24px, 3vh, 44px) clamp(28px, 4vw, 64px);
-  overflow-y: auto;
-}
-.setup-grid { display: grid; grid-template-columns: 1fr; gap: 0 40px; flex: 1; align-content: center; }
+/* Consola ancha que aprovecha el espacio lateral y cabe sin scroll */
+.setup-card.setup-card-wide { max-width: 980px; padding: 28px 48px; }
+.setup-grid { display: grid; grid-template-columns: 1fr; gap: 0 32px; }
 .setup-col { min-width: 0; }
 @media (min-width: 760px) {
   .setup-grid { grid-template-columns: 1fr 1fr; }
-  /* Splash grande: presencia tipográfica para llenar la pantalla con estilo */
-  .setup-card.setup-card-wide .setup-title { font-size: clamp(2rem, 4vw, 3.2rem); margin-bottom: 8px; }
-  .setup-card.setup-card-wide .setup-sub { font-size: clamp(0.95rem, 1.4vw, 1.2rem); margin-bottom: 22px; }
-  .setup-card.setup-card-wide .jose-hero-img { width: 92px; height: 92px; }
-  .setup-card.setup-card-wide .jose-hero-name { font-size: 1.15rem; }
-  .setup-card.setup-card-wide .jose-hero-quip { font-size: 1rem; }
-  .setup-card.setup-card-wide .primary { padding: 15px; font-size: 1.05rem; }
 }
 @media (max-width: 759px) {
   .setup-screen { justify-content: flex-start; overflow-y: auto; padding: 18px 14px; }
-  .setup-card.setup-card-wide { min-height: auto; width: 100%; }
 }
 .setup-card { margin: auto; }
 .setup-card {
-  display: flex; flex-direction: column;
   background: rgba(8,14,30,0.96); backdrop-filter: blur(18px);
   border: 1px solid var(--line); border-radius: 16px;
   padding: 28px 24px; max-width: 440px; width: 100%;
@@ -764,7 +744,7 @@ input[type=text], input[type=number] {
     width: 36px !important; height: 36px !important;
     min-width: 36px; font-size: 1rem;
   }
-  .topbar-pulse { font-size: 0.68rem !important; padding: 2px 6px !important; }
+  .econ-pill { font-size: 0.7rem !important; padding: 3px 7px !important; }
 
   /* Layout: column con la mano apuntando arriba (board) y la mano operando abajo (actions) */
   .game-layout { flex-direction: column; top: 44px; }
@@ -937,28 +917,12 @@ input[type=text], input[type=number] {
   .tile-label { font-size: 0.6rem; -webkit-line-clamp: 2; }
   .tile-icon { font-size: 1.4rem; }
   .game-name { font-size: 0.72rem; }
-  .topbar-pulse { display: none; }
+  .econ-pill { display: none; }
 }
 
-/* Landscape on narrow phones (≤900px): sidebar derecho COMPACTO, board protagonista */
+/* Landscape on narrow phones (≤900px): keep right-sidebar layout */
 @media (max-width: 900px) and (orientation: landscape) {
   .rotate-overlay { display: none; }
-  .game-layout { flex-direction: row !important; }
-  .game-main { flex: 1 1 auto !important; min-height: 0 !important; overflow: hidden !important; }
-  #stats-panel {
-    width: clamp(190px, 30vw, 250px) !important; flex: 0 0 auto !important;
-    overflow-y: auto !important; max-height: 100% !important;
-    padding: 6px 8px !important; gap: 5px !important;
-  }
-  .turn-banner img, .turn-banner svg { width: 40px !important; height: 40px !important; }
-  .turn-banner-text { font-size: 0.9rem !important; }
-  .turn-banner-hint { font-size: 0.66rem !important; }
-  .res-val { font-size: 0.78rem !important; }
-  .ind-lbl-mini { font-size: 0.68rem !important; }
-  .ind-val-mini { font-size: 0.68rem !important; }
-  /* Reloj y footer más chicos para que el board respire */
-  .footer-bar { height: 84px !important; }
-  .time-section .clock-face { width: 64px !important; height: 64px !important; }
 }
 
 /* ── Inline indicators inside StatsPanel ── */
@@ -967,12 +931,12 @@ input[type=text], input[type=number] {
   display: flex; align-items: center; gap: 6px;
 }
 .ind-lbl-mini {
-  flex: 1; min-width: 0;
-  font-size: 0.74rem; font-weight: 700;
+  flex: 0 0 auto; width: 72px;
+  font-size: 0.78rem; font-weight: 700;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ind-bar-mini { flex: 0 0 50px; height: 7px; background: #1a2540; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+.ind-bar-mini { flex: 1; height: 7px; background: #2a3550; border-radius: 4px; overflow: hidden; }
 .ind-val-mini {
   flex: 0 0 auto; font-size: 0.78rem; font-weight: 800; text-align: right;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
@@ -985,8 +949,8 @@ input[type=text], input[type=number] {
 /* LogBar: fix right edge when stats panel is 172px */
 #log-bar { right: 192px; }
 
-/* ── Onboarding modal — ancho para que los 3 goals quepan en fila horizontal ── */
-.onboard-modal { max-width: min(920px, 96vw); width: min(920px, 96vw); }
+/* ── Onboarding modal ── */
+.onboard-modal { max-width: 420px; width: 94vw; }
 .onboard-title {
   font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 6px;
   color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
@@ -995,15 +959,10 @@ input[type=text], input[type=number] {
   font-size: 0.82rem; text-align: center; margin-bottom: 16px;
   color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
 }
-/* Goals en fila horizontal: aprovecha el ancho del modal, sin scroll */
-.onboard-goals { display: flex; flex-direction: row; gap: 12px; margin-bottom: 14px; }
-/* En portrait angosto los 3 goals no caben en fila: vuelven a columna */
-@media (orientation: portrait) and (max-width: 760px) {
-  .onboard-goals { flex-direction: column; gap: 8px; }
-}
+.onboard-goals { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 .onboard-goal {
-  flex: 1; display: flex; gap: 10px; align-items: flex-start;
-  background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px 14px;
+  display: flex; gap: 12px; align-items: flex-start;
+  background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 12px;
   border: 1px solid rgba(255,255,255,0.08);
 }
 .og-num {
@@ -1199,14 +1158,10 @@ input[type=text], input[type=number] {
   .stress-warning { animation: none; }
 }
 
-/* ── Topbar headline: resumen narrado situacional vivo ── */
-.topbar-headline {
-  flex: 1; text-align: center;
-  font-size: 0.82rem; font-weight: 700; font-style: italic;
-  letter-spacing: 0.2px;
-  padding: 0 12px;
-  color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* ── Economy indicator pill in TopBar ── */
+.econ-pill {
+  padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700;
+  margin: 0 8px;
 }
 .econ-good {
   background: rgba(40,236,170,0.15); border: 1px solid #28ECAA;
@@ -1313,29 +1268,6 @@ input[type=text], input[type=number] {
   color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important;
 }
 
-/* Reloj compacto dentro del board (mitad de tamaño, tipografía Verdana legible) */
-.clock-sm { width: 50px; height: 50px; margin: 0; }
-.clock-sm .clock-days { padding-bottom: 2px; }
-.clock-sm .clock-num {
-  font-family: Verdana, Geneva, sans-serif; font-size: 13px; font-weight: 700;
-}
-.clock-sm .clock-unit {
-  font-family: Verdana, Geneva, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .04em;
-}
-
-/* Cabecera del board-center: Quincena + reloj pequeño, arriba */
-.bc-head {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  margin-bottom: 2px;
-}
-
-/* Fade de las acciones tras ~20s visibles */
-.clerk-fading { animation: clerkFade .7s ease forwards; }
-@keyframes clerkFade { to { opacity: 0; transform: translateY(-5px); } }
-@media (prefers-reduced-motion: reduce) {
-  .clerk-fading { animation: none; opacity: 0; }
-}
-
 /* ── Compact action cards ── */
 
 /* ══════════════════════════════════════════
@@ -1397,8 +1329,8 @@ input[type=text], input[type=number] {
 /* ── Center panel (log + city name) ── */
 .board-center {
   flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: flex-start;
-  padding: 8px 10px; gap: 4px;
+  align-items: center; justify-content: center;
+  padding: 10px; gap: 4px;
   position: relative; margin: 6px;
   border: 3px dashed rgba(200,160,64,0.45);
   border-radius: 18px;
@@ -1420,9 +1352,8 @@ input[type=text], input[type=number] {
   color: var(--gold) !important; -webkit-text-fill-color: var(--gold) !important;
 }
 .bc-turn {
-  font-family: Verdana, Geneva, sans-serif; font-size: 13px; font-weight: 700;
-  letter-spacing: .03em;
-  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  font-size: 0.82rem;
+  color: var(--soft) !important; -webkit-text-fill-color: var(--soft) !important;
 }
 /* Dados de suerte — par de dados en el centro del tablero */
 .bc-suerte {
@@ -1455,22 +1386,7 @@ input[type=text], input[type=number] {
 .pawn-float {
   position: absolute;
   transform: translate(-50%, -50%);
-  /* Viaje entre casillas: rápido y con rebote elástico → sensación "tip-tap" de tablero */
-  transition: left 0.4s cubic-bezier(0.34,1.56,0.64,1), top 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-/* Rebote vertical al llegar a una casilla (se remonta con key=ubicación) */
-.pawn-hop { animation: pawnHop 0.42s cubic-bezier(0.3,0.7,0.4,1.4); transform-origin: 50% 100%; }
-@keyframes pawnHop {
-  0%   { transform: translateY(0) scaleY(1); }
-  28%  { transform: translateY(-15px) scaleY(1.06); }
-  55%  { transform: translateY(0) scaleY(0.9); }   /* aterriza: squash */
-  72%  { transform: translateY(-5px) scaleY(1.02); }
-  100% { transform: translateY(0) scaleY(1); }
-}
-.pawn-inner { display: block; }
-@media (prefers-reduced-motion: reduce) {
-  .pawn-float { transition: none; }
-  .pawn-hop { animation: none; }
+  transition: left 0.45s cubic-bezier(0.4,0,0.2,1), top 0.45s cubic-bezier(0.4,0,0.2,1);
 }
 .bc-log {
   width: 100%; max-height: 72px; overflow-y: auto;
@@ -1521,72 +1437,19 @@ input[type=text], input[type=number] {
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
 }
 
-/* ── Clerk panel: acciones dentro del board-center ── */
-.clerk-panel {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 6px 10px;
-  width: 100%; flex: 1 1 auto; min-height: 0;
-  overflow-y: auto;
-  z-index: 10;
-}
-.clerk-header {
-  display: flex; align-items: center; gap: 8px;
-}
-.clerk-portrait {
-  flex-shrink: 0;
-  border: 2px solid var(--gold);
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-}
-.clerk-name {
-  font-size: 0.82rem; font-weight: 800;
-  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
-}
-.clerk-role {
-  font-size: 0.68rem; font-weight: 600;
-  color: #CCCCCC !important; -webkit-text-fill-color: #CCCCCC !important;
-}
-.clerk-quip {
-  font-size: 0.72rem; font-style: italic; line-height: 1.25;
-  color: var(--gold) !important; -webkit-text-fill-color: var(--gold) !important;
-  padding: 3px 0;
-}
-.clerk-actions {
+/* ── Actions popover: se abre sobre el tile cuando estás ahí ── */
+.tile-actions-pop {
+  position: absolute; left: 50%; top: 100%;
+  transform: translateX(-50%);
+  z-index: 80;
   display: flex; flex-direction: column; gap: 3px;
-  flex: 1; overflow-y: auto;
-}
-
-/* ── José jugando (observación pasiva, estilo Jones) ── */
-/* La acción que José elige se resalta exactamente 1s en cada paso */
-.jose-hl {
-  border-color: #E8A020 !important;
-  animation: joseHl 1s ease-out;
-}
-@keyframes joseHl {
-  0%   { background: rgba(232,160,32,0.42); box-shadow: 0 0 0 2px rgba(232,160,32,0.8); }
-  70%  { background: rgba(232,160,32,0.20); box-shadow: 0 0 0 2px rgba(232,160,32,0.3); }
-  100% { background: rgba(232,160,32,0.10); box-shadow: 0 0 0 0 rgba(232,160,32,0); }
-}
-.jose-hl .tac-name { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }
-.jose-hl .tac-desc { color: #E8A020 !important; -webkit-text-fill-color: #E8A020 !important; }
-
-/* Nota "observa a José" en el onboarding */
-.onboard-watch {
-  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
-  background: rgba(232,160,32,0.10); border: 1px solid rgba(232,160,32,0.35);
-  font-size: 0.86rem; line-height: 1.4;
-  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
-}
-
-/* El pawn de José recibe un pulso dorado de ~1s cuando salta/actúa, para seguir su jugada */
-.pawn-acting { animation: pawnActing 1s ease-out; z-index: 30 !important; }
-@keyframes pawnActing {
-  0%   { filter: drop-shadow(0 0 14px #E8A020) drop-shadow(0 0 6px #E8A020); transform: translate(-50%, -50%) scale(1.18); }
-  60%  { filter: drop-shadow(0 0 8px #E8A020); transform: translate(-50%, -50%) scale(1.05); }
-  100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); transform: translate(-50%, -50%) scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .jose-hl, .pawn-acting { animation: none; }
+  background: rgba(8,14,30,0.96);
+  border: 1.5px solid var(--gold);
+  border-radius: 10px;
+  padding: 6px 5px;
+  min-width: 140px; max-width: 220px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.7);
+  backdrop-filter: blur(12px);
 }
 .tile-act-chip {
   display: flex; flex-direction: column; gap: 1px;
@@ -1624,15 +1487,11 @@ input[type=text], input[type=number] {
 }
 .tile-icon { font-size: 1.7rem; line-height: 1; }
 .tile-label {
-  position: relative; z-index: 30;
-  font-size: 0.62rem; font-weight: 800; text-align: center;
+  font-size: 0.62rem; font-weight: 700; text-align: center;
   line-height: 1.1; max-width: 100%; width: 100%;
   overflow: hidden; text-overflow: ellipsis;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  padding: 1px 3px; border-radius: 4px;
-  background: rgba(8,12,24,0.72);
   color: var(--white) !important; -webkit-text-fill-color: var(--white) !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
 .tile-pawns {
   display: flex; gap: 1px; flex-wrap: wrap; justify-content: center;
@@ -1758,8 +1617,6 @@ input[type=text], input[type=number] {
   display: flex; flex-direction: column; align-items: stretch; gap: 6px;
   overflow-y: auto;
 }
-/* Handle del dashboard: oculto en desktop; se muestra en mobile/tablet (bottom-sheet) */
-.stats-handle { display: none; }
 
 
 /* ── Turn Banner — quien juega ahora ── */
@@ -1837,10 +1694,10 @@ input[type=text], input[type=number] {
 /* ── Footer bar: clock + actions + end button ── */
 .footer-bar {
   display: flex; gap: 8px; align-items: center; justify-content: flex-start;
-  padding: 8px 10px; margin-top: auto;
+  padding: 6px 8px; margin-top: auto;
   background: linear-gradient(135deg, rgba(17,30,56,0.8), rgba(11,18,37,0.9));
   border-top: 2px solid rgba(196,158,72,0.2);
-  height: 64px; flex-shrink: 0;
+  height: 116px; flex-shrink: 0;
 }
 .time-section {
   flex-shrink: 0;
@@ -1871,16 +1728,6 @@ input[type=text], input[type=number] {
   transition: all .2s;
   min-height: 40px;
 }
-.btn-jose-speed {
-  flex-shrink: 0;
-  padding: 10px 14px; border-radius: 10px;
-  font-weight: 800; font-size: 0.82rem; cursor: pointer;
-  background: rgba(255,255,255,0.06);
-  border: 2px solid rgba(232,160,32,0.45);
-  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
-  transition: all .2s; min-height: 40px;
-}
-.btn-jose-speed:hover { border-color: var(--gold); background: rgba(232,160,32,0.18); }
 .btn-end-footer:hover {
   background: linear-gradient(135deg, #F5C24A, var(--gold));
   box-shadow: 0 4px 16px rgba(200,160,64,0.4);
@@ -1944,13 +1791,13 @@ input[type=text], input[type=number] {
 }
 /* ── Anuncio transitorio sobre el tablero (se desvanece solo) ── */
 .board-toast {
-  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  z-index: 220; max-width: 300px; width: min(300px, 38vw);
-  padding: 11px 16px; border-radius: 12px; cursor: pointer;
+  position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  z-index: 220; max-width: 460px; width: calc(100% - 48px);
+  padding: 16px 22px; border-radius: 14px; cursor: pointer;
   background: linear-gradient(150deg, rgba(20,30,48,0.97), rgba(8,14,30,0.97));
   border: 2px solid var(--gold);
   box-shadow: 0 14px 50px rgba(0,0,0,0.6), 0 0 26px rgba(232,160,32,0.25);
-  text-align: center; font-size: 0.9rem; font-weight: 700; line-height: 1.35;
+  text-align: center; font-size: 1.02rem; font-weight: 700; line-height: 1.4;
   color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
   animation: toastIn .22s ease-out, toastOut .4s ease-in 2.4s forwards;
 }
@@ -2036,7 +1883,6 @@ input[type=text], input[type=number] {
 /* #15 onboarding: José abre la primera quincena como sherpa */
 .onboard-jose {
   display: flex; gap: 12px; align-items: center; margin-bottom: 12px; text-align: left;
-  max-width: 600px; /* limita el ancho del bloque intro para no estirar en pantalla grande */
 }
 .onboard-jose-img {
   width: 56px; height: 56px; flex-shrink: 0;
@@ -2244,16 +2090,14 @@ input[type=text], input[type=number] {
    ═══════════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) and (orientation: portrait),
        (max-height: 500px) and (max-width: 420px) {
-  /* Layout principal en columna: BOARD protagonista, dashboard compacto abajo */
-  .game-layout { flex-direction: column !important; top: 44px !important; overflow: hidden !important; }
+  /* Layout principal en columna */
+  .game-layout { flex-direction: column !important; top: 44px !important; }
   .game-main {
     flex: 1 1 auto !important; min-height: 0 !important;
     padding: 8px 8px 6px !important; gap: 8px !important;
     display: flex !important; flex-direction: column !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
   }
-  /* El board manda: ocupa el espacio disponible del game-main */
-  .game-main .board { flex: 1 1 auto !important; min-height: 0 !important; }
 
   /* Top bar */
   #top-bar { height: 44px !important; padding: 0 10px !important; gap: 6px !important; }
@@ -2263,7 +2107,7 @@ input[type=text], input[type=number] {
     width: 36px !important; height: 36px !important;
     min-width: 36px !important; font-size: 1rem;
   }
-  .topbar-pulse { font-size: 0.68rem !important; padding: 2px 6px !important; }
+  .econ-pill { font-size: 0.7rem !important; padding: 3px 7px !important; }
 
   /* BOARD: grilla unificada 3 columnas, sin ring */
   .board {
@@ -2302,12 +2146,10 @@ input[type=text], input[type=number] {
   }
   .tile-cost { font-size: 0.62rem !important; font-weight: 800; }
 
-  /* STATS PANEL: strip compacto abajo, con TOPE de altura y scroll interno.
-     Nunca debe comerse la pantalla — el board es el protagonista. */
+  /* STATS PANEL en strip horizontal abajo del board */
   #stats-panel {
     width: 100% !important; max-width: none !important;
     flex: 0 0 auto !important; min-height: 0 !important;
-    max-height: 40vh !important; overflow-y: auto !important;
     border-left: none !important; border-top: 2px solid var(--gold) !important;
     padding: 8px 10px !important; gap: 6px !important;
     border-radius: 14px;
@@ -2343,155 +2185,4 @@ input[type=text], input[type=number] {
     font-size: 0.8rem;
     background: rgba(20,28,48,0.7);
   }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   PORTRAIT phone + tablet (≤1024): TABLERO EN RING (estilo Jones, no grilla),
-   board protagonista a pantalla completa + dashboard colapsable (bottom).
-   Bloque autoritativo: va al final para ganarle a los overrides mobile previos.
-   NO toca desktop ni landscape (que están LOCKED).
-   ═══════════════════════════════════════════════════════════════════════ */
-@media (orientation: portrait) and (max-width: 1024px) {
-  /* --tc que hace caber el ring (6 filas) en la altura disponible */
-  :root { --tc: clamp(50px, calc((100vh - 210px) / 6), 88px) !important; }
-
-  .game-layout { flex-direction: column !important; top: 44px !important; overflow: hidden !important; }
-  .game-main {
-    flex: 1 1 auto !important; min-height: 0 !important;
-    display: flex !important; flex-direction: column !important;
-    padding: 8px 8px 6px !important; gap: 6px !important;
-    overflow: hidden !important;
-  }
-
-  /* RING board — revierte cualquier grilla de los bloques mobile anteriores */
-  .game-main .board {
-    flex: 1 1 auto !important; min-height: 0 !important; overflow: auto !important;
-    display: flex !important; flex-direction: column !important; width: 100% !important;
-  }
-  .board-edge { display: flex !important; }
-  .board-top, .board-bottom { flex-direction: row !important; height: var(--tc) !important; flex: 0 0 auto !important; }
-  .board-body { display: flex !important; flex-direction: row !important; height: calc(4 * var(--tc)) !important; flex: 0 0 auto !important; }
-  .board-left, .board-right { flex: 0 0 var(--tc) !important; flex-direction: column !important; }
-  .board-top .tile, .board-bottom .tile { flex: 1 !important; height: 100% !important; width: auto !important; }
-  .board-left .tile, .board-right .tile { flex: 1 !important; width: 100% !important; height: auto !important; }
-  .board-center {
-    grid-column: auto !important; flex: 1 1 auto !important; margin: 4px !important; min-width: 0 !important;
-    display: flex !important; flex-direction: column !important;
-    align-items: center !important; justify-content: flex-start !important; flex-wrap: nowrap !important;
-  }
-
-  /* Dashboard colapsable inline (abajo): colapsado = barra fina; abierto = scroll interno */
-  #stats-panel {
-    width: 100% !important; max-width: none !important; flex: 0 0 auto !important;
-    border-left: none !important; border-top: 2px solid var(--gold) !important;
-    border-radius: 14px 14px 0 0 !important; padding: 0 10px 8px !important; gap: 6px !important;
-    max-height: 48vh !important; overflow-y: auto !important;
-    background: linear-gradient(170deg, rgba(20,28,48,0.98), rgba(10,16,32,0.98)) !important;
-  }
-  #stats-panel.stats-collapsed { max-height: 50px !important; overflow: hidden !important; padding-bottom: 0 !important; }
-  .stats-handle {
-    display: flex !important; align-items: center; justify-content: center; gap: 8px;
-    position: sticky; top: 0; z-index: 2;
-    width: 100%; height: 44px; margin: 0; background: transparent; border: none; cursor: pointer;
-  }
-  .stats-handle::before {
-    content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
-    width: 40px; height: 4px; border-radius: 2px; background: rgba(232,160,32,0.5);
-  }
-  .stats-handle-label { font-size: 0.92rem; font-weight: 800; color:#E8A020 !important; -webkit-text-fill-color:#E8A020 !important; }
-  .stats-handle-chevron { font-size: 0.8rem; color:#E8A020 !important; -webkit-text-fill-color:#E8A020 !important; }
-
-  .footer-bar { height: 54px !important; flex-shrink: 0 !important; }
-  /* Tiles con altura decente en ring: aprovecha el icono y el nombre */
-  .tile-art { width: 30px !important; height: 30px !important; }
-  .tile-svg-icon { width: 20px !important; height: 20px !important; }
-}
-
-/* Landscape corto (teléfonos apaisados): que el ring quepa en la poca altura */
-@media (orientation: landscape) and (max-height: 500px) {
-  :root { --tc: clamp(38px, calc((100vh - 92px) / 6), 66px) !important; }
-  .footer-bar { height: 48px !important; }
-  .stats-handle { display: none !important; }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   DESKTOP / PANTALLA GRANDE — TODO grande y legible a simple vista.
-   REGLA DURA (JFC): es un juego de MESA que ocupa TODA la pantalla; las letras
-   deben leerse desde lejos en un monitor externo. Nada enano. Va al final.
-   ═══════════════════════════════════════════════════════════════════════ */
-
-/* Palanca global: sube el tamaño raíz → todo lo que está en rem crece parejo */
-@media (min-width: 1200px) { :root { font-size: 18px; } }
-@media (min-width: 1500px) { :root { font-size: 20px; } }
-@media (min-width: 1900px) { :root { font-size: 22px; } }
-
-@media (min-width: 1025px) and (orientation: landscape) {
-  /* El tablero (ring) LLENA la altura del viewport */
-  /* Min 78px (no 94): en laptops cortos (768px alto) 94px forzaba overflow → scroll.
-     El calc con vh garantiza que 6 filas SIEMPRE quepan en el alto visible. */
-  :root { --tc: clamp(78px, calc((100vh - 150px) / 6), 172px) !important; }
-
-  /* NUNCA scroll vertical en desktop: el board cabe exacto en la pantalla */
-  .game-main { overflow: hidden !important; }
-
-  /* Tiles: icono grande + nombre COMPLETO en 2 líneas (nunca cortado feo) */
-  .tile-art { width: 66px !important; height: 66px !important; }
-  .tile-svg-icon { width: 42px; height: 42px; }
-  .tile-label {
-    font-size: 1rem; padding: 2px 6px;
-    white-space: normal; line-height: 1.15;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  }
-  .tile-cost { font-size: 0.95rem; }
-  .tile-you { font-size: 0.85rem; padding: 2px 8px; }
-  .tile { gap: 4px; }
-
-  /* Centro del tablero: reloj y cabecera grandes */
-  .clock-sm { width: 78px !important; height: 78px !important; }
-  .clock-sm .clock-num { font-size: 22px; }
-  .clock-sm .clock-unit { font-size: 15px; }
-  .bc-turn { font-size: 19px; }
-  .bc-city { font-size: 2.2rem; }
-
-  /* Clerk / acciones legibles a simple vista */
-  .clerk-name { font-size: 1.15rem; }
-  .clerk-role { font-size: 0.95rem; }
-  .clerk-quip { font-size: 1.02rem; }
-  .tac-name { font-size: 1.08rem; }
-  .tac-desc { font-size: 0.98rem; }
-  .tac-cost { font-size: 0.95rem; }
-
-  /* Dashboard: ancho, aireado, NOMBRES COMPLETOS (cero truncado, cero apachurre) */
-  #stats-panel { width: clamp(340px, 27vw, 490px) !important; padding: 12px 14px !important; gap: 9px !important; }
-  .turn-banner-text { font-size: 1.5rem; }
-  .turn-banner img, .turn-banner svg { width: 72px !important; height: 72px !important; }
-  .player-name { font-size: 1.25rem; }
-  .player-loc { font-size: 1.02rem; white-space: normal; }
-  .resources { gap: 6px; }
-  .resource { font-size: 1.05rem; gap: 8px; }
-  .res-icon { font-size: 1.15rem; width: 24px; }
-  .res-val { font-size: 1.1rem !important; }
-  .ind-inline { gap: 7px; }
-  .ind-row-mini { gap: 9px; padding: 1px 0; }
-  .ind-lbl-mini { font-size: 1rem; white-space: normal; line-height: 1.2; overflow: visible; text-overflow: clip; }
-  .ind-val-mini { font-size: 1rem; }
-  .ind-bar-mini { height: 10px; flex: 0 0 76px; }
-  .win-pct-label { font-size: 1rem; }
-  .cuadrante-chip.sml { font-size: 0.95rem; }
-
-  /* Header / footer grandes */
-  .game-name { font-size: 1.2rem; }
-  .topbar-headline { font-size: 1.08rem; }
-  .footer-loc { font-size: 1.1rem; }
-  .btn-end-footer { font-size: 1.15rem; padding: 14px 28px; }
-  .btn-jose-speed { font-size: 1.02rem; padding: 12px 18px; }
-
-  /* Splash: título imponente y controles grandes */
-  .setup-card.setup-card-wide .setup-title { font-size: clamp(3rem, 5vw, 4.4rem) !important; }
-  .setup-card.setup-card-wide .setup-sub { font-size: clamp(1.1rem, 1.6vw, 1.5rem) !important; }
-  .setup-label { font-size: 1.05rem !important; }
-  .setup-opt, .setup-sel { font-size: 1.1rem !important; }
-  .tier-name { font-size: 1.1rem !important; }
-  .tier-desc, .tier-lock { font-size: 0.95rem !important; }
-  .setup-card.setup-card-wide .primary { font-size: 1.2rem !important; padding: 17px !important; }
 }

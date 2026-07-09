@@ -6,13 +6,12 @@ import {
   patrimonio, expensesPerTurn, passiveIncome, cuadrante, emergencyFundMonths,
   CUADRANTE_LABEL, CUADRANTE_ICON, TIER_GOALS,
   HOURS_PER_TURN, DEFAULT_GOALS, PLAYER_COLORS, careerTitle, generateBackstory,
-  joseQuip, COLLECTIBLE_LORE, cpuTurnSteps,
+  joseQuip, COLLECTIBLE_LORE,
 } from './engine';
 import { GameTier } from './types';
 import { LOCATIONS, PATH_ORDER, locById, barrioById } from './data';
 import { saveLocal, loadLocal, hasLocalSave, clearLocal, publishToNostr, publishStory } from './nostr';
 import { cityMusic } from './citymusic';
-import { soundscape } from './soundscape';
 
 // Polyfill: structuredClone not available on Chrome < 98 / iOS < 15.4 (phones up to ~2021)
 const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -103,29 +102,16 @@ function winProgress(p: PlayerState, goals: Goals): number {
 
 // #6 Quip contextual: José mira el área más descuidada del jugador y la nombra sin sermonear
 function joseAdvice(human: PlayerState, goals: Goals): string {
-  const isEmpresa = (human as any).aiStrategy === 'empresa';
   const m = metrics(human);
   const em = emergencyFundMonths(human);
   const piPct = Math.min(100, (passiveIncome(human) / Math.max(expensesPerTurn(human), 1)) * 100);
   const areas: { pct: number; tip: string }[] = [
-    { pct: (m.bienestar / goals.bienestar) * 100,
-      tip: '¿cuándo fue la última vez que descansaste sin culpa? El cuerpo también cobra.' },
-    { pct: (m.conocimientos / goals.conocimientos) * 100,
-      tip: isEmpresa
-        ? 'el conocimiento sube la rentabilidad de tu negocio. ¿Cuándo estudias algo útil para él?'
-        : 'lo que aprendes hoy te abre puertas que ni ves todavía. ¿Un curso?' },
-    { pct: (m.impacto / goals.impacto) * 100,
-      tip: 'nadie llega lejos solo. ¿A quién no has cuidado últimamente?' },
-    { pct: (human.impact.comunitario / goals.comunitario) * 100,
-      tip: 'lo que das a tu comunidad es lo único que de verdad queda. Piénsalo.' },
-    { pct: (em / goals.emergencyMonths) * 100,
-      tip: isEmpresa
-        ? 'un negocio sin colchón quiebra en el primer mal mes. ¿Ya tienes el fondo de emergencia?'
-        : 'un colchón para emergencias es dormir tranquilo. ¿Ya empezaste el tuyo?' },
-    { pct: piPct,
-      tip: isEmpresa
-        ? 'tu negocio debe pagarte mientras duermes, no solo cuando trabajas. ¿Ya genera pasivos?'
-        : 'que el dinero trabaje por ti, no al revés. ¿Dónde está tu primer ingreso pasivo?' },
+    { pct: (m.bienestar / goals.bienestar) * 100,       tip: '¿cuándo fue la última vez que descansaste sin culpa? El cuerpo también cobra.' },
+    { pct: (m.conocimientos / goals.conocimientos) * 100, tip: 'lo que aprendes hoy te abre puertas que ni ves todavía. ¿Un curso?' },
+    { pct: (m.impacto / goals.impacto) * 100,           tip: 'nadie llega lejos solo. ¿A quién no has cuidado últimamente?' },
+    { pct: (human.impact.comunitario / goals.comunitario) * 100, tip: 'lo que das a tu comunidad es lo único que de verdad queda. Piénsalo.' },
+    { pct: (em / goals.emergencyMonths) * 100,          tip: 'un colchón para emergencias es dormir tranquilo. ¿Ya empezaste el tuyo?' },
+    { pct: piPct,                                        tip: 'que el dinero trabaje por ti, no al revés. ¿Dónde está tu primer ingreso pasivo?' },
   ];
   const weak = areas.reduce((a, b) => (b.pct < a.pct ? b : a));
   return weak.tip;
@@ -324,42 +310,23 @@ function narrateHeadline(p: PlayerState, game: GameState): string {
   const m = metrics(p);
   const g = game.goals;
   const pi = passiveIncome(p), exp = expensesPerTurn(p);
-  const isHuman = !p.isAI;
-  const areas: { r: number; su: string; tu: string }[] = [
-    { r: m.bienestar / g.bienestar,                         su: 'su bienestar',          tu: 'tu bienestar' },
-    { r: m.conocimientos / g.conocimientos,                 su: 'sus conocimientos',     tu: 'tus conocimientos' },
-    { r: m.impacto / g.impacto,                             su: 'su impacto',            tu: 'tu impacto' },
-    { r: p.impact.comunitario / Math.max(g.comunitario, 1), su: 'su legado comunitario', tu: 'tu legado comunitario' },
-    { r: emergencyFundMonths(p) / g.emergencyMonths,        su: 'su fondo de emergencia',tu: 'tu fondo de emergencia' },
-    { r: Math.min(1, pi / Math.max(exp, 1)),                su: 'sus ingresos pasivos',  tu: 'tus ingresos pasivos' },
+  const areas: { r: number; name: string }[] = [
+    { r: m.bienestar / g.bienestar, name: 'su bienestar' },
+    { r: m.conocimientos / g.conocimientos, name: 'sus conocimientos' },
+    { r: m.impacto / g.impacto, name: 'su impacto' },
+    { r: p.impact.comunitario / g.comunitario, name: 'su legado en la comunidad' },
+    { r: emergencyFundMonths(p) / g.emergencyMonths, name: 'su fondo de emergencia' },
+    { r: Math.min(1, pi / Math.max(exp, 1)), name: 'sus ingresos pasivos' },
   ];
   const win = areas.reduce((s, a) => s + Math.min(1, a.r), 0) / areas.length;
-  // Prefiere áreas con progreso > 0 para identificar el punto débil real (el legado empieza en 0 por diseño)
-  const touched = areas.filter(a => a.r > 0);
-  const pool = touched.length >= 2 ? touched : areas;
-  const weakest = pool.slice().sort((a, b) => a.r - b.r)[0];
-  const weak = isHuman ? weakest.tu : weakest.su;
+  const weak = areas.slice().sort((a, b) => a.r - b.r)[0].name;
   let phase: string;
-  if (isHuman) {
-    const isEmpresa = (p as any).aiStrategy === 'empresa';
-    if (game.turn <= 2)  phase = isEmpresa
-      ? `empiezas a construir tu negocio y tu vida en Cuenca`
-      : `empiezas a hacerte una vida`;
-    else if (win < 0.25) phase = `buscas estabilizarte sin descuidar ${weak}`;
-    else if (win < 0.5)  phase = `vas construyendo bases sólidas, pero te falta ${weak}`;
-    else if (win < 0.75) phase = `avanzas firme hacia una vida plena, atento a ${weak}`;
-    else if (win < 1)    phase = `estás a un suspiro de lograrlo todo, te falta ${weak}`;
-    else                 phase = isEmpresa
-      ? `ya construiste tu empresa y la vida plena que tanto buscabas`
-      : `ya construiste la vida plena que tanto buscabas`;
-  } else {
-    if (game.turn <= 2)  phase = `empieza a hacerse una vida`;
-    else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
-    else if (win < 0.5)  phase = `va construyendo bases sólidas, pero le falta ${weak}`;
-    else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
-    else if (win < 1)    phase = `está a un suspiro de lograrlo todo, le falta ${weak}`;
-    else                 phase = `ya construyó la vida plena que tanto buscaba`;
-  }
+  if (game.turn <= 2) phase = `apenas empieza a hacerse una vida y aún le falta reforzar ${weak}`;
+  else if (win < 0.25) phase = `busca estabilizarse sin descuidar ${weak}`;
+  else if (win < 0.5) phase = `va construyendo bases sólidas, pero aún le falta ${weak}`;
+  else if (win < 0.75) phase = `avanza firme hacia una vida plena, atento a ${weak}`;
+  else if (win < 1) phase = `está a un suspiro de lograrlo todo, solo le falta ${weak}`;
+  else phase = `ya construyó la vida plena que tanto buscaba`;
   return `Nivel ${dif} · ${p.name} ${phase}`;
 }
 const DIFFICULTY_DESC: Record<number, string> = {
@@ -416,17 +383,13 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
   const [withJose, setWithJose] = useState(true);
   const [joseLine] = useState(joseQuip());
   const [avatar, setAvatar] = useState(0);
-  // Ruta de vida: asalariado (escala carrera) vs empresario (crea negocios)
-  const [strategy, setStrategy] = useState<'empleado'|'empresa'>('empleado');
 
   function start() {
     const tierGoals = TIER_GOALS[tier] as typeof TIER_GOALS[1];
-    // Fix 2: el jugador humano ahora lleva su ruta elegida
-    const human = { id: 'p0', name: 'Tú', avatar, aiStrategy: strategy };
+    const human = { id: 'p0', name: 'Tú', avatar };
     const players: { id: string; name: string; isAI?: boolean; aiStrategy?: 'empleado'|'empresa'; aiDifficulty?: 1|2|3 }[] = [human];
-    // Jugadores 2-4: heredan la misma ruta (se puede personalizar después)
-    for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1), aiStrategy: strategy });
-    const joseDiff = (tier <= 1 ? 1 : tier === 2 ? 2 : 3) as 1|2|3;
+    for (let i = 1; i < n; i++) players.push({ id: 'p' + i, name: 'Jugador ' + (i + 1) });
+    const joseDiff = (tier <= 1 ? 1 : tier === 2 ? 2 : 3) as 1|2|3; // José da ejemplo ajustado al nivel
     if (withJose) players.push({ id: 'jose', name: 'José', isAI: true, aiStrategy: 'empresa', aiDifficulty: joseDiff });
     const { label: _l, desc: _d, cpuMult: _c, ...goals } = tierGoals;
     onStart(newGame(players, goals, tier));
@@ -468,43 +431,6 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
                 className={'avatar-opt' + (avatar === i ? ' avatar-sel' : '')}
                 onClick={() => setAvatar(i)}>
                 <img src={'/jose-en-la-vida-adulta/avatars/player' + (i+1) + '.png'} alt={'Personaje ' + (i+1)} />
-              </button>
-            ))}
-          </div>
-
-          {/* Selector de ruta — la decisión más importante del juego */}
-          <div className="setup-label" style={{ marginTop: 14 }}>Tu ruta de vida</div>
-          <div style={{ display:'flex', flexDirection:'column', gap: 6 }}>
-            {([
-              { key: 'empleado', icon: '💼', name: 'Asalariado',
-                desc: 'Escala la carrera laboral. Estabilidad primero, luego inversiones.' },
-              { key: 'empresa', icon: '🏭', name: 'Empresario',
-                desc: 'Crea tu propio negocio. Más riesgo, más velocidad, más libertad.' },
-            ] as const).map(r => (
-              <button key={r.key} type="button"
-                onClick={() => setStrategy(r.key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
-                  textAlign: 'left', lineHeight: 1.3,
-                  border: strategy === r.key
-                    ? '2px solid #E8A020'
-                    : '2px solid rgba(240,232,210,0.15)',
-                  background: strategy === r.key
-                    ? 'linear-gradient(135deg,rgba(232,160,32,0.18),rgba(232,160,32,0.06))'
-                    : 'rgba(255,255,255,0.04)',
-                  color: 'var(--ink)',
-                  transition: 'border-color 0.15s, background 0.15s',
-                }}>
-                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{r.icon}</span>
-                <span>
-                  <span style={{
-                    display: 'block', fontWeight: 700, fontSize: '0.88rem',
-                    color: strategy === r.key ? '#E8A020' : 'inherit',
-                    WebkitTextFillColor: strategy === r.key ? '#E8A020' : 'inherit',
-                  }}>{r.name}</span>
-                  <span style={{ fontSize: '0.82rem', color: '#AFA898', WebkitTextFillColor: '#AFA898' }}>{r.desc}</span>
-                </span>
               </button>
             ))}
           </div>
@@ -550,8 +476,8 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
             </button>
             <button style={{ flex:'0 0 auto', padding:'0 14px' }} onClick={() => {
               const { label: _l, desc: _d, cpuMult: _c, ...goals } = TIER_GOALS[1];
-              onStart(newGame([{ id:'p0', name:'Jugador 1', aiStrategy: 'empleado' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:1 }], goals, 1));
-            }} title="Modo Rapido: 1 jugador + José, Principiante, ruta Asalariado">
+              onStart(newGame([{ id:'p0', name:'Jugador 1' }, { id:'jose', name:'José', isAI:true, aiStrategy:'empresa', aiDifficulty:1 }], goals, 1));
+            }} title="Modo Rapido: 1 jugador + José, Principiante, sin configuracion">
               Rapido
             </button>
           </div>
@@ -569,7 +495,7 @@ function Setup({ onStart }: { onStart: (g: GameState) => void }) {
 }
 
 // ── SVG Clock with hands — shows days remaining ──
-function TimeRing({ hours, compact = false }: { hours: number; compact?: boolean }) {
+function TimeRing({ hours }: { hours: number }) {
   const pct = clamp(hours / HOURS_PER_TURN, 0, 1);
   const days = fh(hours / 8); // 8h útiles por día
   const urgent = pct <= 0.35;
@@ -583,7 +509,7 @@ function TimeRing({ hours, compact = false }: { hours: number; compact?: boolean
   const mRad = (minAngle - 90) * Math.PI / 180;
   const cx = 50, cy = 50;
   return (
-    <div className={'clock-face' + (urgent ? ' clock-urgent' : '') + (compact ? ' clock-sm' : '')}>
+    <div className={'clock-face' + (urgent ? ' clock-urgent' : '')}>
       <svg viewBox="0 0 100 100" className="clock-svg">
         {/* Caja del reloj */}
         <circle cx={cx} cy={cy} r="46" fill="#1A1408" stroke="#5A4218" strokeWidth="3"/>
@@ -619,9 +545,8 @@ function TimeRing({ hours, compact = false }: { hours: number; compact?: boolean
 
 // ── Stats Panel (right side overlay) ──
 function StatsPanel({
-  game, onEnd, onLegacy, onShowProgress, collapsed, onToggleCollapse
-}: { game: GameState; onEnd: () => void; onLegacy: () => void; onShowProgress: () => void;
-  collapsed: boolean; onToggleCollapse: () => void }) {
+  game, onEnd, onLegacy, onShowProgress
+}: { game: GameState; onEnd: () => void; onLegacy: () => void; onShowProgress: () => void }) {
   const p = game.players[game.activePlayerIndex];
   const m = metrics(p);
   const col = PLAYER_COLORS[p.colorIndex];
@@ -642,13 +567,7 @@ function StatsPanel({
   // Win progress: average of all 6 bars capped at 100%
   const winPct = Math.round(indBars.reduce((s, b) => s + Math.min(100, (b.val / b.goal) * 100), 0) / indBars.length);
   return (
-    <div id="stats-panel" className={collapsed ? 'stats-collapsed' : ''}>
-      {/* Handle: solo visible en mobile/tablet — colapsa el dashboard para que el board mande */}
-      <button className="stats-handle" onClick={onToggleCollapse}
-        title={collapsed ? 'Ver mi progreso' : 'Ocultar y ver el tablero'}>
-        <span className="stats-handle-label">{collapsed ? 'Mi progreso' : 'Ver tablero'}</span>
-        <span className="stats-handle-chevron">{collapsed ? '▲' : '▼'}</span>
-      </button>
+    <div id="stats-panel">
       <button className="turn-banner turn-banner-btn" onClick={onShowProgress} title="Ver cómo me va">
         <Portrait p={p} size={62} />
         <div className="turn-banner-right">
@@ -723,10 +642,6 @@ function StatsPanel({
         <div className="stress-warning">
           Estres critico ({p.stats.stress}%) — salario reducido. Descansa ya.
         </div>
-      )}
-      {/* Pista de ruta: coaching contextual Q1-Q3 según la ruta elegida */}
-      {!p.isAI && game.turn <= 3 && (
-        <TurnHint turn={game.turn} strategy={(p.aiStrategy as 'empleado'|'empresa') || 'empleado'} />
       )}
     </div>
   );
@@ -953,15 +868,9 @@ function NodeInspect({ locId, game, onMove, onAction, onClose }: {
 // ── Pawn Overlay: avatares flotando encima de los casilleros, animados con CSS ──
 // position:fixed para evitar clipping de cualquier overflow en el árbol del DOM.
 // getBoundingClientRect() da coordenadas de viewport → left/top directos.
-function PawnOverlay({ game, overrideLoc, actingId }: {
-  game: GameState;
-  overrideLoc?: { id: string; locId: string } | null; // José saltando durante su playback
-  actingId?: string | null;                            // pawn a resaltar 1s (acción/salto)
-}) {
+function PawnOverlay({ game }: { game: GameState }) {
   const active = game.players[game.activePlayerIndex];
-  // La ubicación mostrada de José se sobreescribe con el paso actual del playback
-  const dispLoc = (p: PlayerState) => (overrideLoc && p.id === overrideLoc.id ? overrideLoc.locId : p.currentLocation);
-  const locKey = game.players.map(p => dispLoc(p)).join(',');
+  const locKey = game.players.map(p => p.currentLocation).join(',');
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
 
   useLayoutEffect(() => {
@@ -973,7 +882,7 @@ function PawnOverlay({ game, overrideLoc, actingId }: {
 
     const next: Record<string, { x: number; y: number }> = {};
     for (const p of game.players) {
-      const tile = document.querySelector<HTMLElement>(`[data-loc="${dispLoc(p)}"]`);
+      const tile = document.querySelector<HTMLElement>(`[data-loc="${p.currentLocation}"]`);
       if (tile) {
         const r = tile.getBoundingClientRect();
         const tx = r.left + r.width / 2;
@@ -999,21 +908,15 @@ function PawnOverlay({ game, overrideLoc, actingId }: {
         if (!pp) return null;
         const offset = (i - (count - 1) / 2) * 26;
         return (
-          <div key={p.id} className={'pawn-float' + (p.id === actingId ? ' pawn-acting' : '')} style={{
+          <div key={p.id} className="pawn-float" style={{
             left: pp.x + offset,
             top: pp.y,
             zIndex: p.id === active.id ? 22 : 20,
+            filter: p.id === active.id
+              ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
+              : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
           }}>
-            {/* key por ubicación: remonta y dispara el rebote "tip-tap" en cada salto de casillero */}
-            <div className="pawn-hop" key={dispLoc(p)}>
-              <div className="pawn-inner" style={{
-                filter: p.id === active.id
-                  ? `drop-shadow(0 0 12px ${PLAYER_COLORS[p.colorIndex]})`
-                  : `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-              }}>
-                <Portrait p={p} size={44} />
-              </div>
-            </div>
+            <Portrait p={p} size={44} />
           </div>
         );
       })}
@@ -1132,17 +1035,11 @@ const ZONE_GRAD: Record<string, string> = {
 };
 
 // ── Board ──
-function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClose, lastActionIdx, clerkFeedback, joseStep }: {
+function Board({ game, onInspect, inspecting, onAction }: {
   game: GameState;
   onInspect: (id: string | null) => void;
   inspecting: string | null;
   onAction: (i: number) => void;
-  fading: boolean;
-  onReopen: () => void;
-  onClose: () => void;
-  lastActionIdx: number | null;
-  clerkFeedback: string | null;
-  joseStep: (import('./engine').CpuStep & { name: string }) | null;
 }) {
   const active = game.players[game.activePlayerIndex];
   const locs = LOCATIONS;
@@ -1171,13 +1068,8 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
     return (
       <div
         data-loc={loc.id}
-        title={loc.name} /* tooltip PC: nombre COMPLETO del lugar en mouseover */
         className={'tile' + (here ? ' tile-here' : '') + (reachable ? ' tile-reach' : '') + (sel ? ' tile-sel' : '')}
-        onClick={() => {
-          if (here) { sel ? onClose() : onReopen(); }
-          else onInspect(inspecting === loc.id ? null : loc.id);
-        }}
-        onMouseEnter={here ? onReopen : undefined}
+        onClick={() => onInspect(inspecting === loc.id ? null : loc.id)}
       >
         <div className="tile-art" style={{ background: ZONE_GRAD[loc.zone] ?? 'rgba(255,255,255,0.06)' }}>
           <TileIcon icon={loc.icon} />
@@ -1199,86 +1091,19 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
           {left.map(l => <Tile key={l.id} loc={l} />)}
         </div>
         <div className="board-center">
-          <div className="bc-head">
-            <div className="bc-turn">{joseStep ? `Turno de ${joseStep.name}` : `Quincena ${game.turn}`}</div>
-            <TimeRing hours={active.timeLeft} compact />
-          </div>
-          {joseStep ? (
-            /* Observamos a José jugar (como en Jones): su casillero, la acción que elige y el resultado */
-            <div className="clerk-panel jose-watch">
+          {showingClerk ? (
+            <div className="clerk-panel" onClick={e => e.stopPropagation()}>
               <div className="clerk-header">
-                <ClerkPortrait locId={joseStep.locId} size={44} />
-                <div className="clerk-info">
-                  <div className="clerk-name">{locById(joseStep.locId).name.split('(')[0].trim()}</div>
-                  <div className="clerk-role">{joseStep.name} está aquí</div>
-                </div>
-              </div>
-              <div className="clerk-actions">
-                <div key={joseStep.locId + joseStep.label + joseStep.log} className="tile-act-chip jose-hl">
-                  <span className="tac-name">{joseStep.label}</span>
-                  <span className="tac-desc">{joseStep.log}</span>
-                </div>
-              </div>
-            </div>
-          ) : showingClerk ? (
-            <div className={'clerk-panel' + (fading ? ' clerk-fading' : '')}
-              onClick={e => e.stopPropagation()}>
-              <div className="clerk-header">
-                <ClerkPortrait locId={active.currentLocation} size={44} />
+                <ClerkPortrait locId={active.currentLocation} size={52} />
                 <div className="clerk-info">
                   <div className="clerk-name">{CLERKS[active.currentLocation]?.name}</div>
                   <div className="clerk-role">{CLERKS[active.currentLocation]?.role}</div>
                 </div>
-                <button className="clerk-close-btn" onClick={onClose}
-                  style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer',
-                    color:'rgba(240,232,210,0.45)', fontSize:'1rem', padding:'2px 6px', lineHeight:1 }}>✕</button>
               </div>
               <div className="clerk-quip">{clerkMsg}</div>
-
-              {/* Feedback inline: resultado de la última acción — aparece donde ya tienes los ojos */}
-              {clerkFeedback && (
-                <div style={{
-                  background: 'rgba(40,236,170,0.10)',
-                  border: '1px solid rgba(40,236,170,0.28)',
-                  borderRadius: 6, padding: '5px 10px',
-                  fontSize: '0.80rem', color: '#28ECAA', fontWeight: 600,
-                  margin: '4px 0 6px', letterSpacing: '0.01em',
-                }}>
-                  ✓ {clerkFeedback}
-                </div>
-              )}
-
               <div className="clerk-actions">
-                {/* Botón de repetición rápida — el primero que ves, siempre disponible */}
-                {lastActionIdx !== null && clerkActs[lastActionIdx] && (
-                  <button
-                    key="repeat-quick"
-                    className="tile-act-chip"
-                    onClick={() => onAction(lastActionIdx!)}
-                    style={{
-                      gridColumn: '1 / -1',
-                      borderColor: '#E8A020',
-                      background: 'linear-gradient(135deg,rgba(232,160,32,0.16),rgba(232,160,32,0.05))',
-                      order: -1,
-                    }}>
-                    <span className="tac-name" style={{ color: '#E8A020' }}>
-                      ↻ {clerkActs[lastActionIdx].label}
-                    </span>
-                    <span className="tac-desc" style={{ color: 'rgba(232,160,32,0.7)' }}>repetir</span>
-                    <span className="tac-cost" style={{ color: '#E8A020', fontWeight: 700 }}>
-                      {fh(clerkActs[lastActionIdx].hours)}h
-                    </span>
-                  </button>
-                )}
                 {clerkActs.map((a, i) => (
-                  <button key={a.id}
-                    className={'tile-act-chip' + (i === lastActionIdx ? ' tile-act-last' : '')}
-                    onClick={() => onAction(i)}
-                    title={a.desc}
-                    style={i === lastActionIdx ? {
-                      borderColor: 'rgba(232,160,32,0.45)',
-                      background: 'rgba(232,160,32,0.06)',
-                    } : undefined}>
+                  <button key={a.id} className="tile-act-chip" onClick={() => onAction(i)}>
                     <span className="tac-name">{a.label}</span>
                     <span className="tac-desc">{a.desc}</span>
                     <span className="tac-cost">{fh(a.hours)}h</span>
@@ -1287,7 +1112,10 @@ function Board({ game, onInspect, inspecting, onAction, fading, onReopen, onClos
               </div>
             </div>
           ) : (
-            <div className="bc-city">CUENCA</div>
+            <>
+              <div className="bc-city">CUENCA</div>
+              <div className="bc-turn">Quincena {game.turn}</div>
+            </>
           )}
         </div>
         <div className="board-edge board-right">
@@ -1418,36 +1246,21 @@ function PlayerCardZoom({ p, game }: { p: PlayerState; game: GameState }) {
 
 // ── Onboarding modal — aparece solo en Q1, solo la primera vez ──
 const ONBOARD_KEY = 'jelva_onboard_v1';
-function OnboardModal({ onClose, strategy }: { onClose: () => void; strategy: 'empleado'|'empresa' }) {
+function OnboardModal({ onClose }: { onClose: () => void }) {
   function dismiss() { localStorage.setItem(ONBOARD_KEY, '1'); onClose(); }
-
-  const isEmp = strategy === 'empleado';
-  const routeLabel = isEmp ? '💼 Ruta Asalariado' : '🏭 Ruta Empresario';
-  const routeSub = isEmp
-    ? 'Consigue empleo, escala la carrera y construye patrimonio con estabilidad.'
-    : 'Abre tu negocio, genera ingresos propios y crece a tu propio ritmo.';
-
-  const goals = isEmp ? [
-    { icon: '🚌', place: 'Terminal (bolsa de empleo)',       action: 'Busca tu primer empleo',        why: 'Sin trabajo no hay sueldo. Es tu primera parada.' },
-    { icon: '🏦', place: 'Banco (ahorrar · invertir)',        action: 'Deposita $100 en el banco',     why: 'El fondo de emergencia es una de las 6 metas de victoria.' },
-    { icon: '🏠', place: 'Tu Casa (hogar)',                   action: 'Descansa cuando el estrés suba',why: 'Si el estrés llega a 100, pierdes rendimiento en todo.' },
-  ] : [
-    { icon: '🏪', place: 'Feria Libre (tu negocio)',          action: 'Abre tu primer negocio',        why: 'Sin negocio no hay ingresos propios. Empieza cuanto antes.' },
-    { icon: '🏦', place: 'Banco (ahorrar · invertir)',        action: 'Deposita capital inicial',      why: 'El fondo de emergencia te protege cuando el negocio tarda en arrancar.' },
-    { icon: '🎓', place: 'UDA / Universidad (estudiar)',      action: 'Estudia algo útil para tu negocio', why: 'El conocimiento sube la rentabilidad de lo que construyes.' },
+  const goals = [
+    { icon: '🚌', place: 'Terminal (bolsa de empleo)', action: 'Busca tu primer empleo', why: 'Sin trabajo, no hay sueldo. Es tu primera parada.' },
+    { icon: '🏦', place: 'Banco (ahorrar · invertir)', action: 'Deposita $100 en el banco', why: 'El fondo de emergencia es una de las 6 metas de victoria.' },
+    { icon: '🏠', place: 'Tu Casa (hogar)', action: 'Descansa cuando el estrés suba', why: 'Si el estrés llega a 100, pierdes rendimiento en todo.' },
   ];
-
   return (
     <div className="modal-bg">
       <div className="modal onboard-modal">
         <div className="onboard-jose">
           <img className="onboard-jose-img" src="/jose-en-la-vida-adulta/avatars/jose.png" alt="José" />
           <div>
-            <div className="onboard-title">Tu primera quincena · {routeLabel}</div>
-            <div className="onboard-sub">
-              Soy José. Tienes <b>112 horas</b>: cada cosa cuesta tiempo y nada vuelve.
-              {' '}{routeSub}{' '}Empieza por estas tres.
-            </div>
+            <div className="onboard-title">Tu primera quincena</div>
+            <div className="onboard-sub">Soy José. Tienes <b>112 horas</b>: cada cosa cuesta tiempo y nada vuelve. Empieza por estas tres. No es la única ruta — es una buena.</div>
           </div>
         </div>
         <div className="onboard-goals">
@@ -1463,7 +1276,6 @@ function OnboardModal({ onClose, strategy }: { onClose: () => void; strategy: 'e
           ))}
         </div>
         <div className="onboard-win">Meta: bienestar · conocimientos · impacto · legado · fondo 6 meses · 35% ingreso pasivo. Todo a la vez. El camino lo decides tú.</div>
-        <div className="onboard-watch">👀 En mi turno, obsérvame jugar: verás cómo salto entre casilleros y elijo mis acciones. Aprende de mí y compárate. Usa <b>🐢 lento</b> para seguir cada jugada o <b>🐇 rápido</b> para saltarla.</div>
         <button className="primary" style={{ width: '100%', marginTop: 16 }} onClick={dismiss}>
           Entendido — empezar
         </button>
@@ -1597,20 +1409,13 @@ function Victory({ game, onRestart }: { game: GameState; onRestart: () => void }
 // MAIN APP
 // ═══════════════════════════════════════
 export // ── Turn-based contextual hints (visible Q1-Q3 only) ──
-const TURN_HINTS: Record<'empleado'|'empresa', Record<number, { icon: string; text: string }>> = {
-  empleado: {
-    1: { icon: 'T', text: 'Q1: Ve a Terminal y busca empleo. Sin trabajo no hay sueldo.' },
-    2: { icon: 'B', text: 'Q2: Deposita en el Banco. El fondo de emergencia es clave para ganar.' },
-    3: { icon: 'U', text: 'Q3: Estudia en la UDA. El conocimiento abre mejores empleos.' },
-  },
-  empresa: {
-    1: { icon: '🏪', text: 'Q1: Ve a Feria Libre y abre tu primer negocio. Sin negocio no hay ingresos propios.' },
-    2: { icon: 'B',  text: 'Q2: Deposita capital en el Banco. Un colchón te salva cuando el negocio tarda.' },
-    3: { icon: 'U',  text: 'Q3: Estudia en la UDA. El conocimiento sube la rentabilidad de tu negocio.' },
-  },
+const TURN_HINTS: Record<number, { icon: string; text: string }> = {
+  1: { icon: 'T', text: 'Q1: Ve a Terminal y busca empleo. Sin trabajo no hay progreso.' },
+  2: { icon: 'B', text: 'Q2: Deposita algo en el Banco. El fondo de emergencia es clave para ganar.' },
+  3: { icon: 'U', text: 'Q3: Visita la UDA y estudia. El conocimiento abre mejores empleos.' },
 };
-function TurnHint({ turn, strategy }: { turn: number; strategy: 'empleado'|'empresa' }) {
-  const hint = TURN_HINTS[strategy]?.[turn];
+function TurnHint({ turn }: { turn: number }) {
+  const hint = TURN_HINTS[turn];
   if (!hint) return null;
   return (
     <div className="turn-hint">
@@ -1631,20 +1436,9 @@ function App() {
   const [zoom, setZoom] = useState<string | null>(null);
   const [openPanel, setOpenPanel] = useState<PanelId>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
-  const [actionsFading, setActionsFading] = useState(false);
-  const actionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
-  // Feedback inline en el clerk panel (reemplaza el toast flotante — aparece donde clickeaste)
-  const [lastActionIdx, setLastActionIdx] = useState<number | null>(null);
-  const [clerkFeedback, setClerkFeedback] = useState<string | null>(null);
-  const clerkFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Reproducción visible del turno de José (pasos): como en Jones, lo observamos jugar
-  const [josePlay, setJosePlay] = useState<{ steps: import('./engine').CpuStep[]; idx: number; name: string } | null>(null);
-  const joseFinal = useRef<GameState | null>(null);
   // Velocidad del turno de José: lento (ves su jugada y aprendes) o rápido (saltas)
   const [slowJose, setSlowJose] = useState(true);
-  // Dashboard colapsado por defecto (relevante solo en mobile/tablet; en desktop el handle se oculta)
-  const [statsCollapsed, setStatsCollapsed] = useState(true);
   const [showOnboard, setShowOnboard] = useState(() =>
     localStorage.getItem(ONBOARD_KEY) !== '1'
   );
@@ -1652,8 +1446,8 @@ function App() {
   const [celebrate, setCelebrate] = useState(false); // #3 microcelebración juicy
   const [showFocusPick, setShowFocusPick] = useState(false); // #7 meta autoimpuesta
 
-  // Tema oficial + soundscape: arrancan al primer gesto en iOS/mobile (política autoplay)
-  useEffect(() => { cityMusic.arm(); soundscape.arm(); }, []);
+  // Tema oficial: suena siempre (arranca al primer gesto en iOS/mobile)
+  useEffect(() => { cityMusic.arm(); }, []);
 
   // El anuncio sobre el tablero se desvanece solo en un tiempo prudencial
   useEffect(() => {
@@ -1673,64 +1467,33 @@ function App() {
     commit(g, persist);
   }
 
-  // ── Turno de la IA: calcula los pasos y los REPRODUCE visiblemente (como en Jones) ──
+  // ── Auto-run CPU turns — MUST be before early returns (Rules of Hooks) ──
   useEffect(() => {
-    if (phase !== 'play' || !game || cpuThinking || queue.length > 0 || josePlay) return;
+    if (phase !== 'play' || !game || cpuThinking || queue.length > 0) return;
     const p = game.players[game.activePlayerIndex];
     if (!p?.isAI) return;
     setCpuThinking(true);
     const snap = game;
-    const startDelay = slowJose ? 650 : 150;
+    // Lento: pausa larga para leer la jugada de José y aprender. Rápido: casi instantáneo.
+    const delay = slowJose ? 2200 + Math.random() * 600 : 200 + Math.random() * 150;
     const timer = setTimeout(() => {
       const g: GameState = deepClone(snap);
       const ai = g.players[g.activePlayerIndex];
-      const { steps, logs } = cpuTurnSteps(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
+      const logs = cpuTurn(ai, g.world, ai.aiStrategy!, ai.aiDifficulty!);
       logs.forEach(text => g.log.push({ turn: g.turn, text, kind: 'plain', importance: 1 }));
       // José, sherpa del Viaje del Héroe: a veces deja un quip socrático (sin spoilear)
       if (ai.name.toLowerCase().startsWith('jos') && Math.random() < 0.4) {
         const human = g.players.find(p => !p.isAI);
+        // La mitad de las veces apunta al área más floja del jugador; el resto, sabiduría general
         const line = human && Math.random() < 0.55 ? joseAdvice(human, g.goals) : joseQuip();
         g.log.push({ turn: g.turn, text: 'José: ' + line, kind: 'jose', importance: 2 });
       }
       setCpuThinking(false);
-      joseFinal.current = g;
-      if (steps.length === 0) { endPlayerTurn(g); return; }
-      // Arranca la reproducción paso a paso (el estado final se aplica al terminar)
-      setJosePlay({ steps, idx: 0, name: ai.name });
-    }, startDelay);
+      endPlayerTurn(g);
+    }, delay);
     return () => { clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.activePlayerIndex, game?.turn, phase, queue.length, slowJose, josePlay]);
-
-  // Avanza la reproducción del turno de José: 1 paso por intervalo (lento/rápido)
-  useEffect(() => {
-    if (!josePlay) return;
-    const stepMs = slowJose ? 1500 : 300;
-    const t = setTimeout(() => {
-      if (josePlay.idx + 1 < josePlay.steps.length) {
-        setJosePlay({ ...josePlay, idx: josePlay.idx + 1 });
-      } else {
-        const fin = joseFinal.current;
-        joseFinal.current = null;
-        setJosePlay(null);
-        if (fin) endPlayerTurn(fin);
-      }
-    }, stepMs);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [josePlay, slowJose]);
-
-  // Al llegar a un lugar (o iniciar turno) las acciones se despliegan solas, sin fade.
-  useEffect(() => {
-    if (phase !== 'play' || !game) return;
-    const p = game.players[game.activePlayerIndex];
-    if (!p || p.isAI || queue.length > 0) return;
-    setLastActionIdx(null);
-    setClerkFeedback(null);
-    openActionsHere();
-    return clearActionsTimer;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.activePlayerIndex, game?.players[game?.activePlayerIndex ?? 0]?.currentLocation, phase, queue.length]);
+  }, [game?.activePlayerIndex, game?.turn, phase, queue.length, slowJose]);
 
   if (phase === 'setup') return <Setup onStart={g => { setGame(g); setShowBackstory(true); setPhase('play'); saveLocal(g); }} />;
   if (!game) return null;
@@ -1749,40 +1512,10 @@ function App() {
       g.log.push({ turn: g.turn, text: log, kind: 'plain', importance: 1 });
     });
     if (result) {
-      const big = /graduaste|ascendiste|Ascendiste|legado máximo|Compraste un apartamento/.test(result);
-      if (big) {
-        // Hito grande (ascenso, graduación): fanfarria sonora + celebración visual
-        soundscape.playMilestone();
-        setFlash(result);
-        setCelebrate(true);
-      } else {
-        // Feedback inline en el clerk panel + chime discreto de confirmación
-        soundscape.playActionConfirm();
-        setClerkFeedback(result);
-        if (clerkFeedbackTimer.current) clearTimeout(clerkFeedbackTimer.current);
-        clerkFeedbackTimer.current = setTimeout(() => setClerkFeedback(null), 2400);
-      }
+      setFlash(result);
+      // #3 microcelebración: un hito grande (ascenso, graduación) merece fanfarria
+      setCelebrate(/graduaste|ascendiste|Ascendiste|legado máximo|Compraste un apartamento/.test(result));
     }
-    setLastActionIdx(idx);
-    // Panel siempre abierto para repetir sin fricción (estilo Jones)
-    openActionsHere();
-  }
-
-  // ── Acciones del lugar actual: se despliegan ~20s y luego hacen fade. Click/mouseover reabren. ──
-  function clearActionsTimer() {
-    if (actionsTimer.current) { clearTimeout(actionsTimer.current); actionsTimer.current = null; }
-  }
-  function openActionsHere() {
-    if (!game) return;
-    const loc = game.players[game.activePlayerIndex].currentLocation;
-    setActionsFading(false);
-    setInspecting(loc);
-    clearActionsTimer();
-    // Sin auto-fade: en tu ubicación actual las acciones quedan siempre visibles (estilo Jones)
-  }
-  function closeActionsHere() {
-    clearActionsTimer();
-    setActionsFading(false);
     setInspecting(null);
   }
 
@@ -1790,9 +1523,6 @@ function App() {
     if (locId === active.currentLocation) return;
     const cost = locById(locId).tc[active.transport];
     if (active.timeLeft < cost) { setFlash('No te alcanza el tiempo para moverte.'); return; }
-    // SFX de transporte + cambio de drone de zona (antes del commit para que no haya delay)
-    soundscape.playMove(active.transport);
-    soundscape.setZone(locById(locId).zone);
     mutate(g => {
       const p = g.players[g.activePlayerIndex];
       // Tracking de tiempo ahorrado vs caminar (para narrar al cierre)
@@ -1803,7 +1533,7 @@ function App() {
       }
       p.timeLeft -= cost; p.currentLocation = locId;
     });
-    // El effect de llegada despliega solo las acciones del nuevo lugar.
+    setInspecting(null);
   }
 
   function endPlayerTurn(override?: GameState) {
@@ -1957,7 +1687,6 @@ function App() {
     if (winner) { g.over = true; g.winnerId = winner.id; commit(g, true); setPhase('victory'); return; }
     // Cierre narrado (elegancia Knizia): el toast cuenta una historia, no recita KPI
     const humanForNarrative = g.players.find(p => !p.isAI) || g.players[0];
-    soundscape.playEndTurn();  // cadencia de cierre (G→E→C) antes del flash
     setFlash(narrateClose(humanForNarrative, g.turn));
     g.turn++; g.activePlayerIndex = 0;
     for (const p of g.players) {
@@ -1978,26 +1707,20 @@ function App() {
         <BackstoryModal player={game.players.find(p => !p.isAI) || game.players[0]} onClose={() => setShowBackstory(false)} />
       )}
       <TopBar openPanel={openPanel} setOpenPanel={id => { setOpenPanel(id); setInspecting(null); }} game={game} player={game.players[game.activePlayerIndex]} />
-      <PawnOverlay game={game}
-        overrideLoc={josePlay ? { id: game.players[game.activePlayerIndex].id, locId: josePlay.steps[josePlay.idx].locId } : null}
-        actingId={josePlay ? game.players[game.activePlayerIndex].id : null}
-      />
+      <PawnOverlay game={game} />
       <div className="game-layout">
         <div className="game-main">
           <Board game={game}
             onInspect={id => { setInspecting(id); setOpenPanel(null); }}
             inspecting={inspecting}
             onAction={doAction}
-            fading={actionsFading}
-            onReopen={openActionsHere}
-            onClose={closeActionsHere}
-            lastActionIdx={lastActionIdx}
-            clerkFeedback={clerkFeedback}
-            joseStep={josePlay ? { ...josePlay.steps[josePlay.idx], name: josePlay.name } : null}
           />
           <div className="footer-bar">
+            <div className="time-section">
+              <TimeRing hours={game.activePlayerIndex >= 0 ? game.players[game.activePlayerIndex].timeLeft : HOURS_PER_TURN} />
+            </div>
             <div className="footer-loc">
-              {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {locName(loc, p)}</>; })()}
+              {(() => { const p = game.players[game.activePlayerIndex]; const loc = locById(p.currentLocation); return <>{loc.icon} {loc.name}</>; })()}
             </div>
             <button className="btn-jose-speed" onClick={() => setSlowJose(s => !s)}
               title={slowJose ? 'José juega lento: ves su jugada y aprendes' : 'José juega rápido: salta su turno'}>
@@ -2008,8 +1731,7 @@ function App() {
             </button>
           </div>
         </div>
-        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)}
-          collapsed={statsCollapsed} onToggleCollapse={() => setStatsCollapsed(c => !c)} />
+        <StatsPanel game={game} onEnd={endPlayerTurn} onLegacy={retire} onShowProgress={() => setShowProgress(true)} />
       </div>
       {inspecting && inspecting !== game.players[game.activePlayerIndex].currentLocation && (
         <NodeInspect locId={inspecting} game={game}
@@ -2044,10 +1766,7 @@ function App() {
 
       {/* Onboarding — solo Q1, solo primera vez */}
       {showOnboard && game.turn === 1 && queue.length === 0 && (
-        <OnboardModal
-          onClose={() => setShowOnboard(false)}
-          strategy={(game.players.find(p => !p.isAI)?.aiStrategy as 'empleado'|'empresa') || 'empleado'}
-        />
+        <OnboardModal onClose={() => setShowOnboard(false)} />
       )}
 
       {/* Event modals */}
