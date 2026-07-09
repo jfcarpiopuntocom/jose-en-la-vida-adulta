@@ -432,20 +432,39 @@ h1,h2,h3,p,span,div,button,label,li,a {
   position: fixed; inset: 0; z-index: 150;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 20px;
-  padding: 16px; overflow: hidden;
+  padding: 2.2vh 2vw; overflow: hidden;
+  /* Superficie inmersiva: la pantalla ENTERA es el juego, no un fondo vacío con tarjeta */
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(232,160,32,0.12), transparent 60%),
+    radial-gradient(900px 600px at 90% 110%, rgba(232,96,64,0.10), transparent 60%),
+    linear-gradient(160deg, #0b1220, #070b16);
 }
-/* Consola ancha que aprovecha el espacio lateral y cabe sin scroll */
-.setup-card.setup-card-wide { max-width: 980px; padding: 28px 48px; }
-.setup-grid { display: grid; grid-template-columns: 1fr; gap: 0 32px; }
+/* Consola: en desktop OCUPA CASI TODA LA PANTALLA (regla dura: se ve como tablero a pantalla completa) */
+.setup-card.setup-card-wide {
+  max-width: min(1320px, 96vw); width: 96vw;
+  min-height: 92vh; max-height: 96vh;
+  padding: clamp(24px, 3vh, 44px) clamp(28px, 4vw, 64px);
+  overflow-y: auto;
+}
+.setup-grid { display: grid; grid-template-columns: 1fr; gap: 0 40px; flex: 1; align-content: center; }
 .setup-col { min-width: 0; }
 @media (min-width: 760px) {
   .setup-grid { grid-template-columns: 1fr 1fr; }
+  /* Splash grande: presencia tipográfica para llenar la pantalla con estilo */
+  .setup-card.setup-card-wide .setup-title { font-size: clamp(2rem, 4vw, 3.2rem); margin-bottom: 8px; }
+  .setup-card.setup-card-wide .setup-sub { font-size: clamp(0.95rem, 1.4vw, 1.2rem); margin-bottom: 22px; }
+  .setup-card.setup-card-wide .jose-hero-img { width: 92px; height: 92px; }
+  .setup-card.setup-card-wide .jose-hero-name { font-size: 1.15rem; }
+  .setup-card.setup-card-wide .jose-hero-quip { font-size: 1rem; }
+  .setup-card.setup-card-wide .primary { padding: 15px; font-size: 1.05rem; }
 }
 @media (max-width: 759px) {
   .setup-screen { justify-content: flex-start; overflow-y: auto; padding: 18px 14px; }
+  .setup-card.setup-card-wide { min-height: auto; width: 100%; }
 }
 .setup-card { margin: auto; }
 .setup-card {
+  display: flex; flex-direction: column;
   background: rgba(8,14,30,0.96); backdrop-filter: blur(18px);
   border: 1px solid var(--line); border-radius: 16px;
   padding: 28px 24px; max-width: 440px; width: 100%;
