@@ -414,6 +414,7 @@ h1,h2,h3,p,span,div,button,label,li,a {
   border: 2px solid rgba(232,160,32,0.35); border-radius: 14px;
   padding: 22px 20px; max-width: 480px; width: 100%;
   box-shadow: 0 12px 60px rgba(0,0,0,0.7);
+  max-height: 90vh; /* fallback para navegadores sin dvh (iOS <15.4) */
   max-height: 90dvh; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -996,6 +997,10 @@ input[type=text], input[type=number] {
 }
 /* Goals en fila horizontal: aprovecha el ancho del modal, sin scroll */
 .onboard-goals { display: flex; flex-direction: row; gap: 12px; margin-bottom: 14px; }
+/* En portrait angosto los 3 goals no caben en fila: vuelven a columna */
+@media (orientation: portrait) and (max-width: 760px) {
+  .onboard-goals { flex-direction: column; gap: 8px; }
+}
 .onboard-goal {
   flex: 1; display: flex; gap: 10px; align-items: flex-start;
   background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px 14px;
@@ -2422,7 +2427,9 @@ input[type=text], input[type=number] {
 
 @media (min-width: 1025px) and (orientation: landscape) {
   /* El tablero (ring) LLENA la altura del viewport */
-  :root { --tc: clamp(94px, calc((100vh - 150px) / 6), 172px) !important; }
+  /* Min 78px (no 94): en laptops cortos (768px alto) 94px forzaba overflow → scroll.
+     El calc con vh garantiza que 6 filas SIEMPRE quepan en el alto visible. */
+  :root { --tc: clamp(78px, calc((100vh - 150px) / 6), 172px) !important; }
 
   /* NUNCA scroll vertical en desktop: el board cabe exacto en la pantalla */
   .game-main { overflow: hidden !important; }
